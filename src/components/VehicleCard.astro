@@ -1,0 +1,46 @@
+---
+import type { VehicleResponse } from '../schemas';
+
+interface Props {
+  vehicle: VehicleResponse;
+}
+
+const { vehicle } = Astro.props;
+
+const priceFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+});
+
+const mileageFormatter = new Intl.NumberFormat('en-US');
+---
+
+<a
+  href={`/vehicles/${vehicle.id}`}
+  class="block overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-lg"
+>
+  {
+    vehicle.images.length > 0 ? (
+      <img
+        src={vehicle.images[0]}
+        alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+        class="aspect-[4/3] w-full object-cover"
+      />
+    ) : (
+      <div class="flex aspect-[4/3] w-full items-center justify-center bg-gray-200 text-sm text-gray-500">
+        No photo
+      </div>
+    )
+  }
+  <div class="space-y-2 p-4">
+    <h2 class="text-lg font-semibold text-gray-900">
+      {vehicle.year} {vehicle.make} {vehicle.model}
+    </h2>
+    <p class="text-lg font-semibold text-gray-900">{priceFormatter.format(vehicle.price)}</p>
+    <p class="text-sm text-gray-500">
+      {mileageFormatter.format(vehicle.mileage)} mi · {vehicle.location.city}
+    </p>
+    <p class="text-sm text-gray-400">Listed by {vehicle.sellerName}</p>
+  </div>
+</a>
