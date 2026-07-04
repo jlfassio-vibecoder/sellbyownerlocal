@@ -102,6 +102,11 @@ export const InquirySchema = z.object({
   message: z.string().max(2000).optional().or(z.literal('')),
 });
 
+export const InquiryRecordSchema = InquirySchema.extend({
+  id: z.string(),
+  timestamp: z.string().datetime(),
+});
+
 export const PitchBlockSchema = z.object({
   title: z.string().min(1),
   body: z.string().min(1),
@@ -134,6 +139,98 @@ export const DocumentsBannerSchema = z.object({
   badges: z.array(z.string().min(1)).optional(),
 });
 
+export const VehicleHighlightSchema = z.object({
+  title: z.string().min(1),
+  text: z.string().min(1),
+});
+
+const optionalString = z.string().optional().or(z.literal(''));
+
+export const VehicleFormStateSchema = z.object({
+  mileage: z.string().min(1).max(20),
+  price: z.string().min(1).max(20),
+  windowStickerUrl: optionalString,
+  carfaxReportUrl: optionalString,
+  kbbReportUrl: optionalString,
+  smogReportUrl: optionalString,
+  subtitle: optionalString,
+  msrp: optionalString,
+  sellersNoteIntro: optionalString,
+  peaceOfMindText: optionalString,
+  maintenanceText: optionalString,
+  utilityTowingText: optionalString,
+  luxuryOptionsText: optionalString,
+  ctaText: optionalString,
+  mechanicalIntegrityIntro: optionalString,
+  mechanicalItem1Title: optionalString,
+  mechanicalItem1Text: optionalString,
+  mechanicalItem2Title: optionalString,
+  mechanicalItem2Text: optionalString,
+  mechanicalItem3Title: optionalString,
+  mechanicalItem3Text: optionalString,
+  marketValuationIntro: optionalString,
+  marketDealerReality: optionalString,
+  marketKbbValue: optionalString,
+  marketThisTruck: optionalString,
+  highlight1Title: optionalString,
+  highlight1Text: optionalString,
+  highlight2Title: optionalString,
+  highlight2Text: optionalString,
+  highlight3Title: optionalString,
+  highlight3Text: optionalString,
+  highlight4Title: optionalString,
+  highlight4Text: optionalString,
+  videoUrl: optionalString,
+  videoPosterUrl: optionalString,
+});
+
+export const VehicleDashboardUpdateSchema = z
+  .object({
+    mileage: z.number().int().nonnegative().optional(),
+    price: z.number().positive().optional(),
+    videoUrl: httpHttpsUrl.optional(),
+    videoPosterUrl: httpHttpsUrl.optional(),
+    documents: VehicleDocumentsSchema.partial().optional(),
+    sellersNote: SellersNoteSchema.partial().optional(),
+    mechanicalIntegrity: MechanicalIntegritySchema.partial().optional(),
+    marketValuation: z
+      .object({
+        intro: z.string().optional(),
+        dealerReality: z.string().optional(),
+        kbbValue: z.string().optional(),
+        thisTruck: z.string().optional(),
+        comparisons: z.array(MarketComparisonPointSchema).min(2).optional(),
+      })
+      .optional(),
+    highlights: z.array(VehicleHighlightSchema).optional(),
+  })
+  .strict();
+
+export const UploadResponseSchema = z.object({
+  url: documentUrl,
+});
+
+export const MessageSchema = z.object({
+  id: z.string(),
+  sessionId: z.string().min(1).max(100),
+  vehicleId: z.string().min(1),
+  sender: z.enum(['buyer', 'seller']),
+  content: z.string().min(1).max(2000),
+  timestamp: z.string().datetime(),
+  isRead: z.number().int().min(0).max(1).optional(),
+});
+
+export const ConversationSchema = MessageSchema.extend({
+  unreadCount: z.number().int().nonnegative(),
+});
+
+export const MessageCreateSchema = z.object({
+  sessionId: z.string().min(1).max(100),
+  vehicleId: z.string().min(1),
+  sender: z.enum(['buyer', 'seller']),
+  content: z.string().min(1).max(2000),
+});
+
 export const VehicleSchema = z.object({
   year: z.number().int().min(1900),
   make: z.string().min(1),
@@ -151,6 +248,7 @@ export const VehicleSchema = z.object({
   createdAt: z.string().datetime(),
   specs: VehicleSpecsSchema,
   features: z.array(z.string().min(1)).min(1),
+  highlights: z.array(VehicleHighlightSchema).optional(),
   maintenance: z.array(MaintenanceRecordSchema).min(1),
   documents: VehicleDocumentsSchema.optional(),
   windowStickerBreakdown: WindowStickerBreakdownSchema.optional(),
@@ -177,10 +275,18 @@ export type GalleryPhoto = z.infer<typeof GalleryPhotoSchema>;
 export type MarketComparisonPoint = z.infer<typeof MarketComparisonPointSchema>;
 export type MarketValuation = z.infer<typeof MarketValuationSchema>;
 export type Inquiry = z.infer<typeof InquirySchema>;
+export type InquiryRecord = z.infer<typeof InquiryRecordSchema>;
 export type PitchBlock = z.infer<typeof PitchBlockSchema>;
 export type SellersNote = z.infer<typeof SellersNoteSchema>;
 export type MechanicalItem = z.infer<typeof MechanicalItemSchema>;
 export type MechanicalIntegrity = z.infer<typeof MechanicalIntegritySchema>;
 export type DocumentsBanner = z.infer<typeof DocumentsBannerSchema>;
+export type VehicleHighlight = z.infer<typeof VehicleHighlightSchema>;
+export type VehicleFormState = z.infer<typeof VehicleFormStateSchema>;
+export type VehicleDashboardUpdate = z.infer<typeof VehicleDashboardUpdateSchema>;
+export type UploadResponse = z.infer<typeof UploadResponseSchema>;
+export type Message = z.infer<typeof MessageSchema>;
+export type Conversation = z.infer<typeof ConversationSchema>;
+export type MessageCreate = z.infer<typeof MessageCreateSchema>;
 export type UserResponse = z.infer<typeof UserResponseSchema>;
 export type VehicleResponse = z.infer<typeof VehicleResponseSchema>;
