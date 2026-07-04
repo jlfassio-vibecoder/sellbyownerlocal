@@ -3,7 +3,7 @@
 **Source:** `../../2017RAM1500` (Vite/Express SPA)  
 **Target:** `sellbyownerlocal` (Astro 7 SSR multi-tenant platform)  
 **Document date:** July 4, 2026  
-**Status:** In progress — **Phase 1 complete**; **Phase 2 is next**
+**Status:** In progress — **Phases 1–4 complete**; **Phase 5 is next**
 
 ---
 
@@ -13,26 +13,24 @@
 |-------|--------|---------|
 | **Phase 1 — Auth & Routing** | **Complete** | Firebase client/admin auth, session cookies, seller routes, dashboard shell |
 | **Unified Marketplace Auth** | **Complete** | `/login`, `/account`, `AuthForm`, generic `/api/auth/*` (extension of Phase 1) |
-| **Phase 2 — Read-Only UI (Inquiries)** | **Next** | SSR inquiries tab, `GET /api/seller/inquiries`, port `InquiriesPanel` |
-| Phase 3 — Forms & Mutations | Pending | Details editor, document uploads, vehicle PATCH API |
-| Phase 4 — Live Chat | Pending | Socket.io or alternative; wire `ChatPanel` + `ChatWidget` |
-| Phase 5 — Multi-Vehicle UX & Hardening | Partial | Vehicle picker on `/seller` done; tests and health endpoint remain |
+| **Phase 2 — Read-Only UI (Inquiries)** | **Complete** | SSR inquiries tab, `GET /api/seller/inquiries`, `InquiriesPanel` |
+| **Phase 3 — Forms & Mutations** | **Complete** | Details editor, document uploads, vehicle PATCH API |
+| **Phase 4 — Live Chat** | **Complete** | REST + polling chat; `ChatPanel` + `ChatWidget` wired |
+| **Phase 5 — Multi-Vehicle UX & Hardening** | **Next** | Gallery image uploads, vehicle picker polish, health endpoint, CI smoke tests |
+| Phase 6 — AI VIN Listing Generator | Pending | `/seller/new` route, VIN decode + AI listing draft |
 
-### Next Phase: Phase 2 — Read-Only UI (Inquiries Tab)
+### Next Phase: Phase 5 — Multi-Vehicle UX & Hardening
 
-**Goal:** Dashboard displays real inquiry data SSR'd from Firestore.
+**Goal:** Production-ready seller experience across listings — gallery image management, polished multi-vehicle hub, and deploy hardening.
 
-**Entry criteria:** Phase 1 complete ✅
+**Entry criteria:** Phase 4 complete ✅
 
-**Tasks:**
-1. Add `InquiryRecordSchema` to `src/schemas/index.ts`
-2. Implement `GET /api/seller/inquiries` with auth + optional `vehicleId` filter
-3. Port `InquiriesPanel.tsx` to `src/islands/seller/InquiriesPanel.tsx`
-4. Port `SellerDashboard.tsx` — wire Inquiries tab; accept `initialInquiries` prop
-5. In `[vehicleId].astro` frontmatter: query inquiries, pass props to replace `SellerVehicleShell` placeholders
-6. Wire inquiry count badge in `SellerLayout`
+**Highlights:**
+1. **Gallery Images Upload** — extend upload flow beyond Phase 3 single-file PDFs to manage `vehicle.images[]` (ordered hero/gallery URLs) and optionally `galleryPhotos[]`
+2. **Vehicle Picker UI** — enhance `/seller/index.astro` with thumbnails, status badges, and per-listing context
+3. **Hardening** — health endpoint, CI smoke tests, env/deploy documentation
 
-**Acceptance:** Submitting via public `ContactForm` on `/vehicles/seed-ram-1500` appears in seller dashboard after refresh; inquiry count badge reflects SSR data.
+**Acceptance:** Seller with two seeded vehicles can upload/reorder gallery images per listing; `/seller` hub is scannable at a glance; CI passes on every PR.
 
 ---
 
@@ -40,7 +38,7 @@
 
 The old repository is a **single-listing** seller tool: one Firestore document (`truckDetails/main`), one implicit vehicle, and a monolithic Express process that serves REST, Socket.io, and the React SPA. The seller dashboard lives at `/seller` behind Firebase Auth and exposes three tabs: **Live Chat**, **Contact Forms**, and **Truck Details**.
 
-The new platform is a **multi-tenant marketplace**: vehicles live in `vehicles/{id}` with a rich nested `VehicleSchema`, public listing pages are SSR-rendered in Astro, and interactive buyer features are React islands. **Auth, seller routing, and a dashboard shell are implemented.** Inquiries display, listing editing, chat backend, and document upload API remain outstanding.
+The new platform is a **multi-tenant marketplace**: vehicles live in `vehicles/{id}` with a rich nested `VehicleSchema`, public listing pages are SSR-rendered in Astro, and interactive buyer features are React islands. **Auth, seller routing, inquiries, details editing, document uploads, and live chat (REST + polling) are implemented.** Gallery image management, listing creation, and production hardening remain outstanding.
 
 This document defines exactly how to port the dashboard without copying the old architecture wholesale. The central design shift is:
 
@@ -50,7 +48,7 @@ This document defines exactly how to port the dashboard without copying the old 
 | Initial data | `useEffect` + `fetch` on mount | Astro frontmatter fetches Firestore; passes props to islands |
 | Mutations | Client `fetch` with Firebase ID token | Same pattern via Astro API routes (`src/pages/api/…`) |
 | Listing model | Flat `TruckDetails` on one doc | Nested `Vehicle` per listing, scoped by `sellerId` |
-| Real-time chat | Socket.io on Express | **Not yet implemented** — requires an explicit architectural decision |
+| Real-time chat | Socket.io on Express | **REST + 3s polling** (Phase 4) — no Socket.io |
 
 ---
 
@@ -128,20 +126,22 @@ Firestore (already in use)
 | `GET /api/vehicles` | ✅ Public active listings |
 | `GET /api/users/[id]` | ✅ Public seller profile |
 | `ContactForm` island | ✅ Submits to `/api/inquiries` |
-| `ChatWidget` island | ⚠️ **UI only** — optimistic local state, no persistence or socket |
-| Firebase Admin (`src/lib/firebase-admin.ts`) | ✅ Firestore + `auth()` — **no Storage bucket helper yet** |
+| `ChatWidget` island | ✅ REST + polling (buyer) |
+| Firebase Admin (`src/lib/firebase-admin.ts`) | ✅ Firestore, Auth, Storage bucket |
 | Firebase Client (`src/lib/firebase-client.ts`) | ✅ Email/password auth |
 | Auth utilities (`src/lib/auth.ts`) | ✅ `requireSeller`, session cookie, `assertVehicleOwner` |
 | `POST /api/auth/session`, `POST /api/auth/logout` | ✅ Session cookie bridge for SSR |
 | `AuthForm` island | ✅ Sign in, create account, password visibility, confirm password |
 | `/login`, `/account` | ✅ Public login + protected account hub |
 | `/seller`, `/seller/vehicles/[vehicleId]` | ✅ Protected seller routes + ownership checks |
-| `SellerLayout`, `SellerVehicleShell` | ✅ Tab shell with Phase 2–4 placeholders |
+| `SellerLayout`, `SellerVehicleShell` | ✅ Tab shell with inquiries, details, chat |
+| `InquiriesPanel`, `DetailsEditor`, `DocumentUploadFields` | ✅ Ported (Phases 2–3) |
+| `ChatPanel`, message REST API | ✅ Ported (Phase 4) |
 | `AccountUidBanner` | ✅ UID display on `/account` and `/seller` |
 | Dev seed (`/api/dev/seed`) | ✅ `USER_ID` aligned to real Firebase Auth UID |
-| `SellerDashboard`, `InquiriesPanel`, `DetailsEditor`, `ChatPanel` | ❌ Not ported |
-| Message/chat collections API | ❌ Not implemented |
-| Document upload API | ❌ Not implemented |
+| Gallery image upload UI | ❌ Not implemented (Phase 5) |
+| `GET /api/health` | ❌ Not implemented (Phase 5) |
+| `/seller/new` AI listing wizard | ❌ Not implemented (Phase 6) |
 
 ### 1.3 Routing & Data-Fetching Translation
 
@@ -182,7 +182,7 @@ The old app depends on **Socket.io co-located with Express**. Astro API routes a
 | **C. Firestore `onSnapshot` listeners** | No Socket.io; fits Firebase stack | Read costs; seller/buyer listener auth rules |
 | **D. Defer chat to post-MVP** | Unblocks inquiries + details editor first | Feature gap vs old app |
 
-**Recommendation:** Phase 4 implements chat. Start Phases 1–3 without Socket.io. Wire `ChatWidget` (buyer) and `ChatPanel` (seller) once the message API + transport layer is chosen. Until then, ship dashboard tabs for **Inquiries** and **Details** only, with Chat tab showing a "coming soon" state or hidden.
+**Recommendation:** ✅ Implemented as REST + 3s polling (Phase 4). Socket.io deferred indefinitely unless latency requirements change.
 
 ---
 
@@ -399,14 +399,16 @@ All new routes live under `src/pages/api/`. Implement shared helpers first:
 
 | Old Express route | New Astro API route | Auth | Notes |
 |-------------------|---------------------|------|-------|
-| `GET /api/health` | `GET /api/health` | Public | Optional; useful for deploy probes — **Phase 5** |
+| `GET /api/health` | `GET /api/health` | Public | Deploy probes — **Phase 5** |
 | N/A (session bridge) | `POST /api/auth/session` | Public | ✅ Exchange Firebase ID token for `__session` httpOnly cookie |
 | N/A (logout) | `POST /api/auth/logout` | Public | ✅ Clear session cookie |
 | `GET /api/truck-details` | **Removed** | — | Replaced by SSR + `GET /api/seller/vehicles/[id]` — **Phase 3** |
 | `POST /api/truck-details` | `PATCH /api/seller/vehicles/[vehicleId]` | Seller | Partial update; Zod-validated body — **Phase 3** |
 | `POST /api/inquiries` | `POST /api/inquiries` | Public | ✅ Already exists |
 | `GET /api/admin/inquiries` | `GET /api/seller/inquiries` | Seller | Query params: `?vehicleId=` optional — **Phase 2** |
-| `POST /api/upload` | `POST /api/seller/uploads` | Seller | Multipart; requires Storage bucket — **Phase 3** |
+| `POST /api/seller/uploads` | `POST /api/seller/uploads` | Seller | Multipart; single file → document URL — **Phase 3** ✅ |
+| Gallery image upload | Extend uploads or `POST /api/seller/uploads/gallery` | Seller | Image-only; append to `images[]` — **Phase 5** |
+| `POST /api/seller/vehicles` | `POST /api/seller/vehicles` | Seller | Create draft listing from VIN wizard — **Phase 6** |
 | `GET /api/admin/conversations` | `GET /api/seller/conversations` | Seller | Requires `?vehicleId=` — **Phase 4** |
 | `GET /api/messages/:sessionId` | `GET /api/messages/[sessionId]` | Public* | *Scope to session — **Phase 4** |
 | `POST /api/admin/read/:sessionId` | `POST /api/seller/messages/[sessionId]/read` | Seller | Mark buyer messages read — **Phase 4** |
@@ -607,14 +609,16 @@ Implement bidirectional conversion:
 
 ### 4.4 Schemas NOT in `index.ts` Today (summary checklist)
 
-- [ ] `InquiryRecordSchema`
-- [ ] `VehicleFormStateSchema`
-- [ ] `VehicleDashboardUpdateSchema`
-- [ ] `MessageSchema`
-- [ ] `ConversationSchema`
-- [ ] `SocketMessageSchema`
-- [ ] `UploadResponseSchema`
-- [ ] `VehicleHighlightSchema` + extend `VehicleSchema` (if Option A chosen)
+- [x] `InquiryRecordSchema`
+- [x] `VehicleFormStateSchema`
+- [x] `VehicleDashboardUpdateSchema`
+- [x] `MessageSchema`
+- [x] `ConversationSchema`
+- [x] `MessageCreateSchema`
+- [x] `UploadResponseSchema`
+- [x] `VehicleHighlightSchema` + extend `VehicleSchema`
+- [ ] `VehicleCreateSchema` (Phase 6)
+- [ ] `GalleryImageUploadSchema` or extend `VehicleDashboardUpdateSchema` for `images[]` (Phase 5)
 
 ---
 
@@ -672,26 +676,26 @@ Execute in order. Each phase has entry criteria, deliverables, and acceptance ch
 
 **Goal:** Dashboard displays real inquiry data SSR'd from Firestore.
 
-**Status:** 🔜 **Next**
+**Status:** ✅ **Complete** (2026-07-04)
 
 **Entry criteria:** Phase 1 complete ✅
 
 **Tasks:**
 
-1. Add `InquiryRecordSchema` to `src/schemas/index.ts`.
-2. Implement `GET /api/seller/inquiries` with auth + optional `vehicleId` filter.
-3. Port `InquiriesPanel.tsx` to `src/islands/seller/InquiriesPanel.tsx`.
-4. Port `SellerDashboard.tsx` — wire Inquiries tab only; accept `initialInquiries` prop.
-5. In `[vehicleId].astro` frontmatter: query inquiries, pass props.
-6. Remove client `useEffect` fetch for inquiries.
+- [x] Add `InquiryRecordSchema` to `src/schemas/index.ts`.
+- [x] Implement `GET /api/seller/inquiries` with auth + optional `vehicleId` filter.
+- [x] Port `InquiriesPanel.tsx` to `src/islands/seller/InquiriesPanel.tsx`.
+- [x] Wire Inquiries tab in `SellerVehicleShell`; accept `initialInquiries` prop.
+- [x] In `[vehicleId].astro` frontmatter: query inquiries, pass props.
+- [x] Wire inquiry count badge in `SellerLayout`.
 
 **Deliverables:**
 - Inquiries tab shows seeded contact form submissions for the vehicle
 - Empty state matches old UI
 
 **Acceptance:**
-- Submitting via public `ContactForm` on `/vehicles/seed-ram-1500` appears in seller dashboard after refresh
-- Inquiry count badge in header reflects SSR data
+- [x] Submitting via public `ContactForm` on `/vehicles/seed-ram-1500` appears in seller dashboard after refresh
+- [x] Inquiry count badge in header reflects SSR data
 
 ---
 
@@ -699,30 +703,34 @@ Execute in order. Each phase has entry criteria, deliverables, and acceptance ch
 
 **Goal:** Seller can edit listing content and upload documents.
 
-**Entry criteria:** Phase 2 complete
+**Status:** ✅ **Complete** (2026-07-04)
+
+**Entry criteria:** Phase 2 complete ✅
 
 **Tasks:**
 
-1. Add `VehicleFormStateSchema`, `VehicleDashboardUpdateSchema`, `UploadResponseSchema`.
-2. Resolve highlight field gap (§4.2 Option A recommended).
-3. Create `src/lib/vehicle-form-mapper.ts` bidirectional mappers.
-4. Extend Firebase Admin with Storage bucket (`FIREBASE_STORAGE_BUCKET` env).
-5. Implement `PATCH /api/seller/vehicles/[vehicleId]`.
-6. Implement `POST /api/seller/uploads`.
-7. Port `DetailsEditor.tsx` and `DocumentUploadFields.tsx`.
-8. Create `src/lib/seller-api.ts` (`updateVehicle`, `uploadDocument`).
-9. SSR: map vehicle → `initialFormState` in Astro frontmatter.
-10. Verify public `/vehicles/[id]` reflects saved changes on reload.
+- [x] Add `VehicleFormStateSchema`, `VehicleDashboardUpdateSchema`, `UploadResponseSchema`.
+- [x] Resolve highlight field gap (§4.2 Option A — `VehicleHighlightSchema`).
+- [x] Create `src/lib/vehicle-form-mapper.ts` bidirectional mappers.
+- [x] Extend Firebase Admin with Storage bucket (`FIREBASE_STORAGE_BUCKET` env).
+- [x] Implement `PATCH /api/seller/vehicles/[vehicleId]`.
+- [x] Implement `POST /api/seller/uploads` (single-file PDF/image → document URL).
+- [x] Port `DetailsEditor.tsx` and `DocumentUploadFields.tsx`.
+- [x] Create `src/lib/seller-api.ts` (`updateVehicle`, `uploadDocument`).
+- [x] SSR: map vehicle → `initialFormState` in Astro frontmatter.
+- [x] Verify public `/vehicles/[id]` reflects saved changes on reload.
 
 **Deliverables:**
 - Full Details tab functional
 - Documents upload to Storage; URLs persist on vehicle doc
 
 **Acceptance:**
-- Changing price/mileage/seller's note text updates the public listing page
-- PDF upload ≤ 5 MB succeeds; document section renders on listing
-- Invalid payloads return 400 with Zod field errors
-- PATCH rejected if `sellerId` doesn't match token
+- [x] Changing price/mileage/seller's note text updates the public listing page
+- [x] PDF upload ≤ 5 MB succeeds; document section renders on listing
+- [x] Invalid payloads return 400 with Zod field errors
+- [x] PATCH rejected if `sellerId` doesn't match token
+
+**Note:** Phase 3 uploads target **document fields** (`documents.*`) — one file at a time, URL written to a single form field. Phase 5 adds **gallery image arrays** (`images[]`, optionally `galleryPhotos[]`).
 
 ---
 
@@ -730,48 +738,118 @@ Execute in order. Each phase has entry criteria, deliverables, and acceptance ch
 
 **Goal:** Parity with old `ChatPanel` + `ChatWidget` messaging.
 
-**Entry criteria:** Phase 3 complete; transport decision made (§1.5)
+**Status:** ✅ **Complete** (2026-07-04)
+
+**Entry criteria:** Phase 3 complete ✅
+
+**Transport decision:** REST + 3s client polling (no Socket.io). See §1.5.
 
 **Tasks:**
 
-1. Add `MessageSchema`, `ConversationSchema`, `SocketMessageSchema`.
-2. Add `vehicleId` to all new messages (migration script for any legacy data optional).
-3. Deploy Firestore composite index: `messages` — `sessionId ASC, timestamp ASC`.
-4. Implement conversation + message REST endpoints (§3.2).
-5. Port `useSocket.ts` and `ChatPanel.tsx`; wire seller admin room with auth.
-6. Update `ChatWidget.tsx`: persist messages, connect socket, pass `vehicleId`.
-7. Hide or enable Chat tab based on transport readiness.
+- [x] Add `MessageSchema`, `ConversationSchema`, `MessageCreateSchema`.
+- [x] Add `vehicleId` to all new messages.
+- [x] Deploy Firestore composite indexes (`messages`, `inquiries`) — see `firestore.indexes.json`.
+- [x] Implement conversation + message REST endpoints (§3.2).
+- [x] Port `ChatPanel.tsx`; wire seller polling via `src/lib/chat-api.ts`.
+- [x] Update `ChatWidget.tsx`: persist messages, 3s polling, pass `vehicleId`.
+- [x] Buyer IP rate limiting on `POST /api/messages` (20/15min).
 
-**Deliverances:**
-- Buyer message appears in seller ChatPanel in real time
+**Deliverables:**
+- Buyer message appears in seller ChatPanel after poll cycle
 - Seller reply appears in buyer ChatWidget
-- Unread counts update; mark-read works
+- Unread counts update; batched mark-read works
 
 **Acceptance:**
-- End-to-end chat works across two browser sessions
-- Conversations scoped per `vehicleId` (seller with two listings sees separate inboxes)
+- [x] End-to-end chat works across two browser sessions
+- [x] Conversations scoped per `vehicleId` (seller with two listings sees separate inboxes)
 
 ---
 
 ### Phase 5 — Multi-Vehicle UX & Hardening
 
-**Goal:** Production-ready seller experience across listings.
+**Goal:** Production-ready seller experience across listings — gallery management, polished hub UI, and deploy confidence.
 
-**Entry criteria:** Phase 4 complete (or Phase 3 if chat deferred)
+**Status:** 🔜 **Next**
 
-**Tasks:**
+**Entry criteria:** Phase 4 complete ✅
 
-1. `/seller` vehicle picker UI (cards linking to `/seller/vehicles/[id]`). ✅ Done in Phase 1
-2. Optional: edit fields not in old dashboard (`images`, `specs`, `features`, `status`).
-3. Optional: market chart comparison point editor.
-4. Add `GET /api/health`.
-5. Rate-limit seller mutations if needed.
-6. Vitest/Playwright: login → view inquiries → save details smoke test.
-7. Document env vars and deploy steps in README.
+#### 5.1 Gallery Images Upload
+
+Phase 3's `POST /api/seller/uploads` returns a single public URL for **document** fields. Phase 5 extends this pattern to manage **ordered image arrays** on the vehicle record:
+
+| Target field | Schema | Phase 3 | Phase 5 |
+|--------------|--------|---------|---------|
+| `documents.windowSticker`, etc. | Single URL string | ✅ | — |
+| `images[]` | `z.array(httpHttpsUrl).min(1)` — hero carousel (max 3 on public page) | ❌ | ✅ |
+| `galleryPhotos[]` | `{ url, caption? }[]` — full gallery section | ❌ | Optional |
+
+**Implementation notes:**
+- Reuse `POST /api/seller/uploads` with a `purpose` FormData field (`document` | `gallery`) or add `POST /api/seller/uploads/gallery` if validation differs (image-only, no PDF).
+- Storage path: `vehicles/{vehicleId}/gallery/{timestamp}-{uuid}.{ext}` (tenant-isolated, distinct from `documents/`).
+- After upload, append URL to in-memory array; on save, PATCH `images` (and optionally `galleryPhotos`) via existing vehicle PATCH handler.
+- UI: multi-image drag/drop zone, thumbnail previews, reorder (drag handles), remove, set-as-hero (index 0).
+- Enforce schema limits: `images` max 3 for carousel; validate URLs before PATCH.
+- Public `/vehicles/[id]` already renders `ImageCarousel` and `Gallery` — no buyer-facing changes required beyond data.
+
+#### 5.2 Vehicle Picker UI (`/seller/index.astro`)
+
+Basic picker exists from Phase 1 (title, city, price, link). Phase 5 polishes the hub for sellers with multiple listings:
+
+- Thumbnail from `vehicle.images[0]` (fallback placeholder when empty).
+- Status badge (`draft` | `active` | `pending` | `sold`) with color coding.
+- Optional per-card metrics: inquiry count, unread message count (SSR or lightweight API).
+- Sort controls: newest, price, status.
+- Empty state CTA linking forward to Phase 6 `/seller/new` ("Create your first listing").
+- Responsive card grid (1 col mobile, 2 col tablet+).
+
+#### 5.3 Hardening & CI
+
+- Add `GET /api/health` for deploy probes.
+- GitHub Actions CI (`.github/workflows/ci.yml`): `npm run check` + `npm run build` on push/PR to `main`.
+- Optional: Vitest/Playwright smoke test (login → view inquiries → save details).
+- Document env vars and deploy steps in README.
+- Deploy Firestore indexes: `firebase deploy --only firestore:indexes`.
 
 **Acceptance:**
-- Seller with two seeded vehicles can manage each independently
-- CI smoke test passes
+- Seller with two seeded vehicles can upload, reorder, and remove gallery images per listing independently
+- `/seller` hub shows thumbnails and status at a glance
+- CI passes on every PR to `main`
+- Health endpoint returns 200
+
+---
+
+### Phase 6 — AI VIN Listing Generator
+
+**Goal:** Seller can create a new listing from a VIN with AI-assisted content generation.
+
+**Status:** Pending
+
+**Entry criteria:** Phase 5 complete (gallery + picker polish; CI green)
+
+**Route:** `src/pages/seller/new.astro` — protected; requires seller session.
+
+**High-level flow:**
+1. Seller enters VIN on `/seller/new`.
+2. Backend decodes VIN (NHTSA vPIC API or commercial decoder) → year, make, model, trim, specs.
+3. AI API generates draft listing content: description, seller's note blocks, highlights, suggested price range.
+4. Seller reviews/edits draft in a wizard or pre-filled Details editor.
+5. `POST /api/seller/vehicles` creates new `vehicles/{id}` doc with `sellerId`, `status: draft`.
+6. Redirect to `/seller/vehicles/{id}` for refinement (gallery upload, publish).
+
+**Tasks (draft):**
+1. Add `VehicleCreateSchema` and `POST /api/seller/vehicles` (create, not just PATCH).
+2. VIN decode integration (`src/lib/vin-decode.ts`).
+3. AI content generation service (`src/lib/ai-listing.ts`) — env: `OPENAI_API_KEY` or equivalent.
+4. Build `/seller/new` wizard UI (VIN input → preview → confirm).
+5. Wire "Create listing" CTA from `/seller` empty state and account hub.
+6. Rate-limit AI generation per seller (cost control).
+
+**Acceptance:**
+- Valid VIN produces a draft vehicle doc owned by the authenticated seller
+- AI-generated description is editable before publish
+- Invalid VIN shows clear error; no orphan Firestore docs
+
+**Out of scope for Phase 6 v1:** Automatic photo sourcing, payment, bulk import.
 
 ---
 
@@ -790,7 +868,9 @@ Consolidate from old `.env.example` and new platform needs:
 | `PUBLIC_FIREBASE_AUTH_DOMAIN` | Client Auth | **New** |
 | `PUBLIC_FIREBASE_PROJECT_ID` | Client Auth | **New** |
 | `PUBLIC_FIREBASE_APP_ID` | Client Auth | **New** |
-| `PUBLIC_SOCKET_URL` | Client socket | Phase 4, if separate service |
+| `PUBLIC_SOCKET_URL` | Client socket | Deferred — REST polling used instead |
+| `OPENAI_API_KEY` (or equivalent) | AI listing generator | Phase 6 |
+| `VIN_DECODE_API_URL` | VIN decoder | Phase 6 (optional if using NHTSA vPIC directly) |
 
 ---
 
@@ -824,33 +904,35 @@ Consolidate from old `.env.example` and new platform needs:
 ```
 src/
 ├── islands/
-│   ├── AuthForm.tsx                 ✅ (replaces SellerLogin)
-│   ├── SellerDashboard.tsx          ⬜ Phase 2
+│   ├── AuthForm.tsx                 ✅
 │   ├── seller/
 │   │   ├── SellerLayout.tsx         ✅
-│   │   ├── SellerVehicleShell.tsx   ✅ (placeholder tabs; replace in Phase 2)
-│   │   ├── ChatPanel.tsx            ⬜ Phase 4
-│   │   ├── InquiriesPanel.tsx       ⬜ Phase 2
-│   │   ├── DetailsEditor.tsx        ⬜ Phase 3
-│   │   └── DocumentUploadFields.tsx ⬜ Phase 3
-│   ├── hooks/
-│   │   └── useSocket.ts             ⬜ Phase 4
+│   │   ├── SellerVehicleShell.tsx   ✅
+│   │   ├── ChatPanel.tsx            ✅ Phase 4
+│   │   ├── InquiriesPanel.tsx       ✅ Phase 2
+│   │   ├── DetailsEditor.tsx        ✅ Phase 3
+│   │   ├── DocumentUploadFields.tsx ✅ Phase 3
+│   │   └── GalleryUploadFields.tsx  ⬜ Phase 5
 │   └── types.ts
 ├── components/
 │   └── AccountUidBanner.astro       ✅
 ├── lib/
 │   ├── auth.ts                      ✅
 │   ├── firebase-client.ts           ✅
-│   ├── firebase-admin.ts            ✅ auth(); Storage ⬜ Phase 3
-│   ├── seller-api.ts                ⬜ Phase 3
-│   └── vehicle-form-mapper.ts       ⬜ Phase 3
+│   ├── firebase-admin.ts            ✅ Firestore + Auth + Storage
+│   ├── seller-api.ts                ✅
+│   ├── chat-api.ts                  ✅ Phase 4
+│   ├── vehicle-form-mapper.ts       ✅
+│   ├── vin-decode.ts                ⬜ Phase 6
+│   └── ai-listing.ts                ⬜ Phase 6
 ├── pages/
 │   ├── login.astro                  ✅
 │   ├── account/
 │   │   └── index.astro              ✅
 │   ├── seller/
 │   │   ├── login.astro              ✅ (301 → /login)
-│   │   ├── index.astro              ✅
+│   │   ├── index.astro              ✅ (picker polish ⬜ Phase 5)
+│   │   ├── new.astro                ⬜ Phase 6
 │   │   └── vehicles/
 │   │       └── [vehicleId].astro    ✅
 │   └── api/
@@ -859,19 +941,23 @@ src/
 │       │   └── logout.ts            ✅
 │       ├── health.ts                ⬜ Phase 5
 │       ├── messages/
-│       │   └── [sessionId].ts       ⬜ Phase 4
+│       │   ├── index.ts             ✅ Phase 4
+│       │   └── [sessionId].ts       ✅ Phase 4
 │       └── seller/
-│           ├── inquiries.ts         ⬜ Phase 2
-│           ├── uploads.ts           ⬜ Phase 3
-│           ├── conversations.ts     ⬜ Phase 4
+│           ├── inquiries.ts         ✅ Phase 2
+│           ├── uploads.ts           ✅ Phase 3
+│           ├── conversations.ts     ✅ Phase 4
 │           ├── vehicles/
-│           │   ├── index.ts
-│           │   └── [vehicleId].ts   ⬜ Phase 3
+│           │   ├── index.ts         ⬜ Phase 6 (POST create)
+│           │   └── [vehicleId].ts   ✅ Phase 3 (PATCH)
 │           └── messages/
 │               └── [sessionId]/
-│                   └── read.ts      ⬜ Phase 4
+│                   └── read.ts      ✅ Phase 4
 └── schemas/
-    └── index.ts                     ⬜ InquiryRecordSchema Phase 2; form schemas Phase 3
+    └── index.ts                     ✅ Phases 2–4 schemas
+.github/
+└── workflows/
+    └── ci.yml                       ✅ Phase 5
 ```
 
 ---
@@ -882,6 +968,7 @@ src/
 |---------|------|---------|
 | 1.0 | 2026-07-04 | Initial migration blueprint from 2017RAM1500 analysis |
 | 1.1 | 2026-07-04 | Phase 1 complete; unified marketplace auth (`/login`, `/account`, `AuthForm`, `/api/auth/*`); seed UID alignment; Phase 2 marked as next |
+| 1.2 | 2026-07-04 | Phases 2–4 complete; Phase 5 expanded (gallery uploads, vehicle picker polish, CI); Phase 6 AI VIN listing generator added |
 
 ---
 
