@@ -9,9 +9,15 @@ import {
 } from '../../../lib/auth';
 import { db } from '../../../lib/firebase-admin';
 import { mapMessageDoc } from '../../../lib/messages';
+import { checkRateLimit, getClientIp } from '../../../lib/rate-limit';
 import { MessageCreateSchema, VehicleResponseSchema } from '../../../schemas';
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+const MESSAGE_RATE_LIMIT = {
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+};
+
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   try {
     let body: unknown;
     try {
@@ -36,6 +42,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     const { sessionId, vehicleId, sender, content } = parsed.data;
+
+    if (sender === 'buyer') {
+      const clientIp = getClientIp(request, clientAddress);
+      const rateLimit = checkRateLimit(`messages:${clientIp}`, MESSAGE_RATE_LIMIT);
+
+      if (!rateLimit.allowed) {
+        const retryAfterSeconds = Math.ceil(
+          (rateLimit.retryAfterMs ?? MESSAGE_RATE_LIMIT.windowMs) / 1000
+        );
+        return new Response(
+          JSON.stringify({ error: 'Too many messages. Please try again later.' }),
+          {
+            status: 429,
+            headers: {
+              'Content-Type': 'application/json',
+              'Retry-After': String(retryAfterSeconds),
+            },
+          }
+        );
+      }
+    }
 
     const vehicleDoc = await db().collection('vehicles').doc(vehicleId).get();
 

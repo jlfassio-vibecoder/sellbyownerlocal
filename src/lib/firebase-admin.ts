@@ -2,11 +2,13 @@ import './load-env';
 import { initializeApp, applicationDefault, cert, getApps, type App } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { getStorage, type Bucket } from 'firebase-admin/storage';
+import { getStorage } from 'firebase-admin/storage';
+
+type AdminBucket = ReturnType<ReturnType<typeof getStorage>['bucket']>;
 
 let db: Firestore | undefined;
 let adminAuth: Auth | undefined;
-let bucket: Bucket | undefined;
+let bucket: AdminBucket | undefined;
 
 function resolveStorageBucket(projectId?: string): string {
   const storageBucket =
@@ -67,7 +69,7 @@ export function auth(): Auth {
   return adminAuth;
 }
 
-export function storageBucket(): Bucket {
+export function storageBucket(): AdminBucket {
   if (!bucket) {
     const app = initAdmin();
     const projectId = process.env.FIREBASE_PROJECT_ID;
