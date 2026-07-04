@@ -13,13 +13,13 @@ import '../../styles/global.css';
 const { id } = Astro.params;
 
 if (!id) {
-  return new Response(null, { status: 404, statusText: 'Not found' });
+  return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
 }
 
 const doc = await db().collection('vehicles').doc(id).get();
 
 if (!doc.exists) {
-  return new Response(null, { status: 404, statusText: 'Not found' });
+  return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
 }
 
 const parsed = VehicleResponseSchema.safeParse({ id: doc.id, ...doc.data() });
@@ -28,7 +28,7 @@ if (!parsed.success) {
   if (import.meta.env.DEV) {
     console.error(`Vehicle ${id} failed validation:`, parsed.error.flatten());
   }
-  return new Response(null, { status: 404, statusText: 'Not found' });
+  return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
 }
 
 const vehicle = parsed.data;
@@ -191,7 +191,7 @@ for (const doc of otherDocuments) {
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
-    <meta name="description" content={vehicle.description} />
+    <meta name="description" content={descriptionExcerpt} />
     <title>{pageTitle} · Sell By Owner Local</title>
   </head>
   <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">

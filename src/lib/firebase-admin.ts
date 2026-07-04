@@ -1,4 +1,4 @@
-import './load-env.ts';
+import './load-env';
 import { initializeApp, applicationDefault, cert, getApps, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 

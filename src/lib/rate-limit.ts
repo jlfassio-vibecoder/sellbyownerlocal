@@ -19,46 +19,37 @@ interface RateLimitResult {
 
 const store = new Map<string, RateLimitEntry>();
 
-function pruneStaleEntries(now: number, windowMs: number) {
-  const cutoff = now - windowMs;
-  for (const [key, entry] of store) {
-    entry.timestamps = entry.timestamps.filter((ts) => ts > cutoff);
-    if (entry.timestamps.length === 0) {
-      store.delete(key);
-    }
-  }
-}
-
 export function checkRateLimit(key: string, options: RateLimitOptions): RateLimitResult {
   const now = Date.now();
   const { windowMs, max } = options;
   const cutoff = now - windowMs;
 
-  pruneStaleEntries(now, windowMs);
+  const existing = store.get(key);
+  const timestamps = (existing?.timestamps ?? []).filter((ts) => ts > cutoff);
 
-  const entry = store.get(key) ?? { timestamps: [] };
-  entry.timestamps = entry.timestamps.filter((ts) => ts > cutoff);
-
-  if (entry.timestamps.length >= max) {
-    const oldestInWindow = entry.timestamps[0]!;
-    store.set(key, entry);
+  if (timestamps.length >= max) {
+    const oldestInWindow = timestamps[0]!;
+    store.set(key, { timestamps });
     return {
       allowed: false,
       retryAfterMs: oldestInWindow + windowMs - now,
     };
   }
 
-  entry.timestamps.push(now);
-  store.set(key, entry);
+  timestamps.push(now);
+  store.set(key, { timestamps });
+
   return { allowed: true };
 }
 
 export function getClientIp(request: Request, clientAddress?: string): string {
   if (clientAddress) return clientAddress;
 
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    return forwarded.split(',')[0]!.trim();
+  if (process.env.TRUST_PROXY === 'true') {
+    const forwarded = request.headers.get('x-forwarded-for');
+    if (forwarded) {
+      return forwarded.split(',')[0]!.trim();
+    }
   }
 
   return 'unknown';

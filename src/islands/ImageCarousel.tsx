@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 interface ImageCarouselProps {
@@ -21,15 +21,24 @@ export default function ImageCarousel({ images, altPrefix = 'Vehicle image' }: I
     [images, altPrefix]
   );
 
+  useEffect(() => {
+    if (!modalOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [modalOpen]);
+
   const openModal = (index: number) => {
     setCurrentIndex(index);
     setModalOpen(true);
-    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     setModalOpen(false);
-    document.body.style.overflow = 'auto';
   };
 
   const nextImage = (e?: React.MouseEvent) => {
@@ -55,10 +64,12 @@ export default function ImageCarousel({ images, altPrefix = 'Vehicle image' }: I
       <div className="relative">
         <div className="hide-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:px-6 lg:px-8">
           {gallery.map((img, index) => (
-            <div
+            <button
               key={img.id}
-              className="h-32 w-32 flex-none cursor-pointer snap-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm transition-opacity hover:opacity-90 md:h-48 md:w-48"
+              type="button"
+              className="h-32 w-32 flex-none cursor-pointer snap-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100 p-0 shadow-sm transition-opacity hover:opacity-90 md:h-48 md:w-48"
               onClick={() => openModal(index)}
+              aria-label={`Open ${img.alt}`}
             >
               <img
                 src={img.thumb}
@@ -66,7 +77,7 @@ export default function ImageCarousel({ images, altPrefix = 'Vehicle image' }: I
                 className="h-full w-full object-cover"
                 loading="lazy"
               />
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -74,6 +85,7 @@ export default function ImageCarousel({ images, altPrefix = 'Vehicle image' }: I
       {modalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-sm">
           <button
+            type="button"
             onClick={closeModal}
             className="absolute top-6 right-6 z-10 rounded-full bg-black/50 p-2 text-white transition-colors hover:bg-black/80"
             aria-label="Close modal"
@@ -82,6 +94,7 @@ export default function ImageCarousel({ images, altPrefix = 'Vehicle image' }: I
           </button>
 
           <button
+            type="button"
             onClick={prevImage}
             className="absolute left-4 z-10 rounded-full bg-black/50 p-3 text-white transition-colors hover:bg-black/80 md:left-8"
             aria-label="Previous image"
@@ -90,6 +103,7 @@ export default function ImageCarousel({ images, altPrefix = 'Vehicle image' }: I
           </button>
 
           <button
+            type="button"
             onClick={nextImage}
             className="absolute right-4 z-10 rounded-full bg-black/50 p-3 text-white transition-colors hover:bg-black/80 md:right-8"
             aria-label="Next image"

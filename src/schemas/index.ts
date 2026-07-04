@@ -1,5 +1,29 @@
 import { z } from 'zod';
 
+const parseableDateString = z
+  .string()
+  .min(1)
+  .refine((value) => !Number.isNaN(Date.parse(value)), { message: 'Invalid date' });
+
+const httpHttpsUrl = z.string().refine((value) => {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}, { message: 'URL must use http or https' });
+
+const documentUrl = z.string().refine((value) => {
+  if (value.startsWith('data:application/pdf')) return true;
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}, { message: 'Document URL must use http, https, or data:application/pdf' });
+
 export const UserStatsSchema = z.object({
   averageRating: z.number().min(0).max(5),
   itemsSold: z.number().int().nonnegative(),
@@ -26,15 +50,15 @@ export const VehicleSpecsSchema = z.object({
 });
 
 export const MaintenanceRecordSchema = z.object({
-  date: z.string().min(1),
+  date: parseableDateString,
   service: z.string().min(1),
 });
 
 export const VehicleDocumentsSchema = z.object({
-  windowSticker: z.string().url().optional(),
-  kbbReport: z.string().url().optional(),
-  carfaxReport: z.string().url().optional(),
-  smogReport: z.string().url().optional(),
+  windowSticker: documentUrl.optional(),
+  kbbReport: documentUrl.optional(),
+  carfaxReport: documentUrl.optional(),
+  smogReport: documentUrl.optional(),
 });
 
 export const WindowStickerLineItemSchema = z.object({
@@ -49,7 +73,7 @@ export const WindowStickerBreakdownSchema = z.object({
 });
 
 export const GalleryPhotoSchema = z.object({
-  url: z.string().url(),
+  url: httpHttpsUrl,
   category: z.string().min(1),
   caption: z.string().min(1),
   alt: z.string().min(1),
@@ -82,7 +106,7 @@ export const PitchBlockSchema = z.object({
   title: z.string().min(1),
   body: z.string().min(1),
   icon: z.string().optional(),
-  images: z.array(z.string().url()).max(3).optional(),
+  images: z.array(httpHttpsUrl).max(3).optional(),
 });
 
 export const SellersNoteSchema = z.object({
@@ -117,7 +141,7 @@ export const VehicleSchema = z.object({
   price: z.number().positive(),
   mileage: z.number().int().nonnegative(),
   description: z.string().min(1),
-  images: z.array(z.string().url()),
+  images: z.array(httpHttpsUrl),
   status: VehicleStatusSchema,
   sellerId: z.string().min(1),
   sellerName: z.string().min(1),
@@ -130,8 +154,8 @@ export const VehicleSchema = z.object({
   maintenance: z.array(MaintenanceRecordSchema).min(1),
   documents: VehicleDocumentsSchema.optional(),
   windowStickerBreakdown: WindowStickerBreakdownSchema.optional(),
-  videoUrl: z.string().url().optional(),
-  videoPosterUrl: z.string().url().optional(),
+  videoUrl: httpHttpsUrl.optional(),
+  videoPosterUrl: httpHttpsUrl.optional(),
   galleryPhotos: z.array(GalleryPhotoSchema).min(1).optional(),
   marketValuation: MarketValuationSchema.optional(),
   sellersNote: SellersNoteSchema.optional(),

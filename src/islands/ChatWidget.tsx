@@ -62,8 +62,10 @@ export default function ChatWidget({ vehicleId, sellerName }: ChatWidgetProps) {
                 Typically replies in 1hr
               </span>
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
                 className="ml-2 font-bold text-slate-400 transition-colors hover:text-slate-600"
+                aria-label="Close chat"
               >
                 ×
               </button>
@@ -132,8 +134,10 @@ export default function ChatWidget({ vehicleId, sellerName }: ChatWidgetProps) {
 
       {!isOpen && (
         <button
+          type="button"
           onClick={() => setIsOpen(true)}
           className="group flex items-center justify-center rounded-full bg-slate-900 p-4 text-white shadow-xl transition-all hover:-translate-y-1 hover:bg-slate-800"
+          aria-label="Open owner messaging"
         >
           <span className="text-xl transition-transform group-hover:scale-110">💬</span>
         </button>

@@ -27,7 +27,16 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       );
     }
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const parsed = InquirySchema.safeParse(body);
 
     if (!parsed.success) {

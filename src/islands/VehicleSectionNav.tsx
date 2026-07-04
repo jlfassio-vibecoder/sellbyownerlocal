@@ -26,26 +26,25 @@ export default function VehicleSectionNav({
   const [activeSection, setActiveSection] = useState('overview');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const sectionIds = sections.map((section) => section.id);
-  const desktopSections = sections.filter((section) =>
-    DESKTOP_SHORTCUT_IDS.includes(section.id)
-  );
-
   const updateActiveSection = useCallback(() => {
     const scrollPosition = window.scrollY + 100;
 
-    for (const sectionId of sectionIds) {
-      const el = document.getElementById(sectionId);
+    for (const section of sections) {
+      const el = document.getElementById(section.id);
       if (
         el &&
         el.offsetTop <= scrollPosition &&
         el.offsetTop + el.offsetHeight > scrollPosition
       ) {
-        setActiveSection(sectionId);
+        setActiveSection(section.id);
         return;
       }
     }
-  }, [sectionIds]);
+  }, [sections]);
+
+  const desktopSections = sections.filter((section) =>
+    DESKTOP_SHORTCUT_IDS.includes(section.id)
+  );
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -160,6 +159,8 @@ export default function VehicleSectionNav({
         className={`fixed top-0 right-0 z-50 h-full w-64 transform bg-slate-900 shadow-2xl transition-transform duration-300 ease-in-out ${
           isDrawerOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
+        aria-hidden={!isDrawerOpen}
+        inert={!isDrawerOpen}
       >
         <div className="flex h-full flex-col overflow-y-auto p-6">
           <div className="mb-8 flex justify-end">
