@@ -210,6 +210,27 @@ export const UploadResponseSchema = z.object({
   url: documentUrl,
 });
 
+export const MessageSchema = z.object({
+  id: z.string(),
+  sessionId: z.string().min(1).max(100),
+  vehicleId: z.string().min(1),
+  sender: z.enum(['buyer', 'seller']),
+  content: z.string().min(1).max(2000),
+  timestamp: z.string().datetime(),
+  isRead: z.number().int().min(0).max(1).optional(),
+});
+
+export const ConversationSchema = MessageSchema.extend({
+  unreadCount: z.number().int().nonnegative(),
+});
+
+export const MessageCreateSchema = z.object({
+  sessionId: z.string().min(1).max(100),
+  vehicleId: z.string().min(1),
+  sender: z.enum(['buyer', 'seller']),
+  content: z.string().min(1).max(2000),
+});
+
 export const VehicleSchema = z.object({
   year: z.number().int().min(1900),
   make: z.string().min(1),
@@ -264,5 +285,8 @@ export type VehicleHighlight = z.infer<typeof VehicleHighlightSchema>;
 export type VehicleFormState = z.infer<typeof VehicleFormStateSchema>;
 export type VehicleDashboardUpdate = z.infer<typeof VehicleDashboardUpdateSchema>;
 export type UploadResponse = z.infer<typeof UploadResponseSchema>;
+export type Message = z.infer<typeof MessageSchema>;
+export type Conversation = z.infer<typeof ConversationSchema>;
+export type MessageCreate = z.infer<typeof MessageCreateSchema>;
 export type UserResponse = z.infer<typeof UserResponseSchema>;
 export type VehicleResponse = z.infer<typeof VehicleResponseSchema>;

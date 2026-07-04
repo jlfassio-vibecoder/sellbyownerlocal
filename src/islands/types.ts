@@ -1,7 +1,1 @@
-export interface Message {
-  id: string;
-  sessionId: string;
-  sender: 'buyer' | 'seller';
-  content: string;
-  timestamp: string;
-}
+export type { Conversation, Message, MessageCreate } from '../schemas';

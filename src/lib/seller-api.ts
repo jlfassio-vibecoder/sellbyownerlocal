@@ -1,4 +1,4 @@
-import type { VehicleFormState } from '../schemas';
+import type { Conversation, VehicleFormState } from '../schemas';
 
 export class SellerApiError extends Error {
   readonly status: number;
@@ -47,4 +47,27 @@ export async function uploadDocument(vehicleId: string, file: File): Promise<str
 
   const data = (await res.json()) as { url: string };
   return data.url;
+}
+
+export async function getConversations(vehicleId: string): Promise<Conversation[]> {
+  const params = new URLSearchParams({ vehicleId });
+  const res = await fetch(`/api/seller/conversations?${params.toString()}`);
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
+
+  return (await res.json()) as Conversation[];
+}
+
+export async function markMessagesRead(sessionId: string, vehicleId: string): Promise<void> {
+  const params = new URLSearchParams({ vehicleId });
+  const res = await fetch(
+    `/api/seller/messages/${encodeURIComponent(sessionId)}/read?${params.toString()}`,
+    { method: 'POST' }
+  );
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
 }

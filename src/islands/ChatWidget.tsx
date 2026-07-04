@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { format } from 'date-fns';
-import type { Message } from './types';
+import { getSessionMessages, sendMessage } from '../lib/chat-api';
+import type { Message } from '../schemas';
 
 interface ChatWidgetProps {
   vehicleId: string;
   sellerName?: string;
 }
 
+const POLL_INTERVAL_MS = 3000;
+
 export default function ChatWidget({ vehicleId, sellerName }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [sessionId, setSessionId] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,25 +29,61 @@ export default function ChatWidget({ vehicleId, sellerName }: ChatWidgetProps) {
   }, [vehicleId]);
 
   useEffect(() => {
+    if (!isOpen || !sessionId) return;
+
+    let cancelled = false;
+
+    const fetchMessages = async () => {
+      try {
+        const data = await getSessionMessages(sessionId, vehicleId);
+        if (!cancelled) {
+          setMessages(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch messages', err);
+      }
+    };
+
+    fetchMessages();
+    const intervalId = window.setInterval(fetchMessages, POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [isOpen, sessionId, vehicleId]);
+
+  useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isOpen]);
 
-  const handleSendMessage = (e: FormEvent) => {
+  const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || !sessionId) return;
+    if (!inputValue.trim() || !sessionId || isSending) return;
 
-    const optimisticMessage: Message = {
-      id: crypto.randomUUID(),
-      sessionId,
-      sender: 'buyer',
-      content: inputValue.trim(),
-      timestamp: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, optimisticMessage]);
+    const content = inputValue.trim();
     setInputValue('');
+    setIsSending(true);
+
+    try {
+      const created = await sendMessage({
+        sessionId,
+        vehicleId,
+        sender: 'buyer',
+        content,
+      });
+      setMessages((prev) => {
+        if (prev.some((msg) => msg.id === created.id)) return prev;
+        return [...prev, created];
+      });
+    } catch (err) {
+      console.error('Failed to send message', err);
+      setInputValue(content);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const ownerLabel = sellerName ?? 'the owner';
@@ -115,11 +155,12 @@ export default function ChatWidget({ vehicleId, sellerName }: ChatWidgetProps) {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Type your message to the owner..."
-                className="w-full rounded-full border-none bg-slate-100 py-3 pr-12 pl-4 text-xs text-slate-700 transition-all outline-none focus:ring-2 focus:ring-red-600"
+                disabled={isSending}
+                className="w-full rounded-full border-none bg-slate-100 py-3 pr-12 pl-4 text-xs text-slate-700 transition-all outline-none focus:ring-2 focus:ring-red-600 disabled:opacity-60"
               />
               <button
                 type="submit"
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || isSending}
                 className="absolute right-2 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white transition-colors hover:bg-slate-800 disabled:opacity-50 disabled:hover:bg-slate-900"
               >
                 <span className="text-sm font-bold">➔</span>

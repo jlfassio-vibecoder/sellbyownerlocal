@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { InquiryRecord, VehicleFormState } from '../../schemas';
+import ChatPanel from './ChatPanel';
 import SellerLayout, { type SellerTab } from './SellerLayout';
 import DetailsEditor from './DetailsEditor';
 import InquiriesPanel from './InquiriesPanel';
@@ -11,10 +12,6 @@ interface SellerVehicleShellProps {
   initialFormState: VehicleFormState;
 }
 
-const TAB_PLACEHOLDERS: Partial<Record<SellerTab, string>> = {
-  messages: 'Live Chat — coming in Phase 4',
-};
-
 export default function SellerVehicleShell({
   vehicleId,
   vehicleTitle,
@@ -25,14 +22,12 @@ export default function SellerVehicleShell({
   const [formState, setFormState] = useState(initialFormState);
 
   const tabContent =
-    activeTab === 'inquiries' ? (
+    activeTab === 'messages' ? (
+      <ChatPanel vehicleId={vehicleId} vehicleTitle={vehicleTitle} />
+    ) : activeTab === 'inquiries' ? (
       <InquiriesPanel inquiries={initialInquiries} />
-    ) : activeTab === 'details' ? (
-      <DetailsEditor vehicleId={vehicleId} formState={formState} onChange={setFormState} />
     ) : (
-      <div className="flex-1 flex items-center justify-center bg-slate-50">
-        <p className="text-slate-500 text-sm">{TAB_PLACEHOLDERS[activeTab]}</p>
-      </div>
+      <DetailsEditor vehicleId={vehicleId} formState={formState} onChange={setFormState} />
     );
 
   return (
