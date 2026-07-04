@@ -1,17 +1,64 @@
 ---
+import { db } from '../lib/firebase-admin';
+import { VehicleResponseSchema } from '../schemas';
+import VehicleCard from '../components/VehicleCard.astro';
+import '../styles/global.css';
 
+const snapshot = await db()
+  .collection('vehicles')
+  .where('status', '==', 'active')
+  .get();
+
+const vehicles = snapshot.docs.flatMap((doc) => {
+  const parsed = VehicleResponseSchema.safeParse({ id: doc.id, ...doc.data() });
+  if (!parsed.success && import.meta.env.DEV) {
+    console.error(`Vehicle ${doc.id} skipped (validation failed):`, parsed.error.flatten());
+  }
+  return parsed.success ? [parsed.data] : [];
+});
 ---
 
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <meta
+      name="description"
+      content="Browse vehicles for sale by owner in your area. No dealer markup."
+    />
+    <title>Sell By Owner Local</title>
+  </head>
+  <body class="min-h-screen bg-gray-50 text-gray-900">
+    <header class="border-b border-gray-200 bg-white">
+      <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <h1 class="text-2xl font-bold">Sell By Owner Local</h1>
+        <p class="mt-1 text-sm text-gray-500">Vehicles listed directly by their owners</p>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      {
+        vehicles.length > 0 ? (
+          <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {vehicles.map((vehicle) => (
+              <VehicleCard vehicle={vehicle} />
+            ))}
+          </div>
+        ) : (
+          <div class="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
+            <p class="text-lg font-medium text-gray-700">No vehicles listed yet</p>
+            <p class="mt-2 text-sm text-gray-500">
+              In development, seed sample data by visiting{' '}
+              <a href="/api/dev/seed" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs underline">
+                /api/dev/seed
+              </a>
+            </p>
+          </div>
+        )
+      }
+    </main>
+  </body>
 </html>
