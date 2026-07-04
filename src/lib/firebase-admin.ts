@@ -10,10 +10,11 @@ let db: Firestore | undefined;
 let adminAuth: Auth | undefined;
 let bucket: AdminBucket | undefined;
 
-function resolveStorageBucket(projectId?: string): string {
+function resolveStorageBucket(projectId?: string, serviceAccountBucket?: string): string {
   const storageBucket =
     process.env.FIREBASE_STORAGE_BUCKET ??
-    (projectId ? `${projectId}.firebasestorage.app` : undefined);
+    serviceAccountBucket ??
+    (projectId ? `${projectId}.appspot.com` : undefined);
 
   if (!storageBucket) {
     throw new Error(
@@ -31,11 +32,11 @@ function initAdmin(): App {
 
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-    const storageBucket = resolveStorageBucket(projectId ?? sa.project_id);
+    const storageBucket = resolveStorageBucket(projectId ?? sa.project_id, sa.storage_bucket);
     return initializeApp({
       credential: cert(sa),
       projectId: projectId ?? sa.project_id,
-      storageBucket: storageBucket ?? sa.storage_bucket,
+      storageBucket,
     });
   }
 

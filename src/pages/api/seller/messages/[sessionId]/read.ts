@@ -67,9 +67,14 @@ export const POST: APIRoute = async ({ request, cookies, params, url }) => {
       .where('sender', '==', 'buyer')
       .get();
 
-    await Promise.all(
-      snapshot.docs.map((messageDoc) => messageDoc.ref.update({ isRead: 1 }))
-    );
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < snapshot.docs.length; i += BATCH_SIZE) {
+      const batch = db().batch();
+      snapshot.docs.slice(i, i + BATCH_SIZE).forEach((messageDoc) => {
+        batch.update(messageDoc.ref, { isRead: 1 });
+      });
+      await batch.commit();
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

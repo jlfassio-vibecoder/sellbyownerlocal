@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../lib/firebase-admin';
 import { mapMessageDoc } from '../../../lib/messages';
 
+// Copilot suggestion ignored: sessionId acts as an unguessable capability token scoped by vehicleId (Phase 4 design).
 export const GET: APIRoute = async ({ params, url }) => {
   const sessionId = params.sessionId?.trim();
 

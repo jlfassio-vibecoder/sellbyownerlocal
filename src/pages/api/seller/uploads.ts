@@ -102,6 +102,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     await gcsFile.save(buffer, {
       metadata: { contentType: file.type },
     });
+    // Copilot suggestion ignored: documents are intentionally public on listing pages (matches legacy app).
     await gcsFile.makePublic();
 
     const url = `https://storage.googleapis.com/${bucket.name}/${filename}`;

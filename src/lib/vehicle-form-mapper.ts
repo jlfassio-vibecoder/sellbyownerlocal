@@ -208,10 +208,10 @@ export function formStateToVehiclePatch(
 
   const mechanicalIntro = optionalString(state.mechanicalIntegrityIntro).trim();
   const mechanicalItems = buildMechanicalItems(state);
-  if (mechanicalIntro || mechanicalItems.length > 0) {
+  if (mechanicalItems.length > 0) {
     patch.mechanicalIntegrity = {
       ...(mechanicalIntro ? { intro: mechanicalIntro } : {}),
-      ...(mechanicalItems.length > 0 ? { items: mechanicalItems } : {}),
+      items: mechanicalItems,
     };
   }
 
@@ -221,11 +221,8 @@ export function formStateToVehiclePatch(
   const marketThisTruck = optionalString(state.marketThisTruck).trim();
 
   if (
-    marketIntro ||
-    marketDealerReality ||
-    marketKbbValue ||
-    marketThisTruck ||
-    existing.marketValuation
+    existing.marketValuation &&
+    (marketIntro || marketDealerReality || marketKbbValue || marketThisTruck)
   ) {
     patch.marketValuation = {
       ...existing.marketValuation,
