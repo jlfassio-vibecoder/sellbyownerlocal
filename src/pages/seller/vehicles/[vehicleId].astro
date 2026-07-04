@@ -7,6 +7,7 @@ import {
   requireSellerOrRedirect,
 } from '../../../lib/auth';
 import { mapInquiryDoc } from '../../../lib/inquiries';
+import { vehicleToFormState } from '../../../lib/vehicle-form-mapper';
 import { VehicleResponseSchema } from '../../../schemas';
 import SellerVehicleShell from '../../../islands/seller/SellerVehicleShell';
 import '../../../styles/global.css';
@@ -44,6 +45,7 @@ try {
 
 const vehicle = parsed.data;
 const vehicleTitle = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+const initialFormState = vehicleToFormState(vehicle);
 
 const inquirySnapshot = await db()
   .collection('inquiries')
@@ -70,8 +72,10 @@ const initialInquiries = inquirySnapshot.docs.flatMap((doc) => {
   <body>
     <SellerVehicleShell
       client:load
+      vehicleId={vehicleId}
       vehicleTitle={vehicleTitle}
       initialInquiries={initialInquiries}
+      initialFormState={initialFormState}
     />
   </body>
 </html>

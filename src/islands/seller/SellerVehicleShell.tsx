@@ -1,27 +1,34 @@
 import { useState } from 'react';
-import type { InquiryRecord } from '../../schemas';
+import type { InquiryRecord, VehicleFormState } from '../../schemas';
 import SellerLayout, { type SellerTab } from './SellerLayout';
+import DetailsEditor from './DetailsEditor';
 import InquiriesPanel from './InquiriesPanel';
 
 interface SellerVehicleShellProps {
+  vehicleId: string;
   vehicleTitle: string;
   initialInquiries: InquiryRecord[];
+  initialFormState: VehicleFormState;
 }
 
 const TAB_PLACEHOLDERS: Partial<Record<SellerTab, string>> = {
   messages: 'Live Chat — coming in Phase 4',
-  details: 'Listing Details — coming in Phase 3',
 };
 
 export default function SellerVehicleShell({
+  vehicleId,
   vehicleTitle,
   initialInquiries,
+  initialFormState,
 }: SellerVehicleShellProps) {
   const [activeTab, setActiveTab] = useState<SellerTab>('messages');
+  const [formState, setFormState] = useState(initialFormState);
 
   const tabContent =
     activeTab === 'inquiries' ? (
       <InquiriesPanel inquiries={initialInquiries} />
+    ) : activeTab === 'details' ? (
+      <DetailsEditor vehicleId={vehicleId} formState={formState} onChange={setFormState} />
     ) : (
       <div className="flex-1 flex items-center justify-center bg-slate-50">
         <p className="text-slate-500 text-sm">{TAB_PLACEHOLDERS[activeTab]}</p>
