@@ -1,0 +1,90 @@
+---
+import { db } from '../../lib/firebase-admin';
+import { requireSellerOrRedirect } from '../../lib/auth';
+import { VehicleResponseSchema } from '../../schemas';
+import AccountUidBanner from '../../components/AccountUidBanner.astro';
+import '../../styles/global.css';
+
+const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
+if (seller instanceof Response) return seller;
+
+const snapshot = await db().collection('vehicles').where('sellerId', '==', seller.uid).get();
+
+const vehicles = snapshot.docs.flatMap((doc) => {
+  const parsed = VehicleResponseSchema.safeParse({ id: doc.id, ...doc.data() });
+  return parsed.success ? [parsed.data] : [];
+});
+
+if (vehicles.length === 1) {
+  return Astro.redirect(`/seller/vehicles/${vehicles[0]!.id}`);
+}
+
+const priceFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+});
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Your Listings · Sell By Owner Local</title>
+  </head>
+  <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+        <h1 class="text-2xl font-bold">Your Listings</h1>
+        <p class="mt-1 text-sm text-slate-500">Select a vehicle to manage</p>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+      <AccountUidBanner uid={seller.uid} />
+
+      {
+        vehicles.length === 0 ? (
+          <div class="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+            <p class="text-lg font-medium text-slate-700">No listings yet</p>
+            <p class="mt-2 text-sm text-slate-500">
+              Vehicles you own will appear here once they are linked to your account.
+            </p>
+            <a
+              href="/"
+              class="mt-6 inline-block text-sm font-semibold text-red-600 hover:text-red-700"
+            >
+              Browse public listings →
+            </a>
+          </div>
+        ) : (
+          <ul class="space-y-4">
+            {vehicles.map((vehicle) => (
+              <li>
+                <a
+                  href={`/seller/vehicles/${vehicle.id}`}
+                  class="block rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+                >
+                  <div class="flex items-center justify-between gap-4">
+                    <div>
+                      <h2 class="text-lg font-bold text-slate-900">
+                        {vehicle.year} {vehicle.make} {vehicle.model}
+                      </h2>
+                      <p class="mt-1 text-sm text-slate-500">{vehicle.location.city}</p>
+                    </div>
+                    <span class="text-lg font-semibold text-slate-900">
+                      {priceFormatter.format(vehicle.price)}
+                    </span>
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </main>
+  </body>
+</html>

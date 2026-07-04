@@ -1,0 +1,76 @@
+---
+import { requireSellerOrRedirect } from '../../lib/auth';
+import AccountUidBanner from '../../components/AccountUidBanner.astro';
+import '../../styles/global.css';
+
+const session = await requireSellerOrRedirect(Astro.request, Astro.cookies);
+if (session instanceof Response) return session;
+
+const displayEmail = session.email ?? 'Your account';
+const uid = session.uid;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Your Account · Sell By Owner Local</title>
+  </head>
+  <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
+    <header class="bg-slate-900 text-white">
+      <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <h1 class="text-2xl font-bold">{displayEmail}</h1>
+        <p class="mt-2 text-sm text-slate-400">Manage your marketplace account</p>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <AccountUidBanner uid={uid} />
+
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <a
+          href="/seller"
+          class="group block rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-slate-300 hover:shadow-md"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900 group-hover:text-red-600 transition-colors">
+                Seller Dashboard
+              </h2>
+              <p class="mt-2 text-sm text-slate-500">
+                Manage your vehicle listings and inquiries
+              </p>
+            </div>
+            <span class="text-red-600 text-xl shrink-0" aria-hidden="true">→</span>
+          </div>
+        </a>
+
+        <div
+          class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm opacity-60 cursor-not-allowed"
+          aria-disabled="true"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h2 class="text-lg font-bold text-slate-900">Saved Vehicles</h2>
+                <span class="bg-slate-100 text-slate-500 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                  Coming Soon
+                </span>
+              </div>
+              <p class="mt-2 text-sm text-slate-500">View cars you've favorited</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="mt-10 text-center">
+        <a href="/" class="text-sm font-semibold text-red-600 hover:text-red-700">
+          Browse listings →
+        </a>
+      </p>
+    </main>
+  </body>
+</html>

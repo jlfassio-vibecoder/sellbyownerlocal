@@ -1,0 +1,60 @@
+---
+import { db } from '../../../lib/firebase-admin';
+import {
+  assertVehicleOwner,
+  ForbiddenError,
+  forbiddenResponse,
+  requireSellerOrRedirect,
+} from '../../../lib/auth';
+import { VehicleResponseSchema } from '../../../schemas';
+import SellerVehicleShell from '../../../islands/seller/SellerVehicleShell';
+import '../../../styles/global.css';
+
+const { vehicleId } = Astro.params;
+
+if (!vehicleId) {
+  return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
+}
+
+const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
+if (seller instanceof Response) return seller;
+
+const doc = await db().collection('vehicles').doc(vehicleId).get();
+
+if (!doc.exists) {
+  return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
+}
+
+const raw = { id: doc.id, ...doc.data() };
+const parsed = VehicleResponseSchema.safeParse(raw);
+
+if (!parsed.success) {
+  return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
+}
+
+try {
+  assertVehicleOwner(seller.uid, parsed.data.sellerId);
+} catch (error) {
+  if (error instanceof ForbiddenError) {
+    return forbiddenResponse();
+  }
+  throw error;
+}
+
+const vehicle = parsed.data;
+const vehicleTitle = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{vehicleTitle} · Seller Dashboard</title>
+  </head>
+  <body>
+    <SellerVehicleShell client:load vehicleTitle={vehicleTitle} />
+  </body>
+</html>

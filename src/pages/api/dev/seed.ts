@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../lib/firebase-admin';
 import { UserSchema, VehicleSchema } from '../../../schemas';
 
-const USER_ID = 'seed-justin-f';
+const USER_ID = '4SDUnGT1TvhhAweUYFCL8MIsstG3';
 const VEHICLE_IDS = ['seed-ram-1500', 'seed-ford-f150'] as const;
 
 const RAM_WINDOW_STICKER_BREAKDOWN = {
