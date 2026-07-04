@@ -102,6 +102,11 @@ export const InquirySchema = z.object({
   message: z.string().max(2000).optional().or(z.literal('')),
 });
 
+export const InquiryRecordSchema = InquirySchema.extend({
+  id: z.string(),
+  timestamp: z.string().datetime(),
+});
+
 export const PitchBlockSchema = z.object({
   title: z.string().min(1),
   body: z.string().min(1),
@@ -177,6 +182,7 @@ export type GalleryPhoto = z.infer<typeof GalleryPhotoSchema>;
 export type MarketComparisonPoint = z.infer<typeof MarketComparisonPointSchema>;
 export type MarketValuation = z.infer<typeof MarketValuationSchema>;
 export type Inquiry = z.infer<typeof InquirySchema>;
+export type InquiryRecord = z.infer<typeof InquiryRecordSchema>;
 export type PitchBlock = z.infer<typeof PitchBlockSchema>;
 export type SellersNote = z.infer<typeof SellersNoteSchema>;
 export type MechanicalItem = z.infer<typeof MechanicalItemSchema>;

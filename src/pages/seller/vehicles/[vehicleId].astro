@@ -6,6 +6,7 @@ import {
   forbiddenResponse,
   requireSellerOrRedirect,
 } from '../../../lib/auth';
+import { mapInquiryDoc } from '../../../lib/inquiries';
 import { VehicleResponseSchema } from '../../../schemas';
 import SellerVehicleShell from '../../../islands/seller/SellerVehicleShell';
 import '../../../styles/global.css';
@@ -43,6 +44,18 @@ try {
 
 const vehicle = parsed.data;
 const vehicleTitle = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+
+const inquirySnapshot = await db()
+  .collection('inquiries')
+  .where('sellerId', '==', seller.uid)
+  .where('vehicleId', '==', vehicleId)
+  .orderBy('timestamp', 'desc')
+  .get();
+
+const initialInquiries = inquirySnapshot.docs.flatMap((doc) => {
+  const parsedInquiry = mapInquiryDoc(doc.id, doc.data() as Record<string, unknown>);
+  return parsedInquiry.success ? [parsedInquiry.data] : [];
+});
 ---
 
 <html lang="en">
@@ -55,6 +68,10 @@ const vehicleTitle = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
     <title>{vehicleTitle} · Seller Dashboard</title>
   </head>
   <body>
-    <SellerVehicleShell client:load vehicleTitle={vehicleTitle} />
+    <SellerVehicleShell
+      client:load
+      vehicleTitle={vehicleTitle}
+      initialInquiries={initialInquiries}
+    />
   </body>
 </html>
