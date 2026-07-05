@@ -11,7 +11,8 @@ import {
 import { db, storageBucket } from '../../../lib/firebase-admin';
 import { UploadResponseSchema, VehicleResponseSchema } from '../../../schemas';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_DOCUMENT_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_GALLERY_FILE_SIZE = 20 * 1024 * 1024;
 
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
@@ -27,6 +28,42 @@ const MIME_TO_EXT: Record<string, string> = {
   'image/webp': 'webp',
 };
 
+const GALLERY_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
+
+/** UBLA buckets reject per-object ACLs; public read must be set at bucket IAM instead. */
+function isUniformBucketLevelAccessError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/uniform bucket-level access/i.test(message)) {
+    return true;
+  }
+
+  const apiError = error as { code?: number; errors?: Array<{ message?: string; reason?: string }> };
+  if (apiError.code === 400) {
+    return (
+      apiError.errors?.some(
+        (entry) =>
+          /uniform bucket-level access/i.test(entry.message ?? '') ||
+          (entry.reason === 'invalid' && /access control/i.test(entry.message ?? ''))
+      ) ?? false
+    );
+  }
+
+  return false;
+}
+
+async function makeObjectPublicIfSupported(
+  gcsFile: ReturnType<ReturnType<typeof storageBucket>['file']>
+): Promise<void> {
+  try {
+    await gcsFile.makePublic();
+  } catch (error) {
+    if (isUniformBucketLevelAccessError(error)) {
+      return;
+    }
+    throw error;
+  }
+}
+
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const session = await requireSeller(request, cookies);
@@ -34,6 +71,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const formData = await request.formData();
     const file = formData.get('file');
     const vehicleId = formData.get('vehicleId');
+    const purposeRaw = formData.get('purpose');
+    const purpose = purposeRaw === 'gallery' ? 'gallery' : 'document';
 
     if (!(file instanceof File)) {
       return new Response(JSON.stringify({ error: 'No file provided' }), {
@@ -79,8 +118,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       throw error;
     }
 
-    if (file.size > MAX_FILE_SIZE) {
-      return new Response(JSON.stringify({ error: 'File size exceeds 5MB limit' }), {
+    const maxFileSize = purpose === 'gallery' ? MAX_GALLERY_FILE_SIZE : MAX_DOCUMENT_FILE_SIZE;
+    const maxFileSizeLabel = purpose === 'gallery' ? '20MB' : '5MB';
+
+    if (file.size > maxFileSize) {
+      return new Response(JSON.stringify({ error: `File size exceeds ${maxFileSizeLabel} limit` }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -93,8 +135,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
+    if (purpose === 'gallery' && !GALLERY_MIME_TYPES.has(file.type)) {
+      return new Response(
+        JSON.stringify({ error: 'Gallery uploads must be PNG, JPEG, or WebP images' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const ext = MIME_TO_EXT[file.type] ?? 'bin';
-    const filename = `vehicles/${trimmedVehicleId}/documents/${Date.now()}-${randomUUID()}.${ext}`;
+    const folder = purpose === 'gallery' ? 'gallery' : 'documents';
+    const filename = `vehicles/${trimmedVehicleId}/${folder}/${Date.now()}-${randomUUID()}.${ext}`;
     const bucket = storageBucket();
     const gcsFile = bucket.file(filename);
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -102,8 +152,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     await gcsFile.save(buffer, {
       metadata: { contentType: file.type },
     });
-    // Copilot suggestion ignored: documents are intentionally public on listing pages (matches legacy app).
-    await gcsFile.makePublic();
+    // Uploaded files are public on listing pages; UBLA buckets rely on bucket IAM instead of makePublic().
+    await makeObjectPublicIfSupported(gcsFile);
 
     const url = `https://storage.googleapis.com/${bucket.name}/${filename}`;
     const response = UploadResponseSchema.parse({ url });

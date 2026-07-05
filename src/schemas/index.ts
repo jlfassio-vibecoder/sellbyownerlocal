@@ -182,6 +182,7 @@ export const VehicleFormStateSchema = z.object({
   highlight4Text: optionalString,
   videoUrl: optionalString,
   videoPosterUrl: optionalString,
+  images: z.array(httpHttpsUrl).max(30).default([]),
 });
 
 export const VehicleDashboardUpdateSchema = z
@@ -203,6 +204,7 @@ export const VehicleDashboardUpdateSchema = z
       })
       .optional(),
     highlights: z.array(VehicleHighlightSchema).optional(),
+    images: z.array(httpHttpsUrl).max(30).optional(),
   })
   .strict();
 

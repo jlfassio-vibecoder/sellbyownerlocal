@@ -3,6 +3,7 @@ import { AlertCircle, CheckCircle, Save, Settings } from 'lucide-react';
 import { updateVehicle } from '../../lib/seller-api';
 import type { VehicleFormState } from '../../schemas';
 import DocumentUploadFields from './DocumentUploadFields';
+import GalleryUploadFields from './GalleryUploadFields';
 
 interface DetailsEditorProps {
   vehicleId: string;
@@ -370,6 +371,12 @@ export default function DetailsEditor({ vehicleId, formState, onChange }: Detail
                 </div>
               </div>
             </div>
+
+            <GalleryUploadFields
+              vehicleId={vehicleId}
+              images={formState.images}
+              onChange={(images) => setField('images', images)}
+            />
 
             <DocumentUploadFields
               vehicleId={vehicleId}

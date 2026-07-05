@@ -3,7 +3,6 @@ import { db } from '../../../lib/firebase-admin';
 import {
   assertVehicleOwner,
   ForbiddenError,
-  forbiddenResponse,
   requireSellerOrRedirect,
 } from '../../../lib/auth';
 import { mapInquiryDoc } from '../../../lib/inquiries';
@@ -38,7 +37,7 @@ try {
   assertVehicleOwner(seller.uid, parsed.data.sellerId);
 } catch (error) {
   if (error instanceof ForbiddenError) {
-    return forbiddenResponse();
+    return new Response('Forbidden', { status: 403, statusText: 'Forbidden' });
   }
   throw error;
 }
