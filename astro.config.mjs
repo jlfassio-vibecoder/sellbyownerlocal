@@ -9,6 +9,13 @@ import react from '@astrojs/react';
 export default defineConfig({
   output: 'server',
 
+  image: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'storage.googleapis.com' },
+      { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
+    ],
+  },
+
   adapter: node({
     mode: 'standalone',
   }),

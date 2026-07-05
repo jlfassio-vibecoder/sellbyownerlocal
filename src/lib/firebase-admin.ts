@@ -74,7 +74,15 @@ export function storageBucket(): AdminBucket {
   if (!bucket) {
     const app = initAdmin();
     const projectId = process.env.FIREBASE_PROJECT_ID;
-    const bucketName = resolveStorageBucket(projectId);
+    let serviceAccountBucket: string | undefined;
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+      try {
+        serviceAccountBucket = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON).storage_bucket;
+      } catch {
+        serviceAccountBucket = undefined;
+      }
+    }
+    const bucketName = resolveStorageBucket(projectId, serviceAccountBucket);
     bucket = getStorage(app).bucket(bucketName);
   }
   return bucket;

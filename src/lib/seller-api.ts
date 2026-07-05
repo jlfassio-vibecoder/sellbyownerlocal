@@ -31,10 +31,15 @@ export async function updateVehicle(
   }
 }
 
-export async function uploadDocument(vehicleId: string, file: File): Promise<string> {
+export async function uploadDocument(
+  vehicleId: string,
+  file: File,
+  purpose: 'document' | 'gallery' = 'document'
+): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('vehicleId', vehicleId);
+  formData.append('purpose', purpose);
 
   const res = await fetch('/api/seller/uploads', {
     method: 'POST',

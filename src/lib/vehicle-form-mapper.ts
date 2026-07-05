@@ -170,6 +170,7 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
     highlight4Text: highlights[3]?.text ?? '',
     videoUrl: vehicle.videoUrl ?? '',
     videoPosterUrl: vehicle.videoPosterUrl ?? '',
+    images: vehicle.images ?? [],
   };
 }
 
@@ -248,6 +249,12 @@ export function formStateToVehiclePatch(
 
   const videoPosterUrl = optionalString(state.videoPosterUrl).trim();
   if (videoPosterUrl) patch.videoPosterUrl = videoPosterUrl;
+
+  const images = state.images
+    .map((url) => url.trim())
+    .filter((url) => url.length > 0)
+    .slice(0, 30);
+  patch.images = images;
 
   return patch;
 }
