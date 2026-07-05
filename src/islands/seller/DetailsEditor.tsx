@@ -171,7 +171,11 @@ export default function DetailsEditor({ vehicleId, formState, onChange }: Detail
           <div className="flex-1 overflow-y-auto p-8">
             <div className="max-w-2xl mx-auto space-y-6">
               <div style={sectionStyle('basics')}>
-                <BasicsSection {...sectionProps} />
+                <BasicsSection
+                  {...sectionProps}
+                  vehicleId={vehicleId}
+                  onPopulate={(state) => reset(state)}
+                />
               </div>
               <div style={sectionStyle('overview')}>
                 <OverviewSection {...sectionProps} />

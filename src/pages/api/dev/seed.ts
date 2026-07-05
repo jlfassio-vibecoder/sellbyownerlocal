@@ -35,6 +35,47 @@ const RAM_WINDOW_STICKER_BREAKDOWN = {
   ],
 };
 
+const RAM_MONRONEY = {
+  baseMsrp: 44095,
+  destinationCharge: 1395,
+  totalMsrp: 59895,
+  options: [
+    {
+      label: 'Night Edition Package 26Q',
+      price: 395,
+      category: 'package' as const,
+      contents: ['Flat Black Badging', 'Black Painted Honeycomb Grille', '20-inch Black Wheels'],
+    },
+    {
+      label: 'Leather-Trimmed Bucket Seats',
+      price: 1545,
+      category: 'option' as const,
+    },
+    {
+      label: 'Ram Box® Cargo Management System',
+      price: 1295,
+      category: 'package' as const,
+    },
+    {
+      label: '4-Corner Air Suspension',
+      price: 1715,
+      category: 'option' as const,
+    },
+  ],
+  standardEquipment: [
+    {
+      category: 'Mechanical',
+      items: ['5.7L HEMI V8', '8-Speed Automatic', '4WD', 'Anti-Spin Differential'],
+    },
+    {
+      category: 'Interior',
+      items: ['Uconnect 8.4', 'Heated/Ventilated Front Seats', 'Dual-Zone Climate'],
+    },
+  ],
+  fuelEconomy: { city: 15, highway: 22, combined: 17 },
+  assembly: { plant: 'Warren', country: 'United States' },
+};
+
 const FORD_WINDOW_STICKER_BREAKDOWN = {
   totalMsrp: 52100,
   lineItems: [
@@ -228,6 +269,7 @@ async function runSeed() {
         videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
         videoPosterUrl: 'https://picsum.photos/seed/ramVideoPoster/1280/720',
         windowStickerBreakdown: RAM_WINDOW_STICKER_BREAKDOWN,
+        monroney: RAM_MONRONEY,
         galleryPhotos: [
           {
             url: 'https://picsum.photos/seed/ramGalleryExterior/800/600',

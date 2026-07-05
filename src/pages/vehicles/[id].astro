@@ -7,6 +7,7 @@ import Gallery from '../../islands/Gallery';
 import MarketChart from '../../islands/MarketChart';
 import ContactForm from '../../islands/ContactForm';
 import VehicleSectionNav from '../../islands/VehicleSectionNav';
+import WindowSticker from '../../islands/WindowSticker';
 import { Palette, Sofa, Cog, Gauge, Truck, Check, FileText, ShieldCheck, Download } from 'lucide-react';
 import '../../styles/global.css';
 
@@ -100,8 +101,9 @@ const availableDocuments = documentItems.flatMap((item) => {
 
 const windowStickerUrl = vehicle.documents?.windowSticker;
 const windowStickerBreakdown = vehicle.windowStickerBreakdown;
+const monroney = vehicle.monroney;
 const otherDocuments = availableDocuments.filter((doc) => doc.key !== 'windowSticker');
-const showWindowStickerSection = Boolean(windowStickerUrl || windowStickerBreakdown);
+const showWindowStickerSection = Boolean(windowStickerUrl || windowStickerBreakdown || monroney);
 const showDocumentsSection =
   showWindowStickerSection || otherDocuments.length > 0;
 
@@ -145,7 +147,8 @@ const primaryTag = vehicle.tags[0];
 const sellersNote = vehicle.sellersNote;
 const pitchSubtitle = sellersNote?.subtitle ?? pageTitle;
 const pitchIntro = sellersNote?.intro ?? vehicle.description;
-const originalMsrp = sellersNote?.originalMsrp ?? windowStickerBreakdown?.totalMsrp;
+const originalMsrp = sellersNote?.originalMsrp ?? monroney?.totalMsrp ?? windowStickerBreakdown?.totalMsrp;
+const heroImagePending = vehicle.aiGeneration?.status === 'text_complete' && !vehicle.images[0];
 const pitchBlocks = sellersNote?.blocks ?? [];
 const ctaButtonLabel =
   sellersNote?.ctaButtonLabel ?? 'Contact Seller to Schedule a Showing';
@@ -269,6 +272,10 @@ for (const doc of otherDocuments) {
                   alt={pageTitle}
                   class="absolute inset-0 h-full w-full object-cover"
                 />
+              ) : heroImagePending ? (
+                <div class="absolute inset-0 flex items-center justify-center bg-slate-100 text-sm text-slate-600">
+                  Hero image generating…
+                </div>
               ) : (
                 <div class="absolute inset-0 flex items-center justify-center text-sm text-slate-500">
                   No photo
@@ -669,13 +676,15 @@ for (const doc of otherDocuments) {
                     <p class="text-sm text-slate-500">Factory installed options and original MSRP.</p>
                   </div>
                   {
-                    windowStickerBreakdown && (
+                    (monroney || windowStickerBreakdown) && (
                       <div class="text-left md:text-right">
                         <span class="mb-1 block text-[10px] font-bold text-slate-400 uppercase">
                           Total Price
                         </span>
                         <span class="text-3xl font-bold text-slate-900">
-                          {priceFormatter.format(windowStickerBreakdown.totalMsrp)}
+                          {priceFormatter.format(
+                            monroney?.totalMsrp ?? windowStickerBreakdown!.totalMsrp
+                          )}
                         </span>
                       </div>
                     )
@@ -717,7 +726,19 @@ for (const doc of otherDocuments) {
                 }
 
                 {
-                  windowStickerBreakdown && (
+                  monroney && (
+                    <div class="mb-8">
+                      <WindowSticker
+                        monroney={monroney}
+                        vehicleTitle={pageTitle}
+                        vin={vehicle.vin}
+                      />
+                    </div>
+                  )
+                }
+
+                {
+                  windowStickerBreakdown && !monroney && (
                     <div class="grid grid-cols-1 gap-x-12 gap-y-2 text-sm md:grid-cols-2">
                       {windowStickerBreakdown.lineItems.map((item) => (
                         <div class="flex justify-between border-b border-slate-50 py-2">

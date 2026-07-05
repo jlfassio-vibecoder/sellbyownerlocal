@@ -72,6 +72,66 @@ export const WindowStickerBreakdownSchema = z.object({
   lineItems: z.array(WindowStickerLineItemSchema).min(1),
 });
 
+export const vinString = z
+  .string()
+  .length(17)
+  .regex(/^[A-HJ-NPR-Z0-9]{17}$/i, { message: 'Invalid VIN format' });
+
+export const MonroneyOptionSchema = z.object({
+  label: z.string().min(1),
+  price: z.number().nonnegative(),
+  category: z.enum(['package', 'option', 'fee']),
+  contents: z.array(z.string().min(1)).optional(),
+});
+
+export const MonroneyStandardEquipmentSchema = z.object({
+  category: z.string().min(1),
+  items: z.array(z.string().min(1)).min(1),
+});
+
+export const MonroneyFuelEconomySchema = z.object({
+  city: z.number().positive(),
+  highway: z.number().positive(),
+  combined: z.number().positive(),
+});
+
+export const MonroneyAssemblySchema = z.object({
+  plant: z.string().min(1),
+  country: z.string().min(1),
+});
+
+export const MonroneySchema = z.object({
+  baseMsrp: z.number().positive(),
+  destinationCharge: z.number().nonnegative(),
+  totalMsrp: z.number().positive(),
+  options: z.array(MonroneyOptionSchema),
+  standardEquipment: z.array(MonroneyStandardEquipmentSchema),
+  fuelEconomy: MonroneyFuelEconomySchema.optional(),
+  assembly: MonroneyAssemblySchema.optional(),
+});
+
+export const AiGenerationSchema = z.object({
+  status: z.enum(['text_complete', 'complete', 'failed']),
+  source: z.literal('vin'),
+  model: z.string().min(1),
+  generatedAt: z.string().datetime(),
+});
+
+export const DealerProspectSchema = z.object({
+  firstName: z.string().min(1).max(50),
+  lastName: z.string().min(1).max(50),
+});
+
+export const GenerateListingRequestSchema = z.object({
+  vin: vinString,
+  vehicleId: z.string().min(1).optional(),
+  prospect: DealerProspectSchema.optional(),
+});
+
+export const GenerateHeroImageRequestSchema = z.object({
+  vehicleId: z.string().min(1),
+});
+
 export const GalleryPhotoSchema = z.object({
   url: httpHttpsUrl,
   category: z.string().min(1),
@@ -209,6 +269,14 @@ export const VehicleFormStateSchema = z.object({
   images: z.array(httpHttpsUrl).max(30).default([]),
 });
 
+export const GenerateListingFormFieldsSchema = VehicleFormStateSchema.partial();
+
+export const GenerateListingResponseSchema = z.object({
+  vehicleId: z.string().min(1),
+  formFields: GenerateListingFormFieldsSchema,
+  monroney: MonroneySchema,
+});
+
 export const VehicleDashboardUpdateSchema = z
   .object({
     mileage: z.number().int().nonnegative().optional(),
@@ -262,7 +330,7 @@ export const VehicleSchema = z.object({
   sellerName: z.string().min(1),
   location: VehicleLocationSchema,
   tags: z.array(z.string()),
-  vin: z.string().min(1).optional(),
+  vin: vinString.optional(),
   createdAt: z.string().datetime(),
   specs: VehicleSpecsSchema,
   features: z.array(z.string().min(1)).min(1),
@@ -270,6 +338,9 @@ export const VehicleSchema = z.object({
   maintenance: z.array(MaintenanceRecordSchema).min(1),
   documents: VehicleDocumentsSchema.optional(),
   windowStickerBreakdown: WindowStickerBreakdownSchema.optional(),
+  monroney: MonroneySchema.optional(),
+  aiGeneration: AiGenerationSchema.optional(),
+  dealerProspect: DealerProspectSchema.optional(),
   videoUrl: httpHttpsUrl.optional(),
   videoPosterUrl: httpHttpsUrl.optional(),
   galleryPhotos: z.array(GalleryPhotoSchema).min(1).optional(),
@@ -289,6 +360,17 @@ export type MaintenanceRecord = z.infer<typeof MaintenanceRecordSchema>;
 export type VehicleDocuments = z.infer<typeof VehicleDocumentsSchema>;
 export type WindowStickerLineItem = z.infer<typeof WindowStickerLineItemSchema>;
 export type WindowStickerBreakdown = z.infer<typeof WindowStickerBreakdownSchema>;
+export type VinString = z.infer<typeof vinString>;
+export type MonroneyOption = z.infer<typeof MonroneyOptionSchema>;
+export type MonroneyStandardEquipment = z.infer<typeof MonroneyStandardEquipmentSchema>;
+export type MonroneyFuelEconomy = z.infer<typeof MonroneyFuelEconomySchema>;
+export type MonroneyAssembly = z.infer<typeof MonroneyAssemblySchema>;
+export type Monroney = z.infer<typeof MonroneySchema>;
+export type AiGeneration = z.infer<typeof AiGenerationSchema>;
+export type DealerProspect = z.infer<typeof DealerProspectSchema>;
+export type GenerateListingRequest = z.infer<typeof GenerateListingRequestSchema>;
+export type GenerateListingResponse = z.infer<typeof GenerateListingResponseSchema>;
+export type GenerateHeroImageRequest = z.infer<typeof GenerateHeroImageRequestSchema>;
 export type GalleryPhoto = z.infer<typeof GalleryPhotoSchema>;
 export type MarketComparable = z.infer<typeof MarketComparableSchema>;
 export type MarketValuation = z.infer<typeof MarketValuationSchema>;

@@ -1,10 +1,31 @@
 import type { DetailsSectionFormProps } from './form-section-types';
 import { INPUT_CLASS } from './form-section-types';
+import VinPopulateBar from './VinPopulateBar';
+import type { VehicleFormState } from '../../../schemas';
 
-export default function BasicsSection({ register }: DetailsSectionFormProps) {
+interface BasicsSectionProps extends DetailsSectionFormProps {
+  vehicleId?: string;
+  onPopulate?: (state: VehicleFormState) => void;
+}
+
+export default function BasicsSection({
+  register,
+  vehicleId,
+  watch,
+  onPopulate,
+}: BasicsSectionProps) {
+  const values = watch();
+
   return (
     <>
       <h2 className="text-2xl font-bold text-slate-900 mb-6">Basics</h2>
+      {vehicleId && onPopulate ? (
+        <VinPopulateBar
+          vehicleId={vehicleId}
+          currentValues={values}
+          onPopulated={onPopulate}
+        />
+      ) : null}
       <div className="space-y-6">
         <div>
           <label htmlFor="mileage" className="block text-sm font-medium text-slate-700 mb-2">
