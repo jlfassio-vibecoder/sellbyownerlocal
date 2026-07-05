@@ -1,4 +1,5 @@
 import type {
+  MarketValuation,
   PitchBlock,
   VehicleDashboardUpdate,
   VehicleFormState,
@@ -127,6 +128,73 @@ function buildDocuments(state: VehicleFormState) {
   return Object.keys(documents).length > 0 ? documents : undefined;
 }
 
+function sanitizeOptionalNumber(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === '' || Number.isNaN(value)) {
+    return undefined;
+  }
+  const num = Number(value);
+  return Number.isNaN(num) ? undefined : num;
+}
+
+function sanitizeComparable(
+  comparable: VehicleFormState['marketValuation']['comparables'][number]
+) {
+  const sourceUrl = optionalString(comparable.sourceUrl as string | undefined).trim();
+  return {
+    ...comparable,
+    year: sanitizeOptionalNumber(comparable.year),
+    mileage: sanitizeOptionalNumber(comparable.mileage),
+    price: sanitizeOptionalNumber(comparable.price) ?? 0,
+    sourceUrl: sourceUrl || undefined,
+  };
+}
+
+function emptyMarketValuation(): MarketValuation {
+  return {
+    contextText: '',
+    dealerRealityText: '',
+    kbbText: '',
+    justificationText: '',
+    comparables: [],
+  };
+}
+
+function buildMarketValuation(state: VehicleFormState): MarketValuation | undefined {
+  const mv = state.marketValuation ?? emptyMarketValuation();
+  const contextText = optionalString(mv.contextText).trim();
+  const dealerRealityText = optionalString(mv.dealerRealityText).trim();
+  const kbbText = optionalString(mv.kbbText).trim();
+  const justificationText = optionalString(mv.justificationText).trim();
+  const comparables = (mv.comparables ?? [])
+    .map(sanitizeComparable)
+    .filter((c) => c.label.trim() && c.price > 0)
+    .map((c) => ({
+      label: c.label.trim(),
+      price: c.price,
+      ...(c.mileage != null && c.mileage >= 0 ? { mileage: c.mileage } : {}),
+      ...(c.highlighted ? { highlighted: true } : {}),
+      ...(c.year != null && c.year > 0 ? { year: c.year } : {}),
+      ...(c.make?.trim() ? { make: c.make.trim() } : {}),
+      ...(c.model?.trim() ? { model: c.model.trim() } : {}),
+      ...(c.trim?.trim() ? { trim: c.trim.trim() } : {}),
+      ...(c.drivetrain?.trim() ? { drivetrain: c.drivetrain.trim() } : {}),
+      ...(c.color?.trim() ? { color: c.color.trim() } : {}),
+      ...(c.sourceUrl?.trim() ? { sourceUrl: c.sourceUrl.trim() } : {}),
+    }));
+
+  if (!contextText && !dealerRealityText && !kbbText && !justificationText && comparables.length === 0) {
+    return undefined;
+  }
+
+  return {
+    ...(contextText ? { contextText } : {}),
+    ...(dealerRealityText ? { dealerRealityText } : {}),
+    ...(kbbText ? { kbbText } : {}),
+    ...(justificationText ? { justificationText } : {}),
+    comparables,
+  };
+}
+
 export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
   const blocks = vehicle.sellersNote?.blocks ?? [];
   const mechanicalItems = vehicle.mechanicalIntegrity?.items ?? [];
@@ -156,10 +224,15 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
     mechanicalItem2Text: mechanicalItems[1]?.text ?? '',
     mechanicalItem3Title: mechanicalItems[2]?.title ?? '',
     mechanicalItem3Text: mechanicalItems[2]?.text ?? '',
-    marketValuationIntro: vehicle.marketValuation?.intro ?? '',
-    marketDealerReality: vehicle.marketValuation?.dealerReality ?? '',
-    marketKbbValue: vehicle.marketValuation?.kbbValue ?? '',
-    marketThisTruck: vehicle.marketValuation?.thisTruck ?? '',
+    marketValuation: vehicle.marketValuation
+      ? {
+          contextText: vehicle.marketValuation.contextText ?? '',
+          dealerRealityText: vehicle.marketValuation.dealerRealityText ?? '',
+          kbbText: vehicle.marketValuation.kbbText ?? '',
+          justificationText: vehicle.marketValuation.justificationText ?? '',
+          comparables: vehicle.marketValuation.comparables ?? [],
+        }
+      : emptyMarketValuation(),
     highlight1Title: highlights[0]?.title ?? '',
     highlight1Text: highlights[0]?.text ?? '',
     highlight2Title: highlights[1]?.title ?? '',
@@ -216,22 +289,9 @@ export function formStateToVehiclePatch(
     };
   }
 
-  const marketIntro = optionalString(state.marketValuationIntro).trim();
-  const marketDealerReality = optionalString(state.marketDealerReality).trim();
-  const marketKbbValue = optionalString(state.marketKbbValue).trim();
-  const marketThisTruck = optionalString(state.marketThisTruck).trim();
-
-  if (
-    existing.marketValuation &&
-    (marketIntro || marketDealerReality || marketKbbValue || marketThisTruck)
-  ) {
-    patch.marketValuation = {
-      ...existing.marketValuation,
-      ...(marketIntro ? { intro: marketIntro } : {}),
-      ...(marketDealerReality ? { dealerReality: marketDealerReality } : {}),
-      ...(marketKbbValue ? { kbbValue: marketKbbValue } : {}),
-      ...(marketThisTruck ? { thisTruck: marketThisTruck } : {}),
-    };
+  const marketValuation = buildMarketValuation(state);
+  if (marketValuation) {
+    patch.marketValuation = marketValuation;
   }
 
   const highlights = buildHighlights(state);

@@ -255,20 +255,63 @@ async function runSeed() {
           },
         ],
         marketValuation: {
-          intro:
+          contextText:
             'While algorithmic offers from dealers focus on wholesale turnover, a true market analysis illustrates the replacement cost for a vehicle of this specific configuration and condition. Finding an equivalent 2017 Ram 1500 Night Edition in Good to Excellent condition with roughly 85,000 miles is currently incredibly difficult, driving up its intrinsic value.',
-          dealerReality:
+          dealerRealityText:
             'Dealerships price these trucks at a premium, then frequently add mandatory documentation fees, prep fees, and taxes that drive the "out-the-door" cost even higher. Typical dealer retail for comparable Night Edition trucks runs $25,500 - $26,500+.',
-          kbbValue:
+          kbbText:
             'The specific target value based on mileage and standard options. The recognized fair market range is $22,552 - $24,752 for a private transaction in Good condition.',
-          thisTruck:
+          justificationText:
             "A fair, data-backed price that reflects the truck's pristine mechanical state and thousands in recent maintenance.",
-          comparisons: [
-            { name: 'Dealer (118k)', value: 24495 },
-            { name: 'This Truck (85k)', value: 42500, highlighted: true },
-            { name: 'Dealer (98k)', value: 24593 },
-            { name: 'Dealer (94k)', value: 25999 },
-            { name: 'Dealer (89k)', value: 29244 },
+          comparables: [
+            {
+              label: 'Dealer',
+              color: 'Gray',
+              sourceUrl: 'https://www.carmax.com/',
+              year: 2017,
+              make: 'RAM',
+              model: '1500',
+              trim: 'Big Horn',
+              drivetrain: '4WD',
+              mileage: 118000,
+              price: 24495,
+            },
+            {
+              label: 'Dealer',
+              color: 'Black',
+              sourceUrl: 'https://www.carvana.com/',
+              year: 2017,
+              make: 'RAM',
+              model: '1500',
+              trim: 'Night Edition',
+              drivetrain: '4WD',
+              mileage: 98000,
+              price: 24593,
+            },
+            {
+              label: 'Dealer',
+              color: 'Flame Red',
+              sourceUrl: 'https://www.autotrader.com/',
+              year: 2017,
+              make: 'RAM',
+              model: '1500',
+              trim: 'Night Edition',
+              drivetrain: '4WD',
+              mileage: 94000,
+              price: 25999,
+            },
+            {
+              label: 'Dealer',
+              color: 'White',
+              sourceUrl: 'https://www.cars.com/',
+              year: 2017,
+              make: 'RAM',
+              model: '1500',
+              trim: 'Laramie',
+              drivetrain: '4WD',
+              mileage: 89000,
+              price: 29244,
+            },
           ],
         },
         sellersNote: RAM_SELLERS_NOTE,
@@ -344,19 +387,51 @@ async function runSeed() {
           },
         ],
         marketValuation: {
-          intro:
+          contextText:
             'Market context for a well-maintained 2020 F-150 XLT SuperCrew with low miles. Private party pricing typically undercuts dealer retail while offering comparable equipment.',
-          dealerReality:
+          dealerRealityText:
             'Dealer listings for similar XLT SuperCrew 4x4 trucks commonly list at $40,000 - $42,000 before fees and add-ons.',
-          kbbValue:
+          kbbText:
             'KBB private party range for this configuration in Good condition is approximately $36,500 - $39,500.',
-          thisTruck:
+          justificationText:
             'Priced competitively for a private sale with documented maintenance and clean history.',
-          comparisons: [
-            { name: 'Dealer (52k mi)', value: 41500 },
-            { name: 'This Truck (42k)', value: 38900, highlighted: true },
-            { name: 'Dealer (38k mi)', value: 42900 },
-            { name: 'Dealer (45k mi)', value: 40200 },
+          comparables: [
+            {
+              label: 'Dealer',
+              color: 'Oxford White',
+              sourceUrl: 'https://www.carvana.com/',
+              year: 2020,
+              make: 'Ford',
+              model: 'F-150',
+              trim: 'XLT SuperCrew',
+              drivetrain: '4WD',
+              mileage: 52000,
+              price: 41500,
+            },
+            {
+              label: 'Dealer',
+              color: 'Agate Black',
+              sourceUrl: 'https://www.carmax.com/',
+              year: 2020,
+              make: 'Ford',
+              model: 'F-150',
+              trim: 'Lariat',
+              drivetrain: '4WD',
+              mileage: 38000,
+              price: 42900,
+            },
+            {
+              label: 'Dealer',
+              color: 'Blue Jeans',
+              sourceUrl: 'https://www.autotrader.com/',
+              year: 2019,
+              make: 'Ford',
+              model: 'F-150',
+              trim: 'XLT',
+              drivetrain: '4WD',
+              mileage: 45000,
+              price: 40200,
+            },
           ],
         },
         sellersNote: FORD_SELLERS_NOTE,

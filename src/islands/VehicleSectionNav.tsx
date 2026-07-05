@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu } from 'lucide-react';
+import MobileDrawer from './MobileDrawer';
 
 export interface NavSection {
   id: string;
@@ -57,25 +58,6 @@ export default function VehicleSectionNav({
     window.addEventListener('scroll', updateActiveSection);
     return () => window.removeEventListener('scroll', updateActiveSection);
   }, [updateActiveSection]);
-
-  useEffect(() => {
-    if (isDrawerOpen) {
-      const previousOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') {
-          setIsDrawerOpen(false);
-        }
-      };
-
-      window.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.body.style.overflow = previousOverflow;
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    }
-  }, [isDrawerOpen]);
 
   const subtitle = vin ? `VIN Verified: ${vin}` : (locationCity ?? '');
 
@@ -147,46 +129,20 @@ export default function VehicleSectionNav({
         </div>
       </nav>
 
-      {isDrawerOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity"
-          onClick={() => setIsDrawerOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      <div
-        className={`fixed top-0 right-0 z-50 h-full w-64 transform bg-slate-900 shadow-2xl transition-transform duration-300 ease-in-out ${
-          isDrawerOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
-        aria-hidden={!isDrawerOpen}
-        inert={!isDrawerOpen}
-      >
-        <div className="flex h-full flex-col overflow-y-auto p-6">
-          <div className="mb-8 flex justify-end">
+      <MobileDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)}>
+        <div className="flex flex-col space-y-6 text-sm font-medium">
+          {sections.map((section) => (
             <button
+              key={section.id}
               type="button"
-              onClick={() => setIsDrawerOpen(false)}
-              className="text-slate-400 transition-colors hover:text-white"
-              aria-label="Close menu"
+              onClick={() => scrollToSection(section.id)}
+              className={`text-left ${navLinkClass(section.id, false)}`}
             >
-              <X size={24} />
+              {section.label}
             </button>
-          </div>
-          <div className="flex flex-col space-y-6 text-sm font-medium">
-            {sections.map((section) => (
-              <button
-                key={section.id}
-                type="button"
-                onClick={() => scrollToSection(section.id)}
-                className={`text-left ${navLinkClass(section.id, false)}`}
-              >
-                {section.label}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
-      </div>
+      </MobileDrawer>
     </>
   );
 }
