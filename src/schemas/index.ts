@@ -79,18 +79,41 @@ export const GalleryPhotoSchema = z.object({
   alt: z.string().min(1),
 });
 
-export const MarketComparisonPointSchema = z.object({
-  name: z.string().min(1),
-  value: z.number().positive(),
+const optionalComparableNumber = z.preprocess(
+  (val) => (val === '' || val === null || Number.isNaN(val) ? undefined : Number(val)),
+  z.number().optional()
+);
+
+const comparablePrice = z.preprocess(
+  (val) => (val === '' || val === null || Number.isNaN(val) ? 0 : Number(val)),
+  z.number()
+);
+
+const optionalComparableSourceUrl = z.preprocess(
+  (val) => (val === '' || val === null ? undefined : val),
+  z.string().url().optional()
+);
+
+export const MarketComparableSchema = z.object({
+  label: z.string(),
+  mileage: optionalComparableNumber,
+  price: comparablePrice,
   highlighted: z.boolean().optional(),
+  year: optionalComparableNumber,
+  make: z.string().optional(),
+  model: z.string().optional(),
+  trim: z.string().optional(),
+  drivetrain: z.string().optional(),
+  color: z.string().optional(),
+  sourceUrl: optionalComparableSourceUrl,
 });
 
 export const MarketValuationSchema = z.object({
-  intro: z.string().optional(),
-  dealerReality: z.string().optional(),
-  kbbValue: z.string().optional(),
-  thisTruck: z.string().optional(),
-  comparisons: z.array(MarketComparisonPointSchema).min(2),
+  contextText: z.string().optional(),
+  dealerRealityText: z.string().optional(),
+  kbbText: z.string().optional(),
+  justificationText: z.string().optional(),
+  comparables: z.array(MarketComparableSchema).max(5).default([]),
 });
 
 export const InquirySchema = z.object({
@@ -168,10 +191,7 @@ export const VehicleFormStateSchema = z.object({
   mechanicalItem2Text: optionalString,
   mechanicalItem3Title: optionalString,
   mechanicalItem3Text: optionalString,
-  marketValuationIntro: optionalString,
-  marketDealerReality: optionalString,
-  marketKbbValue: optionalString,
-  marketThisTruck: optionalString,
+  marketValuation: MarketValuationSchema.default({ comparables: [] }),
   highlight1Title: optionalString,
   highlight1Text: optionalString,
   highlight2Title: optionalString,
@@ -194,15 +214,7 @@ export const VehicleDashboardUpdateSchema = z
     documents: VehicleDocumentsSchema.partial().optional(),
     sellersNote: SellersNoteSchema.partial().optional(),
     mechanicalIntegrity: MechanicalIntegritySchema.partial().optional(),
-    marketValuation: z
-      .object({
-        intro: z.string().optional(),
-        dealerReality: z.string().optional(),
-        kbbValue: z.string().optional(),
-        thisTruck: z.string().optional(),
-        comparisons: z.array(MarketComparisonPointSchema).min(2).optional(),
-      })
-      .optional(),
+    marketValuation: MarketValuationSchema.partial().optional(),
     highlights: z.array(VehicleHighlightSchema).optional(),
     images: z.array(httpHttpsUrl).max(30).optional(),
   })
@@ -274,7 +286,7 @@ export type VehicleDocuments = z.infer<typeof VehicleDocumentsSchema>;
 export type WindowStickerLineItem = z.infer<typeof WindowStickerLineItemSchema>;
 export type WindowStickerBreakdown = z.infer<typeof WindowStickerBreakdownSchema>;
 export type GalleryPhoto = z.infer<typeof GalleryPhotoSchema>;
-export type MarketComparisonPoint = z.infer<typeof MarketComparisonPointSchema>;
+export type MarketComparable = z.infer<typeof MarketComparableSchema>;
 export type MarketValuation = z.infer<typeof MarketValuationSchema>;
 export type Inquiry = z.infer<typeof InquirySchema>;
 export type InquiryRecord = z.infer<typeof InquiryRecordSchema>;
