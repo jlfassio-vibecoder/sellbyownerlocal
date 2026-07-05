@@ -170,7 +170,7 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
     highlight4Text: highlights[3]?.text ?? '',
     videoUrl: vehicle.videoUrl ?? '',
     videoPosterUrl: vehicle.videoPosterUrl ?? '',
-    images: vehicle.images ?? [],
+    images: (vehicle.images ?? []).slice(0, 30),
   };
 }
 

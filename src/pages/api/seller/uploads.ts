@@ -31,14 +31,33 @@ const MIME_TO_EXT: Record<string, string> = {
 const GALLERY_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 /** UBLA buckets reject per-object ACLs; public read must be set at bucket IAM instead. */
+function isUniformBucketLevelAccessError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/uniform bucket-level access/i.test(message)) {
+    return true;
+  }
+
+  const apiError = error as { code?: number; errors?: Array<{ message?: string; reason?: string }> };
+  if (apiError.code === 400) {
+    return (
+      apiError.errors?.some(
+        (entry) =>
+          /uniform bucket-level access/i.test(entry.message ?? '') ||
+          (entry.reason === 'invalid' && /access control/i.test(entry.message ?? ''))
+      ) ?? false
+    );
+  }
+
+  return false;
+}
+
 async function makeObjectPublicIfSupported(
   gcsFile: ReturnType<ReturnType<typeof storageBucket>['file']>
 ): Promise<void> {
   try {
     await gcsFile.makePublic();
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.includes('uniform bucket-level access')) {
+    if (isUniformBucketLevelAccessError(error)) {
       return;
     }
     throw error;
@@ -133,7 +152,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     await gcsFile.save(buffer, {
       metadata: { contentType: file.type },
     });
-    // Copilot suggestion ignored: documents are intentionally public on listing pages (matches legacy app).
+    // Uploaded files are public on listing pages; UBLA buckets rely on bucket IAM instead of makePublic().
     await makeObjectPublicIfSupported(gcsFile);
 
     const url = `https://storage.googleapis.com/${bucket.name}/${filename}`;

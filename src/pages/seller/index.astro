@@ -41,6 +41,8 @@ const statusLabels: Record<VehicleResponse['status'], string> = {
 };
 
 const OPTIMIZED_IMAGE_HOSTS = new Set(['storage.googleapis.com', 'firebasestorage.googleapis.com']);
+const HERO_THUMB_WIDTH = 400;
+const HERO_THUMB_HEIGHT = 300;
 
 function isOptimizableImageUrl(url: string): boolean {
   try {
@@ -117,13 +119,18 @@ function isOptimizableImageUrl(url: string): boolean {
                       <Image
                         src={heroImage}
                         alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                        inferSize
+                        width={HERO_THUMB_WIDTH}
+                        height={HERO_THUMB_HEIGHT}
                         class="aspect-[4/3] w-full object-cover"
                       />
                     ) : heroImage ? (
                       <img
                         src={heroImage}
                         alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                        width={HERO_THUMB_WIDTH}
+                        height={HERO_THUMB_HEIGHT}
+                        loading="lazy"
+                        decoding="async"
                         class="aspect-[4/3] w-full object-cover"
                       />
                     ) : (

@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Loader2, Upload, X } from 'lucide-react';
 import { uploadDocument } from '../../lib/seller-api';
 
@@ -17,11 +17,16 @@ export default function GalleryUploadFields({
   onChange,
 }: GalleryUploadFieldsProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imagesRef = useRef(images);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
 
   const handleRemove = (index: number) => {
     onChange(images.filter((_, i) => i !== index));
@@ -56,7 +61,7 @@ export default function GalleryUploadFields({
     const files = Array.from(fileList);
     if (files.length === 0) return;
 
-    const remaining = MAX_IMAGES - images.length;
+    const remaining = MAX_IMAGES - imagesRef.current.length;
     if (remaining <= 0) {
       setError(`Maximum of ${MAX_IMAGES} gallery images allowed.`);
       return;
@@ -100,7 +105,9 @@ export default function GalleryUploadFields({
       }
 
       if (uploadedUrls.length > 0) {
-        onChange([...images, ...uploadedUrls]);
+        const merged = [...imagesRef.current, ...uploadedUrls].slice(0, MAX_IMAGES);
+        imagesRef.current = merged;
+        onChange(merged);
       }
 
       if (errors.length > 0) {
