@@ -86,6 +86,7 @@ function ChartTooltipContent({
 
 function buildChartData(price: number, mileage: number, valuation: MarketValuation): ChartBar[] {
   const dealerBars: ChartBar[] = valuation.comparables
+    // Copilot suggestion ignored: highlighted comparables are legacy listing duplicates; the seller listing bar is appended separately from vehicle price/mileage.
     .filter((point) => !point.highlighted)
     .map((point) => ({
       name: formatComparableLabel(point),

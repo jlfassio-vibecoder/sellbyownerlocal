@@ -80,18 +80,22 @@ export const GalleryPhotoSchema = z.object({
 });
 
 const optionalComparableNumber = z.preprocess(
-  (val) => (val === '' || val === null || Number.isNaN(val) ? undefined : Number(val)),
+  (val) =>
+    val === '' || val === null || val === undefined || Number.isNaN(val)
+      ? undefined
+      : Number(val),
   z.number().optional()
 );
 
 const comparablePrice = z.preprocess(
-  (val) => (val === '' || val === null || Number.isNaN(val) ? 0 : Number(val)),
+  (val) =>
+    val === '' || val === null || val === undefined || Number.isNaN(val) ? 0 : Number(val),
   z.number()
 );
 
 const optionalComparableSourceUrl = z.preprocess(
-  (val) => (val === '' || val === null ? undefined : val),
-  z.string().url().optional()
+  (val) => (val === '' || val === null || val === undefined ? undefined : val),
+  httpHttpsUrl.optional()
 );
 
 export const MarketComparableSchema = z.object({

@@ -48,7 +48,7 @@ export default function MobileDrawer({
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         role="dialog"
-        aria-modal={isOpen}
+        {...(isOpen ? { 'aria-modal': true as const } : {})}
         aria-label={ariaLabel}
         aria-hidden={!isOpen}
         inert={!isOpen}
