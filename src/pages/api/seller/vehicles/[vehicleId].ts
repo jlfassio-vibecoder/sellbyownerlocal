@@ -105,8 +105,12 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
     }
 
     const firestoreUpdate: Record<string, unknown> = { ...patchParsed.data };
-    if (firestoreUpdate.listingTitle === null || firestoreUpdate.listingTitle === '') {
+    const listingTitle = firestoreUpdate.listingTitle;
+    if (listingTitle === null || listingTitle === '') {
       firestoreUpdate.listingTitle = FieldValue.delete();
+    } else if (typeof listingTitle === 'string') {
+      const trimmed = listingTitle.trim();
+      firestoreUpdate.listingTitle = trimmed ? trimmed : FieldValue.delete();
     }
 
     await db().collection('vehicles').doc(vehicleId).update(firestoreUpdate);

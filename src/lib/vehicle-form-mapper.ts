@@ -324,25 +324,28 @@ export function formStateToVehiclePatch(
   patch.listingTitle = listingTitleTrimmed || null;
 
   const description = optionalString(state.description).trim();
-  if (description) {
-    patch.description = description;
+  if (!description) {
+    throw new Error('Listing summary is required');
   }
+  patch.description = description;
 
   const drivetrain = optionalString(state.drivetrain).trim();
-  if (drivetrain) {
-    patch.specs = {
-      ...existing.specs,
-      drivetrain,
-    };
+  if (!drivetrain) {
+    throw new Error('Drivetrain is required');
   }
+  patch.specs = {
+    ...existing.specs,
+    drivetrain,
+  };
 
   const locationCity = optionalString(state.locationCity).trim();
-  if (locationCity) {
-    patch.location = {
-      geohash: existing.location.geohash,
-      city: locationCity,
-    };
+  if (!locationCity) {
+    throw new Error('Location is required');
   }
+  patch.location = {
+    geohash: existing.location.geohash,
+    city: locationCity,
+  };
 
   return patch;
 }

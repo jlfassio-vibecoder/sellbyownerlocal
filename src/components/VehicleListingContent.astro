@@ -70,7 +70,7 @@ const monroneyStyleLine = monroney
         <h1 class="text-4xl leading-tight font-bold text-slate-900 md:text-5xl">
           {
             vehicle.listingTitle?.trim() ? (
-              vehicle.listingTitle
+              vehicle.listingTitle.trim()
             ) : (
               <>
                 {vehicle.year} {vehicle.make}{' '}
