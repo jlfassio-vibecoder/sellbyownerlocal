@@ -1,4 +1,4 @@
-import type { GenerateListingResponse } from '../schemas';
+import type { GenerateListingResponse, GenerateMarketResearchResponse } from '../schemas';
 
 export class AiApiError extends Error {
   readonly status: number;
@@ -47,4 +47,20 @@ export async function generateHeroImage(vehicleId: string): Promise<{ url: strin
   }
 
   return (await res.json()) as { url: string };
+}
+
+export async function generateMarketResearch(
+  vehicleId: string
+): Promise<GenerateMarketResearchResponse> {
+  const res = await fetch('/api/ai/generate-market-research', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vehicleId }),
+  });
+
+  if (!res.ok) {
+    throw new AiApiError(await parseErrorResponse(res), res.status);
+  }
+
+  return (await res.json()) as GenerateMarketResearchResponse;
 }
