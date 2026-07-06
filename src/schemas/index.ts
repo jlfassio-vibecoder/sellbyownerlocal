@@ -348,6 +348,14 @@ export const VehicleHighlightSchema = z.object({
   text: z.string().min(1),
 });
 
+export const GenerateHighlightsRequestSchema = z.object({
+  vehicleId: z.string().trim().min(1),
+});
+
+export const GenerateHighlightsResponseSchema = z.object({
+  highlights: z.array(VehicleHighlightSchema).length(4),
+});
+
 const optionalString = z.string().optional().or(z.literal(''));
 
 export const FormMarketValuationSchema = MarketValuationSchema.extend({
@@ -452,7 +460,7 @@ export const VehicleDashboardUpdateSchema = z
     sellersNote: SellersNoteSchema.partial().optional(),
     mechanicalIntegrity: MechanicalIntegritySchema.partial().optional(),
     marketValuation: MarketValuationSchema.partial().optional(),
-    highlights: z.array(VehicleHighlightSchema).optional(),
+    highlights: z.array(VehicleHighlightSchema).max(4).optional(),
     images: z.array(httpHttpsUrl).max(30).optional(),
     specs: VehicleSpecsSchema.partial().optional(),
     location: VehicleLocationSchema.partial().optional(),
@@ -502,7 +510,7 @@ export const VehicleSchema = z.object({
   createdAt: z.string().datetime(),
   specs: VehicleSpecsSchema,
   features: z.array(z.string().min(1)).min(1),
-  highlights: z.array(VehicleHighlightSchema).optional(),
+  highlights: z.array(VehicleHighlightSchema).max(4).optional(),
   maintenance: z.array(MaintenanceRecordSchema).min(1),
   documents: VehicleDocumentsSchema.optional(),
   windowStickerBreakdown: WindowStickerBreakdownSchema.optional(),
@@ -552,6 +560,8 @@ export type PopulateMonroneyFromStickerResponse = z.infer<typeof PopulateMonrone
 export type GenerateHeroImageRequest = z.infer<typeof GenerateHeroImageRequestSchema>;
 export type GenerateMarketResearchRequest = z.infer<typeof GenerateMarketResearchRequestSchema>;
 export type GenerateMarketResearchResponse = z.infer<typeof GenerateMarketResearchResponseSchema>;
+export type GenerateHighlightsRequest = z.infer<typeof GenerateHighlightsRequestSchema>;
+export type GenerateHighlightsResponse = z.infer<typeof GenerateHighlightsResponseSchema>;
 export type GalleryPhoto = z.infer<typeof GalleryPhotoSchema>;
 export type MarketComparable = z.infer<typeof MarketComparableSchema>;
 export type VehicleDeductions = z.infer<typeof VehicleDeductionsSchema>;

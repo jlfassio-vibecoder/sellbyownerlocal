@@ -201,7 +201,7 @@ export default function DetailsEditor({
                 <MarketValuationSection vehicleId={vehicleId} {...sectionProps} />
               </div>
               <div style={sectionStyle('highlights')}>
-                <HighlightsSection {...sectionProps} />
+                <HighlightsSection vehicleId={vehicleId} {...sectionProps} />
               </div>
               <div style={sectionStyle('video')}>
                 <VideoSection {...sectionProps} />
