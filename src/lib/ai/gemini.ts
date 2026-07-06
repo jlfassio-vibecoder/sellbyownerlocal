@@ -1,12 +1,16 @@
 import { createGoogle } from '@ai-sdk/google';
+import { MissingGoogleAiApiKeyError } from './ai-errors';
 
 export const GEMINI_TEXT_MODEL = 'gemini-2.5-flash';
 export const IMAGEN_MODEL = 'imagen-4.0-fast-generate-001';
 
+export const TEXT_GENERATION_TIMEOUT_MS = 60_000;
+export const IMAGE_GENERATION_TIMEOUT_MS = 90_000;
+
 export function getGoogleProvider() {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
   if (!apiKey) {
-    throw new Error('Missing GOOGLE_GENERATIVE_AI_API_KEY');
+    throw new MissingGoogleAiApiKeyError();
   }
   return createGoogle({ apiKey });
 }

@@ -8,18 +8,31 @@ import {
   requireSeller,
   unauthorizedResponse,
 } from '../../../lib/auth';
-import { aiContentToFormFields, buildVehicleFromAiContent } from '../../../lib/ai/ai-output-mapper';
+import {
+  aiContentToFormFields,
+  buildAiContentVehiclePatch,
+  buildVehicleFromAiContent,
+} from '../../../lib/ai/ai-output-mapper';
+import { mapAiGenerationError, logAiGenerationError } from '../../../lib/ai/ai-errors';
 import { GEMINI_TEXT_MODEL, generateListingContent } from '../../../lib/ai/generate-listing-content';
+import { enrichMonroneyFromVinDecode } from '../../../lib/monroney-style-line';
+import { fetchFederalMonroneyData } from '../../../lib/federal-data';
 import { auth, db } from '../../../lib/firebase-admin';
 import { checkRateLimit } from '../../../lib/rate-limit';
 import { decodeVin } from '../../../lib/vin-decoder';
 import {
   GenerateListingRequestSchema,
   GenerateListingResponseSchema,
+  MonroneySchema,
   VehicleSchema,
+  type Monroney,
 } from '../../../schemas';
+import type { PartialAiListingContent } from '../../../lib/ai/ai-listing-content-schema';
 
 const AI_RATE_LIMIT = { windowMs: 60 * 60 * 1000, max: 5 };
+
+const PARTIAL_SUCCESS_MESSAGE =
+  'Saved available generated content. Some sections did not pass validation — review and fill in missing fields instead of regenerating everything.';
 
 function jsonError(message: string, status: number): Response {
   return new Response(JSON.stringify({ error: message }), {
@@ -35,6 +48,56 @@ async function resolveSellerName(uid: string, email?: string): Promise<string> {
   } catch {
     return email?.split('@')[0] || 'Seller';
   }
+}
+
+function resolveEnrichedMonroney(
+  decoded: Awaited<ReturnType<typeof decodeVin>>,
+  content: PartialAiListingContent,
+  federal: Awaited<ReturnType<typeof fetchFederalMonroneyData>>
+): Monroney | undefined {
+  const raw = content.monroney;
+  if (
+    raw?.baseMsrp == null ||
+    raw?.destinationCharge == null ||
+    raw?.totalMsrp == null ||
+    !raw.options ||
+    !raw.standardEquipment
+  ) {
+    return undefined;
+  }
+
+  const enriched = enrichMonroneyFromVinDecode(
+    decoded,
+    {
+      baseMsrp: raw.baseMsrp,
+      destinationCharge: raw.destinationCharge,
+      totalMsrp: raw.totalMsrp,
+      options: raw.options,
+      standardEquipment: raw.standardEquipment,
+      ...(raw.warranty ? { warranty: raw.warranty } : {}),
+      ...(raw.partsContent ? { partsContent: raw.partsContent } : {}),
+    },
+    federal
+  );
+
+  const parsed = MonroneySchema.safeParse(enriched);
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  console.warn('Enriched monroney failed validation; saving core fields only', parsed.error.flatten());
+
+  const minimal = MonroneySchema.safeParse({
+    baseMsrp: raw.baseMsrp,
+    destinationCharge: raw.destinationCharge,
+    totalMsrp: raw.totalMsrp,
+    options: raw.options,
+    standardEquipment: raw.standardEquipment,
+    ...(raw.warranty ? { warranty: raw.warranty } : {}),
+    ...(raw.partsContent ? { partsContent: raw.partsContent } : {}),
+  });
+
+  return minimal.success ? minimal.data : undefined;
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -64,7 +127,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    const { vin, vehicleId, prospect } = parsed.data;
+    const { vin, vehicleId, prospect, stickerFile } = parsed.data;
     const isDealerCreate = Boolean(prospect && !vehicleId);
     const isSellerPopulate = Boolean(vehicleId);
 
@@ -90,23 +153,26 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return jsonError('VIN could not be decoded', 404);
     }
 
-    let content;
+    let generation;
     try {
-      content = await generateListingContent(decoded, prospect);
+      generation = await generateListingContent(decoded, prospect, stickerFile);
     } catch (error) {
-      console.error('AI listing generation failed', error);
-      return jsonError('AI listing generation failed. Please retry.', 502);
+      logAiGenerationError('AI listing generation failed', error);
+      const mapped = mapAiGenerationError(error);
+      return jsonError(mapped.message, mapped.status);
     }
 
+    const federal = await fetchFederalMonroneyData(decoded);
+    const monroney = resolveEnrichedMonroney(decoded, generation.content, federal);
     const generatedAt = new Date().toISOString();
     const aiGeneration = {
-      status: 'text_complete' as const,
+      status: generation.partial ? ('partial' as const) : ('text_complete' as const),
       source: 'vin' as const,
       model: GEMINI_TEXT_MODEL,
       generatedAt,
     };
 
-    const formFields = aiContentToFormFields(content);
+    const formFields = aiContentToFormFields(generation.content);
     let resolvedVehicleId: string;
 
     if (isSellerPopulate) {
@@ -131,22 +197,25 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         throw error;
       }
 
-      await db().collection('vehicles').doc(trimmedVehicleId).update({
-        monroney: content.monroney,
+      const patch = buildAiContentVehiclePatch({
+        decoded,
+        content: generation.content,
         aiGeneration,
-        vin: decoded.vin,
+        monroney,
       });
 
+      await db().collection('vehicles').doc(trimmedVehicleId).update(patch);
       resolvedVehicleId = trimmedVehicleId;
     } else {
       const sellerName = await resolveSellerName(session.uid, session.email);
       const vehicleData = buildVehicleFromAiContent({
         decoded,
-        content,
+        content: generation.content,
         sellerId: session.uid,
         sellerName,
         prospect,
         aiGeneration,
+        monroney,
       });
 
       const vehicleParsed = VehicleSchema.safeParse(vehicleData);
@@ -162,7 +231,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const response = GenerateListingResponseSchema.parse({
       vehicleId: resolvedVehicleId,
       formFields,
-      monroney: content.monroney,
+      monroney,
+      partial: generation.partial || undefined,
+      fieldErrors: generation.fieldErrors.length ? generation.fieldErrors : undefined,
+      message: generation.partial ? PARTIAL_SUCCESS_MESSAGE : undefined,
     });
 
     return new Response(JSON.stringify(response), {

@@ -1,84 +1,167 @@
-import { z } from 'zod';
-import { generateObject } from 'ai';
-import {
-  MechanicalItemSchema,
-  MonroneySchema,
-  VehicleHighlightSchema,
-} from '../../schemas';
+import { generateObject, type FilePart, type TextPart } from 'ai';
 import type { DealerProspect } from '../../schemas';
 import type { VinDecodeResult } from '../vin-decoder';
-import { GEMINI_TEXT_MODEL, getGeminiTextModel } from './gemini';
+import {
+  extractBase64FromDataUri,
+  extractMimeTypeFromDataUri,
+} from '../sticker-file';
+import {
+  AiListingContentSchema,
+  type AiListingContent,
+  type PartialAiListingContent,
+} from './ai-listing-content-schema';
+import { logAiGenerationError } from './ai-errors';
+import { GEMINI_TEXT_MODEL, getGeminiTextModel, TEXT_GENERATION_TIMEOUT_MS } from './gemini';
+import {
+  extractPartialFromGenerationError,
+  isFullAiListingContent,
+} from './parse-partial-listing-content';
+import { STICKER_SOURCE_OF_TRUTH_DIRECTIVE } from './sticker-prompt';
 
-export const AiListingContentSchema = z.object({
-  description: z.string().min(1),
-  subtitle: z.string().min(1),
-  suggestedPrice: z.number().positive(),
-  suggestedMileage: z.number().int().nonnegative(),
-  exteriorColor: z.string().min(1),
-  interiorColor: z.string().min(1),
-  tags: z.array(z.string().min(1)).min(1),
-  features: z.array(z.string().min(1)).min(3),
-  monroney: MonroneySchema,
-  highlights: z.array(VehicleHighlightSchema).length(4),
-  mechanicalIntro: z.string().min(1),
-  mechanicalItems: z.array(MechanicalItemSchema).length(3),
-  peaceOfMindText: z.string().min(1),
-  maintenanceText: z.string().min(1),
-  utilityTowingText: z.string().min(1),
-  luxuryOptionsText: z.string().min(1),
-  ctaText: z.string().min(1),
-  marketValuation: z.object({
-    contextText: z.string().min(1),
-    dealerRealityText: z.string().min(1),
-    kbbText: z.string().min(1),
-    justificationText: z.string().min(1),
-  }),
-});
+export type { AiListingContent, PartialAiListingContent } from './ai-listing-content-schema';
+export { AiListingContentSchema } from './ai-listing-content-schema';
 
-export type AiListingContent = z.infer<typeof AiListingContentSchema>;
+const MULTIMODAL_GENERATION_TIMEOUT_MS = 120_000;
 
-function buildPrompt(
+export type GenerateListingContentResult = {
+  content: PartialAiListingContent;
+  partial: boolean;
+  fieldErrors: string[];
+};
+
+function buildSystemPrompt(stickerFile?: string): string {
+  const lines = [
+    'You are an automotive expert generating a complete vehicle listing.',
+    'Your JSON output must strictly match the required schema.',
+  ];
+
+  if (stickerFile) {
+    lines.push(STICKER_SOURCE_OF_TRUTH_DIRECTIVE);
+  }
+
+  return lines.join(' ');
+}
+
+function buildUserPromptInner(
   decoded: VinDecodeResult,
-  prospect?: DealerProspect
+  prospect: DealerProspect | undefined,
+  hasStickerFile: boolean
 ): string {
   const prospectLine = prospect
-    ? `Personalize the seller's note for prospect ${prospect.firstName} ${prospect.lastName}.`
+    ? `Personalize the seller's note for customer ${prospect.firstName} ${prospect.lastName}.`
     : 'Write copy for a private seller listing.';
 
+  const monroneyLines = hasStickerFile
+    ? [
+        '- monroney: extract baseMsrp, destinationCharge, totalMsrp, options, and standardEquipment verbatim from the uploaded window sticker',
+        '- preserve exact standardEquipment category names and bullet text from the sticker',
+        '- optional equipment line items must match the sticker labels and prices exactly',
+      ]
+    : [
+        '- monroney: baseMsrp, destinationCharge, totalMsrp, options (packages/options/fees), standardEquipment',
+        '- monroney options must reflect factory packages only — never marketing taglines or listing copy',
+        '- include factory style packages when applicable (e.g. Night Edition Package, XLT Equipment Group)',
+        '- Use ONLY plausible factory options, packages, and MSRP values for this exact year/make/model/trim',
+      ];
+
   return [
-    'You are an expert automotive listing writer generating a complete vehicle listing from factory VIN decode data.',
     prospectLine,
-    'Use ONLY plausible factory options, packages, and MSRP values for this exact year/make/model/trim.',
-    'The Monroney sticker must include baseMsrp, destinationCharge, totalMsrp, options (packages/options/fees), and standardEquipment categories.',
+    ...monroneyLines,
+    '- monroney.warranty: factory warranty coverage lines and optional powertrain badge',
+    '- monroney.partsContent: AALA-style parts content (US/Canadian %, major foreign sources, engine/transmission origin)',
+    '- do NOT include monroney.styleLine, factorySpecs, epa, safetyRatings, assembly, or manufacturerInfo — those are added server-side',
+    '- mechanicalIntro and 1 to 3 mechanicalItems',
+    '- highlights: provide 1 to 4 vehicle highlight items',
+    '- marketValuation: contextText, dealerRealityText, kbbText, justificationText',
     'Suggested price should reflect fair private-party value for the suggested mileage — not MSRP.',
     'Suggested mileage should be realistic for the vehicle year unless prospect context implies otherwise.',
     'Return marketing copy that is confident, factual, and ready to publish.',
     '',
-    'VIN decode data (authoritative):',
+    'VIN decode data (authoritative for year/make/model/trim when no sticker is provided):',
     JSON.stringify(decoded, null, 2),
   ].join('\n');
 }
 
+function buildUserMessageContent(
+  decoded: VinDecodeResult,
+  prospect: DealerProspect | undefined,
+  stickerFile?: string
+): Array<TextPart | FilePart> {
+  const parts: Array<TextPart | FilePart> = [
+    {
+      type: 'text',
+      text: buildUserPromptInner(decoded, prospect, Boolean(stickerFile)),
+    },
+  ];
+
+  if (stickerFile) {
+    parts.push({
+      type: 'file',
+      data: extractBase64FromDataUri(stickerFile),
+      mediaType: extractMimeTypeFromDataUri(stickerFile),
+    });
+  }
+
+  return parts;
+}
+
+function toResult(
+  content: PartialAiListingContent,
+  fieldErrors: string[] = []
+): GenerateListingContentResult {
+  const partial = !isFullAiListingContent(content);
+  return { content, partial, fieldErrors };
+}
+
+function tryRecoverPartial(error: unknown): GenerateListingContentResult | null {
+  const recovered = extractPartialFromGenerationError(error);
+  if (!recovered) return null;
+  return toResult(recovered.content, recovered.fieldErrors);
+}
+
 export async function generateListingContent(
   decoded: VinDecodeResult,
-  prospect?: DealerProspect
-): Promise<AiListingContent> {
-  const prompt = buildPrompt(decoded, prospect);
+  prospect?: DealerProspect,
+  stickerFile?: string
+): Promise<GenerateListingContentResult> {
+  const timeoutMs = stickerFile ? MULTIMODAL_GENERATION_TIMEOUT_MS : TEXT_GENERATION_TIMEOUT_MS;
 
   const run = () =>
     generateObject({
       model: getGeminiTextModel(),
       schema: AiListingContentSchema,
-      prompt,
+      instructions: buildSystemPrompt(stickerFile),
+      messages: [
+        {
+          role: 'user',
+          content: buildUserMessageContent(decoded, prospect, stickerFile),
+        },
+      ],
+      abortSignal: AbortSignal.timeout(timeoutMs),
     });
 
   try {
     const result = await run();
-    return result.object;
+    return toResult(result.object);
   } catch (firstError) {
-    console.warn('generateListingContent retry after failure', firstError);
-    const result = await run();
-    return result.object;
+    const partial = tryRecoverPartial(firstError);
+    if (partial) {
+      logAiGenerationError('generateListingContent partial recovery after failure', firstError);
+      return partial;
+    }
+
+    logAiGenerationError('generateListingContent retry after failure', firstError);
+    try {
+      const result = await run();
+      return toResult(result.object);
+    } catch (retryError) {
+      const retryPartial = tryRecoverPartial(retryError);
+      if (retryPartial) {
+        logAiGenerationError('generateListingContent partial recovery after retry failure', retryError);
+        return retryPartial;
+      }
+      throw retryError;
+    }
   }
 }
 

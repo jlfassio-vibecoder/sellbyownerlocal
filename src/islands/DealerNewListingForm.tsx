@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Loader2, Sparkles } from 'lucide-react';
 import { generateHeroImage, generateListingFromVin } from '../lib/ai-api';
+import { readStickerFileAsDataUri, STICKER_FILE_ACCEPT } from '../lib/sticker-file';
 
 interface DealerFormValues {
   firstName: string;
@@ -28,6 +29,10 @@ function stepIndex(step: Step): number {
 export default function DealerNewListingForm() {
   const [step, setStep] = useState<Step>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [stickerFile, setStickerFile] = useState<string | undefined>();
+  const [stickerFileName, setStickerFileName] = useState<string | null>(null);
+  const [stickerError, setStickerError] = useState<string | null>(null);
+  const stickerInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -41,6 +46,8 @@ export default function DealerNewListingForm() {
     setErrorMessage(null);
     setStep('decode');
 
+    let vehicleId: string;
+
     try {
       setStep('text');
       const listing = await generateListingFromVin({
@@ -49,24 +56,63 @@ export default function DealerNewListingForm() {
           firstName: values.firstName.trim(),
           lastName: values.lastName.trim(),
         },
+        ...(stickerFile ? { stickerFile } : {}),
       });
-
-      setStep('image');
-      await generateHeroImage(listing.vehicleId);
-
-      setStep('done');
-      window.location.href = `/vehicles/${listing.vehicleId}`;
+      vehicleId = listing.vehicleId;
+      if (listing.partial) {
+        console.warn('Dealer listing generated with partial content', listing.fieldErrors);
+      }
+      setStickerFile(undefined);
+      setStickerFileName(null);
+      if (stickerInputRef.current) {
+        stickerInputRef.current.value = '';
+      }
     } catch (error) {
       console.error('Dealer listing generation failed', error);
       setStep('error');
       setErrorMessage(
         error instanceof Error ? error.message : 'Generation failed. Please retry.'
       );
+      return;
     }
+
+    try {
+      setStep('image');
+      await generateHeroImage(vehicleId);
+    } catch (error) {
+      console.warn('Hero image generation failed', error);
+    }
+
+    setStep('done');
+    window.location.href = `/seller/vehicles/${vehicleId}/preview`;
   };
 
   const activeIndex = stepIndex(step);
   const isBusy = step !== 'idle' && step !== 'error' && step !== 'done';
+
+  const handleStickerSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setStickerFile(undefined);
+      setStickerFileName(null);
+      setStickerError(null);
+      return;
+    }
+
+    try {
+      const dataUri = await readStickerFileAsDataUri(file);
+      setStickerFile(dataUri);
+      setStickerFileName(file.name);
+      setStickerError(null);
+    } catch (error) {
+      setStickerFile(undefined);
+      setStickerFileName(null);
+      setStickerError(error instanceof Error ? error.message : 'Invalid sticker file');
+      if (stickerInputRef.current) {
+        stickerInputRef.current.value = '';
+      }
+    }
+  };
 
   return (
     <div className="mx-auto max-w-lg">
@@ -132,6 +178,29 @@ export default function DealerNewListingForm() {
             disabled={isBusy}
           />
           {errors.vin ? <p className="mt-1 text-xs text-red-600">{errors.vin.message}</p> : null}
+        </div>
+
+        <div>
+          <label htmlFor="stickerFile" className="mb-2 block text-sm font-medium text-slate-700">
+            Upload Window Sticker (Optional, highly recommended for accurate options)
+          </label>
+          <input
+            ref={stickerInputRef}
+            id="stickerFile"
+            type="file"
+            accept={STICKER_FILE_ACCEPT}
+            onChange={handleStickerSelect}
+            disabled={isBusy}
+            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+          />
+          {stickerFileName ? (
+            <p className="mt-1 text-xs text-slate-600">Attached: {stickerFileName}</p>
+          ) : null}
+          {stickerError ? (
+            <p className="mt-1 text-xs text-red-600" role="alert">
+              {stickerError}
+            </p>
+          ) : null}
         </div>
 
         {activeIndex >= 0 ? (

@@ -1,18 +1,28 @@
 import type { DetailsSectionFormProps } from './form-section-types';
 import { INPUT_CLASS } from './form-section-types';
+import MonroneyStickerUploadBar from './MonroneyStickerUploadBar';
+import MonroneyVinPopulateBar from './MonroneyVinPopulateBar';
+import OriginalStickerUploadField from './OriginalStickerUploadField';
 import VinPopulateBar from './VinPopulateBar';
 import type { VehicleFormState } from '../../../schemas';
 
 interface BasicsSectionProps extends DetailsSectionFormProps {
   vehicleId?: string;
+  vehicleVin?: string;
+  hasMonroney?: boolean;
   onPopulate?: (state: VehicleFormState) => void;
+  onMonroneyUpdated?: () => void;
 }
 
 export default function BasicsSection({
   register,
   vehicleId,
+  vehicleVin,
+  hasMonroney = false,
   watch,
+  setValue,
   onPopulate,
+  onMonroneyUpdated,
 }: BasicsSectionProps) {
   const values = watch();
 
@@ -23,7 +33,10 @@ export default function BasicsSection({
         <VinPopulateBar
           vehicleId={vehicleId}
           currentValues={values}
-          onPopulated={onPopulate}
+          onPopulated={(state) => {
+            onPopulate(state);
+            onMonroneyUpdated?.();
+          }}
         />
       ) : null}
       <div className="space-y-6">
@@ -64,6 +77,38 @@ export default function BasicsSection({
           </p>
         </div>
       </div>
+
+      {vehicleId ? (
+        <div className="mt-8 pt-8 border-t border-slate-200">
+          <h3 className="text-lg font-bold text-slate-900 mb-2">Window Sticker</h3>
+          <p className="text-xs text-slate-500 mb-4">
+            Three ways to work with window stickers: full listing populate via VIN above (Option 1),
+            generate only the site sticker from an upload (Option 2), refresh factory specs from VIN
+            on existing sticker data (Card B), or show the original factory document on the listing
+            (Option 3).
+            {hasMonroney
+              ? ' Monroney data is on file — preview below after generating or updating.'
+              : ' No generated Monroney data yet — use Option 1 or Option 2 to create one.'}
+          </p>
+          <div className="space-y-4">
+            <MonroneyStickerUploadBar
+              vehicleId={vehicleId}
+              vehicleVin={vehicleVin}
+              onMonroneyUpdated={onMonroneyUpdated}
+            />
+            <MonroneyVinPopulateBar
+              vehicleId={vehicleId}
+              initialVin={vehicleVin}
+              hasMonroney={hasMonroney}
+            />
+            <OriginalStickerUploadField
+              vehicleId={vehicleId}
+              windowStickerUrl={values.windowStickerUrl}
+              onFieldUpdate={(url) => setValue('windowStickerUrl', url, { shouldDirty: true })}
+            />
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

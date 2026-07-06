@@ -5,12 +5,18 @@ export interface VinDecodeResult {
   year: number;
   make: string;
   model: string;
+  manufacturer: string;
   trim: string;
+  trim2: string;
+  series: string;
   engine: string;
   transmission: string;
   drivetrain: string;
   bodyClass: string;
+  bodyCabType: string;
   fuelType: string;
+  displacementL: string;
+  engineCylinders: string;
   plant: string;
   plantCountry: string;
 }
@@ -19,8 +25,11 @@ interface NhtsaResult {
   ModelYear?: string;
   Make?: string;
   Model?: string;
+  Manufacturer?: string;
   Trim?: string;
   Trim2?: string;
+  Series?: string;
+  Series2?: string;
   EngineConfiguration?: string;
   DisplacementL?: string;
   EngineCylinders?: string;
@@ -28,6 +37,7 @@ interface NhtsaResult {
   TransmissionStyle?: string;
   DriveType?: string;
   BodyClass?: string;
+  BodyCabType?: string;
   FuelTypePrimary?: string;
   PlantCity?: string;
   PlantCountry?: string;
@@ -107,13 +117,21 @@ export async function decodeVin(vin: string): Promise<VinDecodeResult> {
     year,
     make,
     model,
-    trim: buildTrimLabel(result),
+    manufacturer: pickString(result.Manufacturer, make),
+    trim: pickString(result.Trim) || 'Base',
+    trim2: pickString(result.Trim2),
+    series: pickString(result.Series, result.Series2),
     engine: buildEngineLabel(result),
     transmission: pickString(result.TransmissionStyle) || 'Automatic',
     drivetrain: pickString(result.DriveType) || 'Unknown',
     bodyClass: pickString(result.BodyClass) || 'Unknown',
+    bodyCabType: pickString(result.BodyCabType),
     fuelType: pickString(result.FuelTypePrimary) || 'Gasoline',
+    displacementL: pickString(result.DisplacementL),
+    engineCylinders: pickString(result.EngineCylinders),
     plant: pickString(result.PlantCity) || 'Unknown',
     plantCountry: pickString(result.PlantCountry) || 'Unknown',
   };
 }
+
+export { buildTrimLabel };

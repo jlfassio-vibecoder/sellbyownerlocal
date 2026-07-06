@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { randomUUID } from 'node:crypto';
 import {
   AuthError,
   ForbiddenError,
@@ -7,8 +8,9 @@ import {
   requireSeller,
   unauthorizedResponse,
 } from '../../../lib/auth';
-import { generateAndUploadHeroImage, IMAGEN_MODEL } from '../../../lib/ai/generate-hero-image';
-import { db } from '../../../lib/firebase-admin';
+import { mapAiGenerationError, logAiGenerationError } from '../../../lib/ai/ai-errors';
+import { generateHeroImageBuffer, IMAGEN_MODEL } from '../../../lib/ai/generate-hero-image';
+import { db, storageBucket } from '../../../lib/firebase-admin';
 import { checkRateLimit } from '../../../lib/rate-limit';
 import { decodeVin } from '../../../lib/vin-decoder';
 import {
@@ -24,6 +26,42 @@ function jsonError(message: string, status: number): Response {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+function isUniformBucketLevelAccessError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /uniform bucket-level access/i.test(message);
+}
+
+async function makeObjectPublicIfSupported(
+  gcsFile: ReturnType<ReturnType<typeof storageBucket>['file']>
+): Promise<void> {
+  try {
+    await gcsFile.makePublic();
+  } catch (error) {
+    if (isUniformBucketLevelAccessError(error)) {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function uploadHeroImage(
+  vehicleId: string,
+  buffer: Buffer,
+  mimeType: string
+): Promise<string> {
+  const ext = mimeType === 'image/png' ? 'png' : 'jpg';
+  const filename = `vehicles/${vehicleId}/ai-hero/${Date.now()}-${randomUUID()}.${ext}`;
+  const bucket = storageBucket();
+  const gcsFile = bucket.file(filename);
+
+  await gcsFile.save(buffer, {
+    metadata: { contentType: mimeType },
+  });
+  await makeObjectPublicIfSupported(gcsFile);
+
+  return `https://storage.googleapis.com/${bucket.name}/${filename}`;
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -91,13 +129,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     let url: string;
     try {
-      url = await generateAndUploadHeroImage(
-        vehicleId,
+      const { buffer, mimeType } = await generateHeroImageBuffer(
         decoded,
         vehicle.specs.exteriorColor
       );
+      url = await uploadHeroImage(vehicleId, buffer, mimeType);
     } catch (error) {
-      console.error('Hero image generation failed', error);
+      logAiGenerationError('Hero image generation failed', error);
       await db()
         .collection('vehicles')
         .doc(vehicleId)
@@ -110,7 +148,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           },
         })
         .catch(() => undefined);
-      return jsonError('Hero image generation failed. Please retry.', 502);
+      const mapped = mapAiGenerationError(error);
+      return jsonError(mapped.message, mapped.status);
     }
 
     const images = [url, ...vehicle.images.filter((existing) => existing !== url)].slice(0, 30);

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Loader2, Sparkles, Upload, X } from 'lucide-react';
+import { generateHeroImage } from '../../lib/ai-api';
 import { uploadDocument } from '../../lib/seller-api';
 
 const MAX_IMAGES = 30;
@@ -21,8 +22,18 @@ export default function GalleryUploadFields({
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingHero, setIsGeneratingHero] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [heroToast, setHeroToast] = useState<{ message: string; type: 'success' | 'error' } | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (!heroToast) return;
+    const timer = window.setTimeout(() => setHeroToast(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [heroToast]);
 
   useEffect(() => {
     imagesRef.current = images;
@@ -124,11 +135,36 @@ export default function GalleryUploadFields({
     }
   };
 
+  const handleGenerateHero = async () => {
+    setIsGeneratingHero(true);
+    setError(null);
+
+    try {
+      const { url } = await generateHeroImage(vehicleId);
+      const merged = [url, ...imagesRef.current.filter((existing) => existing !== url)].slice(
+        0,
+        MAX_IMAGES
+      );
+      imagesRef.current = merged;
+      onChange(merged);
+      setHeroToast({ message: 'Hero image generated', type: 'success' });
+    } catch (err) {
+      console.error('AI hero image generation failed', err);
+      setHeroToast({
+        message: err instanceof Error ? err.message : 'Hero image generation failed',
+        type: 'error',
+      });
+    } finally {
+      setIsGeneratingHero(false);
+    }
+  };
+
   const canAddMore = images.length < MAX_IMAGES;
   const showGrid = images.length > 0 || canAddMore;
+  const isBusy = isUploading || isGeneratingHero;
 
   const openFilePicker = () => {
-    if (!isUploading) {
+    if (!isBusy) {
       fileInputRef.current?.click();
     }
   };
@@ -148,12 +184,31 @@ export default function GalleryUploadFields({
         the hero on your public listing. Select multiple files at once to bulk upload.
       </p>
 
+      <button
+        type="button"
+        onClick={() => void handleGenerateHero()}
+        disabled={isBusy}
+        className="mb-4 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50 disabled:opacity-70"
+      >
+        {isGeneratingHero ? (
+          <>
+            <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+            Generating…
+          </>
+        ) : (
+          <>
+            <Sparkles size={16} aria-hidden="true" />
+            Generate AI Hero Image
+          </>
+        )}
+      </button>
+
       {showGrid && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-4">
           {images.map((url, index) => (
             <div
               key={`${url}-${index}`}
-              draggable={!isUploading}
+              draggable={!isBusy}
               onDragStart={() => {
                 dragItem.current = index;
               }}
@@ -203,12 +258,12 @@ export default function GalleryUploadFields({
               onDrop={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (isUploading) return;
+                if (isBusy) return;
                 if (e.dataTransfer.files.length > 0) {
                   void handleFiles(e.dataTransfer.files);
                 }
               }}
-              className={`aspect-[4/3] w-full rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors hover:border-red-400 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 ${isUploading ? 'opacity-70 pointer-events-none' : ''}`}
+              className={`aspect-[4/3] w-full rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors hover:border-red-400 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 ${isBusy ? 'opacity-70 pointer-events-none' : ''}`}
             >
               <input
                 type="file"
@@ -252,6 +307,18 @@ export default function GalleryUploadFields({
       )}
 
       {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+
+      {heroToast ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed bottom-4 right-4 z-50 rounded-md px-4 py-3 font-medium text-white shadow-lg ${
+            heroToast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'
+          }`}
+        >
+          {heroToast.message}
+        </div>
+      ) : null}
     </div>
   );
 }

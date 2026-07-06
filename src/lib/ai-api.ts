@@ -20,6 +20,7 @@ export async function generateListingFromVin(body: {
   vin: string;
   vehicleId?: string;
   prospect?: { firstName: string; lastName: string };
+  stickerFile?: string;
 }): Promise<GenerateListingResponse> {
   const res = await fetch('/api/ai/generate-listing', {
     method: 'POST',

@@ -1,15 +1,16 @@
 ---
-import { db } from '../../../lib/firebase-admin';
+import { db } from '../../../../lib/firebase-admin';
 import {
   assertVehicleOwner,
   ForbiddenError,
   requireSellerOrRedirect,
-} from '../../../lib/auth';
-import { mapInquiryDoc } from '../../../lib/inquiries';
-import { vehicleToFormState } from '../../../lib/vehicle-form-mapper';
-import { VehicleResponseSchema } from '../../../schemas';
-import SellerVehicleShell from '../../../islands/seller/SellerVehicleShell';
-import '../../../styles/global.css';
+} from '../../../../lib/auth';
+import { mapInquiryDoc } from '../../../../lib/inquiries';
+import { resolveVehicleDisplayMonroney } from '../../../../lib/resolve-display-monroney';
+import { VehicleResponseSchema } from '../../../../schemas';
+import SellerPreviewFrame from '../../../../islands/seller/SellerPreviewFrame';
+import VehicleListingContent from '../../../../components/VehicleListingContent.astro';
+import '../../../../styles/global.css';
 
 const { vehicleId } = Astro.params;
 
@@ -43,14 +44,9 @@ try {
 }
 
 const vehicle = parsed.data;
-const vehicleTitle = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
-const initialFormState = vehicleToFormState(vehicle);
-
-const tabParam = Astro.url.searchParams.get('tab');
-const initialTab =
-  tabParam === 'messages' || tabParam === 'inquiries' || tabParam === 'details'
-    ? tabParam
-    : 'messages';
+const displayMonroney = await resolveVehicleDisplayMonroney(vehicle);
+const listingVehicle = displayMonroney ? { ...vehicle, monroney: displayMonroney } : vehicle;
+const vehicleTitle = `${listingVehicle.year} ${listingVehicle.make} ${listingVehicle.model}`;
 
 const inquirySnapshot = await db()
   .collection('inquiries')
@@ -59,10 +55,10 @@ const inquirySnapshot = await db()
   .orderBy('timestamp', 'desc')
   .get();
 
-const initialInquiries = inquirySnapshot.docs.flatMap((doc) => {
-  const parsedInquiry = mapInquiryDoc(doc.id, doc.data() as Record<string, unknown>);
-  return parsedInquiry.success ? [parsedInquiry.data] : [];
-});
+const inquiryCount = inquirySnapshot.docs.reduce((count, inquiryDoc) => {
+  const parsedInquiry = mapInquiryDoc(inquiryDoc.id, inquiryDoc.data() as Record<string, unknown>);
+  return parsedInquiry.success ? count + 1 : count;
+}, 0);
 ---
 
 <html lang="en">
@@ -72,19 +68,18 @@ const initialInquiries = inquirySnapshot.docs.flatMap((doc) => {
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
-    <title>{vehicleTitle} · Seller Dashboard</title>
+    <title>{vehicleTitle} · Preview · Seller Dashboard</title>
   </head>
-  <body>
-    <SellerVehicleShell
+  <body class="flex min-h-screen flex-col bg-[#f8f9fa] font-sans text-slate-900">
+    <SellerPreviewFrame
       client:load
       vehicleId={vehicleId}
       vehicleTitle={vehicleTitle}
-      vehicleVin={vehicle.vin}
-      hasMonroney={Boolean(vehicle.monroney)}
-      initialTab={initialTab}
       sellerUid={seller.uid}
-      initialInquiries={initialInquiries}
-      initialFormState={initialFormState}
+      inquiryCount={inquiryCount}
     />
+    <div class="flex-1 overflow-y-auto">
+      <VehicleListingContent vehicle={listingVehicle} />
+    </div>
   </body>
 </html>
