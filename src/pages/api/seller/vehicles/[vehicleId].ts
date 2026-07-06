@@ -8,6 +8,7 @@ import {
   unauthorizedResponse,
 } from '../../../../lib/auth';
 import { db } from '../../../../lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { formStateToVehiclePatch } from '../../../../lib/vehicle-form-mapper';
 import {
   VehicleDashboardUpdateSchema,
@@ -103,7 +104,12 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
       );
     }
 
-    await db().collection('vehicles').doc(vehicleId).update(patchParsed.data);
+    const firestoreUpdate: Record<string, unknown> = { ...patchParsed.data };
+    if (firestoreUpdate.listingTitle === null || firestoreUpdate.listingTitle === '') {
+      firestoreUpdate.listingTitle = FieldValue.delete();
+    }
+
+    await db().collection('vehicles').doc(vehicleId).update(firestoreUpdate);
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

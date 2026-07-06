@@ -1,5 +1,5 @@
 import type { DetailsSectionFormProps } from './form-section-types';
-import { INPUT_CLASS } from './form-section-types';
+import { INPUT_CLASS, TEXTAREA_CLASS } from './form-section-types';
 import MonroneyStickerUploadBar from './MonroneyStickerUploadBar';
 import MonroneyVinPopulateBar from './MonroneyVinPopulateBar';
 import OriginalStickerUploadField from './OriginalStickerUploadField';
@@ -40,6 +40,73 @@ export default function BasicsSection({
         />
       ) : null}
       <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Listing header</h3>
+          <div className="space-y-6">
+            <div>
+              <label htmlFor="listingTitle" className="block text-sm font-medium text-slate-700 mb-2">
+                Listing title
+              </label>
+              <input
+                type="text"
+                id="listingTitle"
+                {...register('listingTitle')}
+                className={INPUT_CLASS}
+                placeholder="e.g. 2017 RAM 1500"
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                Shown as the main heading on the public listing. Leave blank to use year, make, and
+                model.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-2">
+                Listing summary
+              </label>
+              <textarea
+                id="description"
+                {...register('description')}
+                className={TEXTAREA_CLASS}
+                placeholder="Well-maintained 2017 RAM 1500 Night Edition with Hemi V8, 4x4, and clean Carfax."
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                Short overview shown under the asking price (1–2 sentences).
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="drivetrain" className="block text-sm font-medium text-slate-700 mb-2">
+                Drivetrain
+              </label>
+              <input
+                type="text"
+                id="drivetrain"
+                {...register('drivetrain')}
+                className={INPUT_CLASS}
+                placeholder="e.g. 4WD Fully Loaded"
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                Shown in the overview spec card on the public listing.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="locationCity" className="block text-sm font-medium text-slate-700 mb-2">
+                Location
+              </label>
+              <input
+                type="text"
+                id="locationCity"
+                {...register('locationCity')}
+                className={INPUT_CLASS}
+                placeholder="e.g. Santa Cruz, CA"
+              />
+              <p className="text-xs text-slate-500 mt-2">City shown on the public listing.</p>
+            </div>
+          </div>
+        </div>
+
         <div>
           <label htmlFor="mileage" className="block text-sm font-medium text-slate-700 mb-2">
             Current Mileage

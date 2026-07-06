@@ -177,7 +177,9 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
   const walkaroundYoutubeId = walkaroundVideoUrl ? getYoutubeId(walkaroundVideoUrl) : null;
   const walkaroundVimeoId = walkaroundVideoUrl ? getVimeoId(walkaroundVideoUrl) : null;
 
-  const pageTitle = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+  const pageTitle =
+    vehicle.listingTitle?.trim() ||
+    `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
   const descriptionExcerpt =
     vehicle.description.length > 200
       ? `${vehicle.description.slice(0, 200)}…`

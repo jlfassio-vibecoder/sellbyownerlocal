@@ -201,6 +201,10 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
   const highlights = vehicle.highlights ?? [];
 
   return {
+    listingTitle: vehicle.listingTitle ?? '',
+    description: vehicle.description,
+    drivetrain: vehicle.specs.drivetrain,
+    locationCity: vehicle.location.city,
     mileage: formatMileage(vehicle.mileage),
     price: formatCurrency(vehicle.price),
     windowStickerUrl: vehicle.documents?.windowSticker ?? '',
@@ -315,6 +319,30 @@ export function formStateToVehiclePatch(
     .filter((url) => url.length > 0)
     .slice(0, 30);
   patch.images = images;
+
+  const listingTitleTrimmed = optionalString(state.listingTitle).trim();
+  patch.listingTitle = listingTitleTrimmed || null;
+
+  const description = optionalString(state.description).trim();
+  if (description) {
+    patch.description = description;
+  }
+
+  const drivetrain = optionalString(state.drivetrain).trim();
+  if (drivetrain) {
+    patch.specs = {
+      ...existing.specs,
+      drivetrain,
+    };
+  }
+
+  const locationCity = optionalString(state.locationCity).trim();
+  if (locationCity) {
+    patch.location = {
+      geohash: existing.location.geohash,
+      city: locationCity,
+    };
+  }
 
   return patch;
 }
