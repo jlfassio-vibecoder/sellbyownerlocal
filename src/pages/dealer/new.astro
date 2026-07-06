@@ -1,0 +1,22 @@
+---
+import DealerNewListingForm from '../../islands/DealerNewListingForm';
+import { requireDealerOrRedirect } from '../../lib/auth';
+import '../../styles/global.css';
+
+const dealer = await requireDealerOrRedirect(Astro.request, Astro.cookies);
+if (dealer instanceof Response) return dealer;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>New AI Listing · Dealer Workspace</title>
+  </head>
+  <body class="min-h-screen bg-slate-50 py-12 px-4">
+    <DealerNewListingForm client:load />
+  </body>
+</html>

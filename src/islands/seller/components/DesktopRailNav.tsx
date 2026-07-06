@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Check,
   Circle,
+  Eye,
   FileText,
   FolderOpen,
   Gauge,
@@ -17,6 +18,7 @@ import {
 import type { DetailsSection } from './details-nav-types';
 
 interface DesktopRailNavProps {
+  vehicleId: string;
   sections: DetailsSection[];
   activeId: string;
   onSelect: (id: string) => void;
@@ -46,7 +48,12 @@ function CompleteIcon({ isActive }: { isActive: boolean }) {
   );
 }
 
-export default function DesktopRailNav({ sections, activeId, onSelect }: DesktopRailNavProps) {
+export default function DesktopRailNav({
+  vehicleId,
+  sections,
+  activeId,
+  onSelect,
+}: DesktopRailNavProps) {
   const [isRailOpen, setIsRailOpen] = useState(true);
 
   const completeCount = sections.filter((s) => s.complete).length;
@@ -60,9 +67,19 @@ export default function DesktopRailNav({ sections, activeId, onSelect }: Desktop
     >
       <div
         className={`flex shrink-0 items-center border-b border-slate-700/50 ${
-          isRailOpen ? 'justify-end px-3 py-3' : 'justify-center py-3'
+          isRailOpen ? 'justify-between gap-2 px-3 py-3' : 'flex-col justify-center gap-2 py-3'
         }`}
       >
+        <a
+          href={`/seller/vehicles/${vehicleId}/preview`}
+          className={`flex items-center rounded-lg text-slate-300 transition-colors hover:bg-slate-700/60 hover:text-white ${
+            isRailOpen ? 'gap-1.5 px-2 py-1.5 text-xs font-medium' : 'p-2'
+          }`}
+          title="Preview listing"
+        >
+          <Eye size={isRailOpen ? 16 : 20} aria-hidden="true" />
+          {isRailOpen ? <span>Preview</span> : <span className="sr-only">Preview listing</span>}
+        </a>
         <button
           type="button"
           onClick={() => setIsRailOpen((open) => !open)}

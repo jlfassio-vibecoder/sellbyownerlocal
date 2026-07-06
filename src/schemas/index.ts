@@ -72,6 +72,157 @@ export const WindowStickerBreakdownSchema = z.object({
   lineItems: z.array(WindowStickerLineItemSchema).min(1),
 });
 
+export const vinString = z
+  .string()
+  .length(17)
+  .regex(/^[A-HJ-NPR-Z0-9]{17}$/i, { message: 'Invalid VIN format' });
+
+export const MonroneyOptionSchema = z.object({
+  label: z.string().min(1),
+  price: z.number().nonnegative(),
+  category: z.enum(['package', 'option', 'fee']),
+  contents: z.array(z.string().min(1)).optional(),
+});
+
+export const MonroneyStandardEquipmentSchema = z.object({
+  category: z.string().min(1),
+  items: z.array(z.string().min(1)).min(1),
+});
+
+export const MonroneyFuelEconomySchema = z.object({
+  city: z.number().positive(),
+  highway: z.number().positive(),
+  combined: z.number().positive(),
+});
+
+export const MonroneyEpaSchema = z.object({
+  city: z.number().positive(),
+  highway: z.number().positive(),
+  combined: z.number().positive(),
+  gallonsPer100Mi: z.number().positive().optional(),
+  annualFuelCost: z.number().positive().optional(),
+  /** Negative = buyer spends more vs average new vehicle over 5 years. */
+  fiveYearSavings: z.number().optional(),
+  ghgRating: z.number().int().min(1).max(10).optional(),
+  smogRating: z.number().int().min(1).max(10).optional(),
+  co2GramsPerMile: z.number().positive().optional(),
+  fuelType: z.string().min(1).optional(),
+});
+
+export const MonroneySafetyRatingsSchema = z.object({
+  overall: z.number().int().min(1).max(5).optional(),
+  frontalDriver: z.number().int().min(1).max(5).optional(),
+  frontalPassenger: z.number().int().min(1).max(5).optional(),
+  sideFrontSeat: z.number().int().min(1).max(5).optional(),
+  sideRearSeat: z.number().int().min(1).max(5).optional(),
+  rollover: z.number().int().min(1).max(5).optional(),
+});
+
+export const MonroneyPartsContentSchema = z.object({
+  usCanadianPercent: z.number().min(0).max(100).optional(),
+  majorForeignSources: z
+    .array(
+      z.object({
+        country: z.string().min(1),
+        percent: z.number().min(0).max(100),
+      })
+    )
+    .optional(),
+  engineOrigin: z.string().min(1).optional(),
+  transmissionOrigin: z.string().min(1).optional(),
+});
+
+export const MonroneyWarrantySchema = z.object({
+  items: z.array(z.string().min(1)).min(1),
+  badge: z.string().min(1).optional(),
+});
+
+export const MonroneyManufacturerInfoSchema = z.object({
+  name: z.string().min(1),
+  website: z.string().min(1).optional(),
+  phone: z.string().min(1).optional(),
+});
+
+export const MonroneyAssemblySchema = z.object({
+  plant: z.string().min(1),
+  country: z.string().min(1),
+});
+
+/** Authoritative factory data from NHTSA vPIC at VIN decode time. */
+export const MonroneyFactorySpecsSchema = z.object({
+  trim: z.string().min(1),
+  trim2: z.string().min(1).optional(),
+  series: z.string().min(1).optional(),
+  bodyClass: z.string().min(1),
+  bodyCabType: z.string().min(1).optional(),
+  drivetrain: z.string().min(1),
+  plant: z.string().min(1),
+  plantCountry: z.string().min(1),
+});
+
+export const MonroneySchema = z.object({
+  /** Computed from factorySpecs + Monroney options; cached for display. */
+  styleLine: z.string().min(1).optional(),
+  /** NHTSA vPIC decode — basic specs used for Monroney header and assembly. */
+  factorySpecs: MonroneyFactorySpecsSchema.optional(),
+  baseMsrp: z.number().positive(),
+  destinationCharge: z.number().nonnegative(),
+  totalMsrp: z.number().positive(),
+  options: z.array(MonroneyOptionSchema),
+  standardEquipment: z.array(MonroneyStandardEquipmentSchema),
+  fuelEconomy: MonroneyFuelEconomySchema.optional(),
+  epa: MonroneyEpaSchema.optional(),
+  safetyRatings: MonroneySafetyRatingsSchema.optional(),
+  partsContent: MonroneyPartsContentSchema.optional(),
+  warranty: MonroneyWarrantySchema.optional(),
+  manufacturerInfo: MonroneyManufacturerInfoSchema.optional(),
+  assembly: MonroneyAssemblySchema.optional(),
+});
+
+export const AiGenerationSchema = z.object({
+  status: z.enum(['text_complete', 'complete', 'failed', 'partial']),
+  source: z.enum(['vin', 'sticker']),
+  model: z.string().min(1),
+  generatedAt: z.string().datetime(),
+});
+
+export const DealerProspectSchema = z.object({
+  firstName: z.string().min(1).max(50),
+  lastName: z.string().min(1).max(50),
+});
+
+// Copilot suggestion ignored: server schema and client sticker-file.ts intentionally mirror the same rules; no shared module yet.
+const STICKER_MIME = /^data:(image\/(?:jpeg|png)|application\/pdf);base64,/;
+const MAX_STICKER_BYTES = 5 * 1024 * 1024;
+
+export const stickerDataUri = z
+  .string()
+  .refine((v) => STICKER_MIME.test(v), { message: 'Invalid sticker file format' })
+  .refine((v) => {
+    const b64 = v.split(',')[1] ?? '';
+    return Math.ceil((b64.length * 3) / 4) <= MAX_STICKER_BYTES;
+  }, { message: 'Sticker file must be under 5MB' })
+  .optional();
+
+export const stickerDataUriRequired = z
+  .string()
+  .refine((v) => STICKER_MIME.test(v), { message: 'Invalid sticker file format' })
+  .refine((v) => {
+    const b64 = v.split(',')[1] ?? '';
+    return Math.ceil((b64.length * 3) / 4) <= MAX_STICKER_BYTES;
+  }, { message: 'Sticker file must be under 5MB' });
+
+export const GenerateListingRequestSchema = z.object({
+  vin: vinString,
+  vehicleId: z.string().min(1).optional(),
+  prospect: DealerProspectSchema.optional(),
+  stickerFile: stickerDataUri,
+});
+
+export const GenerateHeroImageRequestSchema = z.object({
+  vehicleId: z.string().min(1),
+});
+
 export const GalleryPhotoSchema = z.object({
   url: httpHttpsUrl,
   category: z.string().min(1),
@@ -209,6 +360,52 @@ export const VehicleFormStateSchema = z.object({
   images: z.array(httpHttpsUrl).max(30).default([]),
 });
 
+export const GenerateListingFormFieldsSchema = VehicleFormStateSchema.partial();
+
+export const GenerateListingResponseSchema = z.object({
+  vehicleId: z.string().min(1),
+  formFields: GenerateListingFormFieldsSchema,
+  monroney: MonroneySchema.optional(),
+  partial: z.boolean().optional(),
+  fieldErrors: z.array(z.string()).optional(),
+  message: z.string().optional(),
+});
+
+export const PopulateMonroneyFromVinRequestSchema = z.object({
+  vin: vinString,
+});
+
+export const MonroneyFactoryPreviewSchema = z.object({
+  styleLine: z.string().min(1),
+  factorySpecs: MonroneyFactorySpecsSchema,
+  assembly: MonroneyAssemblySchema,
+});
+
+export const PopulateMonroneyFromVinResponseSchema = z.object({
+  vehicleId: z.string().min(1),
+  vin: vinString,
+  enriched: z.boolean(),
+  needsFullPopulate: z.boolean().optional(),
+  styleLine: z.string().min(1).optional(),
+  monroney: MonroneySchema.optional(),
+  factoryPreview: MonroneyFactoryPreviewSchema.optional(),
+  message: z.string().optional(),
+});
+
+export const PopulateMonroneyFromStickerRequestSchema = z.object({
+  stickerFile: stickerDataUriRequired,
+  vin: vinString.optional(),
+});
+
+export const PopulateMonroneyFromStickerResponseSchema = z.object({
+  vehicleId: z.string().min(1),
+  enriched: z.boolean(),
+  styleLine: z.string().min(1).optional(),
+  monroney: MonroneySchema.optional(),
+  partial: z.boolean().optional(),
+  message: z.string().optional(),
+});
+
 export const VehicleDashboardUpdateSchema = z
   .object({
     mileage: z.number().int().nonnegative().optional(),
@@ -262,7 +459,7 @@ export const VehicleSchema = z.object({
   sellerName: z.string().min(1),
   location: VehicleLocationSchema,
   tags: z.array(z.string()),
-  vin: z.string().min(1).optional(),
+  vin: vinString.optional(),
   createdAt: z.string().datetime(),
   specs: VehicleSpecsSchema,
   features: z.array(z.string().min(1)).min(1),
@@ -270,6 +467,9 @@ export const VehicleSchema = z.object({
   maintenance: z.array(MaintenanceRecordSchema).min(1),
   documents: VehicleDocumentsSchema.optional(),
   windowStickerBreakdown: WindowStickerBreakdownSchema.optional(),
+  monroney: MonroneySchema.optional(),
+  aiGeneration: AiGenerationSchema.optional(),
+  dealerProspect: DealerProspectSchema.optional(),
   videoUrl: httpHttpsUrl.optional(),
   videoPosterUrl: httpHttpsUrl.optional(),
   galleryPhotos: z.array(GalleryPhotoSchema).min(1).optional(),
@@ -289,6 +489,28 @@ export type MaintenanceRecord = z.infer<typeof MaintenanceRecordSchema>;
 export type VehicleDocuments = z.infer<typeof VehicleDocumentsSchema>;
 export type WindowStickerLineItem = z.infer<typeof WindowStickerLineItemSchema>;
 export type WindowStickerBreakdown = z.infer<typeof WindowStickerBreakdownSchema>;
+export type VinString = z.infer<typeof vinString>;
+export type MonroneyOption = z.infer<typeof MonroneyOptionSchema>;
+export type MonroneyStandardEquipment = z.infer<typeof MonroneyStandardEquipmentSchema>;
+export type MonroneyFuelEconomy = z.infer<typeof MonroneyFuelEconomySchema>;
+export type MonroneyEpa = z.infer<typeof MonroneyEpaSchema>;
+export type MonroneySafetyRatings = z.infer<typeof MonroneySafetyRatingsSchema>;
+export type MonroneyPartsContent = z.infer<typeof MonroneyPartsContentSchema>;
+export type MonroneyWarranty = z.infer<typeof MonroneyWarrantySchema>;
+export type MonroneyManufacturerInfo = z.infer<typeof MonroneyManufacturerInfoSchema>;
+export type MonroneyAssembly = z.infer<typeof MonroneyAssemblySchema>;
+export type MonroneyFactorySpecs = z.infer<typeof MonroneyFactorySpecsSchema>;
+export type Monroney = z.infer<typeof MonroneySchema>;
+export type AiGeneration = z.infer<typeof AiGenerationSchema>;
+export type DealerProspect = z.infer<typeof DealerProspectSchema>;
+export type GenerateListingRequest = z.infer<typeof GenerateListingRequestSchema>;
+export type GenerateListingResponse = z.infer<typeof GenerateListingResponseSchema>;
+export type PopulateMonroneyFromVinRequest = z.infer<typeof PopulateMonroneyFromVinRequestSchema>;
+export type MonroneyFactoryPreview = z.infer<typeof MonroneyFactoryPreviewSchema>;
+export type PopulateMonroneyFromVinResponse = z.infer<typeof PopulateMonroneyFromVinResponseSchema>;
+export type PopulateMonroneyFromStickerRequest = z.infer<typeof PopulateMonroneyFromStickerRequestSchema>;
+export type PopulateMonroneyFromStickerResponse = z.infer<typeof PopulateMonroneyFromStickerResponseSchema>;
+export type GenerateHeroImageRequest = z.infer<typeof GenerateHeroImageRequestSchema>;
 export type GalleryPhoto = z.infer<typeof GalleryPhotoSchema>;
 export type MarketComparable = z.infer<typeof MarketComparableSchema>;
 export type MarketValuation = z.infer<typeof MarketValuationSchema>;

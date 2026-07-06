@@ -17,6 +17,9 @@ import VideoSection from './components/VideoSection';
 
 interface DetailsEditorProps {
   vehicleId: string;
+  vehicleVin?: string;
+  hasMonroney?: boolean;
+  onMonroneyUpdated?: () => void;
   formState: VehicleFormState;
   onChange: (state: VehicleFormState) => void;
 }
@@ -44,7 +47,14 @@ const SECTION_LABELS: Record<SectionId, string> = {
   documents: 'Documents',
 };
 
-export default function DetailsEditor({ vehicleId, formState, onChange }: DetailsEditorProps) {
+export default function DetailsEditor({
+  vehicleId,
+  vehicleVin,
+  hasMonroney = false,
+  onMonroneyUpdated,
+  formState,
+  onChange,
+}: DetailsEditorProps) {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [activeSection, setActiveSection] = useState<SectionId>('basics');
 
@@ -156,6 +166,7 @@ export default function DetailsEditor({ vehicleId, formState, onChange }: Detail
         className="flex-1 min-h-0 flex overflow-hidden bg-slate-50"
       >
         <DesktopRailNav
+          vehicleId={vehicleId}
           sections={sections}
           activeId={activeSection}
           onSelect={(id) => setActiveSection(id as SectionId)}
@@ -171,7 +182,14 @@ export default function DetailsEditor({ vehicleId, formState, onChange }: Detail
           <div className="flex-1 overflow-y-auto p-8">
             <div className="max-w-2xl mx-auto space-y-6">
               <div style={sectionStyle('basics')}>
-                <BasicsSection {...sectionProps} />
+                <BasicsSection
+                  {...sectionProps}
+                  vehicleId={vehicleId}
+                  vehicleVin={vehicleVin}
+                  hasMonroney={hasMonroney}
+                  onPopulate={(state) => reset(state)}
+                  onMonroneyUpdated={onMonroneyUpdated}
+                />
               </div>
               <div style={sectionStyle('overview')}>
                 <OverviewSection {...sectionProps} />

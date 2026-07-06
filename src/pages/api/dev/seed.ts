@@ -35,6 +35,167 @@ const RAM_WINDOW_STICKER_BREAKDOWN = {
   ],
 };
 
+const RAM_MONRONEY = {
+  styleLine: '1500 NIGHT EDITION CREW CAB 4X4',
+  factorySpecs: {
+    trim: 'Sport',
+    series: 'DS',
+    bodyClass: 'Pickup',
+    bodyCabType: 'Crew/Super Crew/Crew Max',
+    drivetrain: '4WD/4-Wheel Drive/4x4',
+    plant: 'Warren',
+    plantCountry: 'UNITED STATES (USA)',
+  },
+  baseMsrp: 44095,
+  destinationCharge: 1395,
+  totalMsrp: 59895,
+  options: [
+    {
+      label: 'Leather-Trimmed Bucket Seats',
+      price: 1545,
+      category: 'option' as const,
+      contents: [
+        'Power 10-Way Driver / 6-Way Passenger Seats',
+        'Heated and Ventilated Front Seats',
+      ],
+    },
+    {
+      label: 'Night Edition Package 26Q',
+      price: 395,
+      category: 'package' as const,
+      contents: [
+        'Flat Black "Ram 1500" Badge',
+        'RAM 1500 Night Special Edition',
+        'Black Painted Honeycomb Grille',
+        '20-Inch x 8.0-Inch Painted Black Aluminum Wheels',
+      ],
+    },
+    {
+      label: 'Convenience Group',
+      price: 545,
+      category: 'package' as const,
+      contents: [
+        'Automatic High Beam Headlamp Control',
+        'Keyless Enter \'n Go™',
+        'Rain Sensitive Windshield Wipers',
+      ],
+    },
+    {
+      label: '9-Speaker Alpine® Premium Audio with Subwoofer',
+      price: 345,
+      category: 'option' as const,
+      contents: ['9-Alpine® Speakers with Subwoofer'],
+    },
+    {
+      label: 'Tri-Fold Tonneau Cover',
+      price: 595,
+      category: 'option' as const,
+    },
+    {
+      label: '5.7-Liter V8 HEMI® MDS VVT Engine',
+      price: 1450,
+      category: 'option' as const,
+    },
+    {
+      label: 'Power Sunroof',
+      price: 1095,
+      category: 'option' as const,
+    },
+    {
+      label: 'Uconnect® 8.4 NAV',
+      price: 795,
+      category: 'option' as const,
+      contents: ['GPS Navigation', 'SiriusXM Traffic / 5-Yr Traffic Subscription'],
+    },
+    {
+      label: '4-Corner Air Suspension',
+      price: 1715,
+      category: 'option' as const,
+    },
+    {
+      label: 'Ram Box® Cargo Management System',
+      price: 1295,
+      category: 'package' as const,
+      contents: ['4 Adjustable Cargo Tie-Down Hooks', 'Bed Cargo Divider / Extender'],
+    },
+    {
+      label: 'Spray-In Bedliner',
+      price: 495,
+      category: 'option' as const,
+    },
+  ],
+  standardEquipment: [
+    {
+      category: 'Functional/Safety Features',
+      items: [
+        'Advanced Multistage Front Airbags',
+        'Supplemental Side-Curtain Front and Rear Airbags',
+        '3.21 Rear Axle Ratio',
+        'Electric Shift-On-Demand Transfer Case',
+        '26-Gallon Fuel Tank',
+        'Remote Keyless Entry with All-Secure',
+        'Anti-Lock 4-Wheel Disc Brakes',
+        'ParkView™ Rear Back-Up Camera',
+        'Speed Control',
+        'Sentry Key® Theft Deterrent System',
+      ],
+    },
+    {
+      category: 'Interior Features',
+      items: [
+        'A/C Auto Temperature Control with Dual Zone Control',
+        'Uconnect® 8.4',
+        'Integrated Voice Command with Bluetooth®',
+        'SiriusXM® Sat Radio w/ 1-Yr Radio Subscription',
+        '6 Speakers',
+        'Heated Seats and Wheel Group',
+        'Leather-Wrapped Steering Wheel',
+        'Steering Wheel Mounted Audio Controls',
+      ],
+    },
+  ],
+  fuelEconomy: { city: 15, highway: 21, combined: 17 },
+  epa: {
+    city: 15,
+    highway: 21,
+    combined: 17,
+    gallonsPer100Mi: 5.9,
+    annualFuelCost: 2350,
+    fiveYearSavings: -4750,
+    ghgRating: 3,
+    smogRating: 6,
+    co2GramsPerMile: 527,
+    fuelType: 'Gasoline Vehicle',
+  },
+  safetyRatings: {
+    overall: 4,
+    frontalDriver: 4,
+    frontalPassenger: 4,
+    sideFrontSeat: 5,
+    sideRearSeat: 5,
+    rollover: 3,
+  },
+  partsContent: {
+    usCanadianPercent: 56,
+    majorForeignSources: [{ country: 'Mexico', percent: 29 }],
+    engineOrigin: 'Mexico',
+    transmissionOrigin: 'United States',
+  },
+  warranty: {
+    items: [
+      '5-year or 60,000-mile Powertrain Limited Warranty.',
+      '3-year or 36,000-mile Basic Limited Warranty.',
+    ],
+    badge: '5 YEAR / 60,000 MILE POWERTRAIN WARRANTY',
+  },
+  manufacturerInfo: {
+    name: 'FCA US LLC',
+    website: 'www.ramtrucks.com',
+    phone: '1-866-RAMINFO',
+  },
+  assembly: { plant: 'Warren, Michigan', country: 'U.S.A.' },
+};
+
 const FORD_WINDOW_STICKER_BREAKDOWN = {
   totalMsrp: 52100,
   lineItems: [
@@ -201,10 +362,10 @@ async function runSeed() {
         vin: '1C6RR7MT3HS761025',
         createdAt,
         specs: {
-          exteriorColor: 'Flame Red',
-          interiorColor: 'Black Leather',
-          transmission: '8-Speed Automatic',
-          engine: '5.7L HEMI V8',
+          exteriorColor: 'Flame Red Clear Coat Exterior Paint',
+          interiorColor: 'Black Interior Color',
+          transmission: '8-Speed Automatic 8HP70 Transmission',
+          engine: '5.7-Liter V8 HEMI® MDS VVT Engine',
           drivetrain: '4WD Fully Loaded',
         },
         features: [
@@ -220,7 +381,6 @@ async function runSeed() {
           { date: '2023-09-20', service: 'Air suspension delete — coilover conversion' },
         ],
         documents: {
-          windowSticker: DUMMY_PDF,
           kbbReport: DUMMY_PDF,
           carfaxReport: DUMMY_PDF,
           smogReport: DUMMY_PDF,
@@ -228,6 +388,7 @@ async function runSeed() {
         videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
         videoPosterUrl: 'https://picsum.photos/seed/ramVideoPoster/1280/720',
         windowStickerBreakdown: RAM_WINDOW_STICKER_BREAKDOWN,
+        monroney: RAM_MONRONEY,
         galleryPhotos: [
           {
             url: 'https://picsum.photos/seed/ramGalleryExterior/800/600',
@@ -358,7 +519,6 @@ async function runSeed() {
           { date: '2024-03-05', service: 'Brake inspection — pads at 70%' },
         ],
         documents: {
-          windowSticker: DUMMY_PDF,
           kbbReport: DUMMY_PDF,
           carfaxReport: DUMMY_PDF,
           smogReport: DUMMY_PDF,

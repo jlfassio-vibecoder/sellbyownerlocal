@@ -8,6 +8,10 @@ import InquiriesPanel from './InquiriesPanel';
 interface SellerVehicleShellProps {
   vehicleId: string;
   vehicleTitle: string;
+  vehicleVin?: string;
+  hasMonroney?: boolean;
+  initialTab?: SellerTab;
+  sellerUid: string;
   initialInquiries: InquiryRecord[];
   initialFormState: VehicleFormState;
 }
@@ -15,11 +19,16 @@ interface SellerVehicleShellProps {
 export default function SellerVehicleShell({
   vehicleId,
   vehicleTitle,
+  vehicleVin,
+  hasMonroney: initialHasMonroney = false,
+  initialTab = 'messages',
+  sellerUid,
   initialInquiries,
   initialFormState,
 }: SellerVehicleShellProps) {
-  const [activeTab, setActiveTab] = useState<SellerTab>('messages');
+  const [activeTab, setActiveTab] = useState<SellerTab>(initialTab);
   const [formState, setFormState] = useState(initialFormState);
+  const [hasMonroney, setHasMonroney] = useState(initialHasMonroney);
 
   const tabContent =
     activeTab === 'messages' ? (
@@ -27,7 +36,14 @@ export default function SellerVehicleShell({
     ) : activeTab === 'inquiries' ? (
       <InquiriesPanel inquiries={initialInquiries} />
     ) : (
-      <DetailsEditor vehicleId={vehicleId} formState={formState} onChange={setFormState} />
+      <DetailsEditor
+        vehicleId={vehicleId}
+        vehicleVin={vehicleVin}
+        hasMonroney={hasMonroney}
+        onMonroneyUpdated={() => setHasMonroney(true)}
+        formState={formState}
+        onChange={setFormState}
+      />
     );
 
   return (
@@ -36,6 +52,7 @@ export default function SellerVehicleShell({
       onTabChange={setActiveTab}
       inquiryCount={initialInquiries.length}
       vehicleTitle={vehicleTitle}
+      sellerUid={sellerUid}
     >
       {tabContent}
     </SellerLayout>

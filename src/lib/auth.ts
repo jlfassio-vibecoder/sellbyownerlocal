@@ -4,6 +4,7 @@ import { auth } from './firebase-admin';
 export interface SellerSession {
   uid: string;
   email?: string;
+  isDealer: boolean;
 }
 
 export const SESSION_COOKIE_NAME = '__session';
@@ -42,11 +43,19 @@ export function extractToken(request: Request, cookies: AstroCookies): string | 
 export async function verifySellerToken(token: string): Promise<SellerSession> {
   try {
     const decoded = await auth().verifySessionCookie(token, true);
-    return { uid: decoded.uid, email: decoded.email };
+    return {
+      uid: decoded.uid,
+      email: decoded.email,
+      isDealer: decoded.dealer === true,
+    };
   } catch {
     try {
       const decoded = await auth().verifyIdToken(token);
-      return { uid: decoded.uid, email: decoded.email };
+      return {
+        uid: decoded.uid,
+        email: decoded.email,
+        isDealer: decoded.dealer === true,
+      };
     } catch {
       throw new AuthError('Invalid or expired token');
     }
@@ -62,6 +71,32 @@ export async function requireSeller(
     throw new AuthError();
   }
   return verifySellerToken(token);
+}
+
+export async function requireDealer(
+  request: Request,
+  cookies: AstroCookies
+): Promise<SellerSession> {
+  const session = await requireSeller(request, cookies);
+  if (!session.isDealer) {
+    throw new ForbiddenError('Dealer access required');
+  }
+  return session;
+}
+
+export async function requireDealerOrRedirect(
+  request: Request,
+  cookies: AstroCookies,
+  loginPath = '/login'
+): Promise<SellerSession | Response> {
+  try {
+    return await requireDealer(request, cookies);
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      return forbiddenResponse('Dealer access required');
+    }
+    return Response.redirect(new URL(loginPath, request.url), 302);
+  }
 }
 
 export async function requireSellerOrRedirect(

@@ -1,4 +1,4 @@
-import type { Conversation, VehicleFormState } from '../schemas';
+import type { Conversation, PopulateMonroneyFromStickerResponse, PopulateMonroneyFromVinResponse, VehicleFormState } from '../schemas';
 
 export class SellerApiError extends Error {
   readonly status: number;
@@ -75,4 +75,48 @@ export async function markMessagesRead(sessionId: string, vehicleId: string): Pr
   if (!res.ok) {
     throw new SellerApiError(await parseErrorResponse(res), res.status);
   }
+}
+
+export async function populateMonroneyFromVin(
+  vehicleId: string,
+  vin: string
+): Promise<PopulateMonroneyFromVinResponse> {
+  const res = await fetch(
+    `/api/seller/vehicles/${encodeURIComponent(vehicleId)}/populate-monroney-from-vin`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vin }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
+
+  return (await res.json()) as PopulateMonroneyFromVinResponse;
+}
+
+export async function populateMonroneyFromSticker(
+  vehicleId: string,
+  stickerFile: string,
+  vin?: string
+): Promise<PopulateMonroneyFromStickerResponse> {
+  const res = await fetch(
+    `/api/seller/vehicles/${encodeURIComponent(vehicleId)}/populate-monroney-from-sticker`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        stickerFile,
+        ...(vin ? { vin } : {}),
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
+
+  return (await res.json()) as PopulateMonroneyFromStickerResponse;
 }
