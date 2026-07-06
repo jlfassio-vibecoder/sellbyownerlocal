@@ -283,7 +283,7 @@ export const MarketValuationSchema = z.object({
 });
 
 export const GenerateMarketResearchRequestSchema = z.object({
-  vehicleId: z.string().min(1),
+  vehicleId: z.string().trim().min(1),
 });
 
 export const GenerateMarketResearchResponseSchema = z.object({

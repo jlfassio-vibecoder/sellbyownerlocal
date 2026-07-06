@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    const vehicleId = parsed.data.vehicleId.trim();
+    const vehicleId = parsed.data.vehicleId;
     const doc = await db().collection('vehicles').doc(vehicleId).get();
 
     if (!doc.exists) {

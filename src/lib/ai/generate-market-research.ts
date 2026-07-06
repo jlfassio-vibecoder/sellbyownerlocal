@@ -47,9 +47,10 @@ function buildVehiclePayload(vehicle: VehicleResponse): Record<string, unknown> 
     tags: vehicle.tags,
     location: vehicle.location,
     monroney,
-    sellersNote: vehicle.sellersNote?.subtitle
-      ? { subtitle: vehicle.sellersNote.subtitle }
-      : undefined,
+    ...(vehicle.sellersNote ? { sellersNote: vehicle.sellersNote } : {}),
+    ...(vehicle.mechanicalIntegrity ? { mechanicalIntegrity: vehicle.mechanicalIntegrity } : {}),
+    ...(vehicle.highlights?.length ? { highlights: vehicle.highlights } : {}),
+    ...(vehicle.maintenance?.length ? { maintenance: vehicle.maintenance } : {}),
     marketValuation: vehicle.marketValuation
       ? {
           contextText: vehicle.marketValuation.contextText,

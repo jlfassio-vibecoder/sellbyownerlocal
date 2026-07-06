@@ -3,6 +3,7 @@ import { VehicleDeductionsSchema } from '../../schemas';
 
 const deductionAmountFields = ['tires', 'paint', 'mechanical', 'interior', 'other'] as const;
 
+// Copilot suggestion ignored: AI output must include at least one deduction amount per product spec; stored MarketValuation allows optional empty deductions.
 export const AiVehicleDeductionsSchema = VehicleDeductionsSchema.refine(
   (d) => deductionAmountFields.some((key) => d[key] != null && d[key]! > 0),
   { message: 'At least one deduction amount is required' }
