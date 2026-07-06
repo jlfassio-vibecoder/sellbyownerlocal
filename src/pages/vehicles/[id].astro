@@ -28,6 +28,7 @@ if (!parsed.success) {
 }
 
 const vehicle = parsed.data;
+// Copilot suggestion ignored: SSR enrichment for derived Monroney only; caching belongs in a follow-up when write paths persist enriched data.
 const displayMonroney = await resolveVehicleDisplayMonroney(vehicle);
 const listingVehicle = displayMonroney ? { ...vehicle, monroney: displayMonroney } : vehicle;
 const { pageTitle, descriptionExcerpt } = buildVehicleListingView(listingVehicle);

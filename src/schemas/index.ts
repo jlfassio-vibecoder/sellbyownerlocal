@@ -191,6 +191,7 @@ export const DealerProspectSchema = z.object({
   lastName: z.string().min(1).max(50),
 });
 
+// Copilot suggestion ignored: server schema and client sticker-file.ts intentionally mirror the same rules; no shared module yet.
 const STICKER_MIME = /^data:(image\/(?:jpeg|png)|application\/pdf);base64,/;
 const MAX_STICKER_BYTES = 5 * 1024 * 1024;
 

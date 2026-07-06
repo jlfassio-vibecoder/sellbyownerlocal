@@ -44,7 +44,6 @@ export default function DealerNewListingForm() {
 
   const onSubmit = async (values: DealerFormValues) => {
     setErrorMessage(null);
-    setStep('decode');
 
     let vehicleId: string;
 

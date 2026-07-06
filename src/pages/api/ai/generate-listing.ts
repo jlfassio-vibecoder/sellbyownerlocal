@@ -4,7 +4,6 @@ import {
   ForbiddenError,
   assertVehicleOwner,
   forbiddenResponse,
-  requireDealer,
   requireSeller,
   unauthorizedResponse,
 } from '../../../lib/auth';
@@ -135,15 +134,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return jsonError('Provide vehicleId (seller) or prospect without vehicleId (dealer create)', 400);
     }
 
-    if (isDealerCreate) {
-      try {
-        await requireDealer(request, cookies);
-      } catch (error) {
-        if (error instanceof ForbiddenError) {
-          return forbiddenResponse('Dealer access required');
-        }
-        throw error;
-      }
+    if (isDealerCreate && !session.isDealer) {
+      return forbiddenResponse('Dealer access required');
     }
 
     let decoded;

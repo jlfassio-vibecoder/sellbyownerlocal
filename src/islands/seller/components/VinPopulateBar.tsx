@@ -3,7 +3,7 @@ import { Loader2, Wand2 } from 'lucide-react';
 import { generateListingFromVin } from '../../../lib/ai-api';
 import { mergeAiFormFields } from '../../../lib/ai/ai-form-merger';
 import { readStickerFileAsDataUri, STICKER_FILE_ACCEPT } from '../../../lib/sticker-file';
-import type { VehicleFormState } from '../../../schemas';
+import { vinString, type VehicleFormState } from '../../../schemas';
 import { INPUT_CLASS } from './form-section-types';
 
 interface VinPopulateBarProps {
@@ -62,7 +62,7 @@ export default function VinPopulateBar({
 
   const handlePopulate = async () => {
     const trimmedVin = vin.trim().toUpperCase();
-    if (trimmedVin.length !== 17) {
+    if (!vinString.safeParse(trimmedVin).success) {
       setError('Enter a valid 17-character VIN');
       return;
     }

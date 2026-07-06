@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ExternalLink, FileText, Loader2 } from 'lucide-react';
 import { populateMonroneyFromVin } from '../../../lib/seller-api';
+import { vinString } from '../../../schemas';
 import { INPUT_CLASS } from './form-section-types';
 
 interface MonroneyVinPopulateBarProps {
@@ -28,7 +29,7 @@ export default function MonroneyVinPopulateBar({
 
   const handleUpdate = async () => {
     const trimmedVin = vin.trim().toUpperCase();
-    if (trimmedVin.length !== 17) {
+    if (!vinString.safeParse(trimmedVin).success) {
       setError('Enter a valid 17-character VIN');
       return;
     }

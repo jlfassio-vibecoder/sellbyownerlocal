@@ -85,7 +85,8 @@ function buildMonroneyFromSellersNote(vehicle: VehicleResponse): Monroney | unde
 
 /**
  * Resolve Monroney data for listing display: stored monroney, breakdown, or sellers note MSRP.
- * When a VIN is available, enriches with vPIC factory specs and federal EPA/safety data.
+ * Stored `vehicle.monroney` is returned as-is. Derived baselines are enriched with vPIC/federal
+ * data when a VIN is available.
  */
 export async function resolveVehicleDisplayMonroney(
   vehicle: VehicleResponse
