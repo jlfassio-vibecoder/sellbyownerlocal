@@ -263,12 +263,38 @@ export const MarketComparableSchema = z.object({
   sourceUrl: optionalComparableSourceUrl,
 });
 
+export const VehicleDeductionsSchema = z.object({
+  tires: z.number().nonnegative().optional(),
+  paint: z.number().nonnegative().optional(),
+  mechanical: z.number().nonnegative().optional(),
+  interior: z.number().nonnegative().optional(),
+  other: z.number().nonnegative().optional(),
+  notes: z.string().optional(),
+});
+
 export const MarketValuationSchema = z.object({
   contextText: z.string().optional(),
   dealerRealityText: z.string().optional(),
   kbbText: z.string().optional(),
   justificationText: z.string().optional(),
   comparables: z.array(MarketComparableSchema).max(5).default([]),
+  retailReadyPrice: z.number().positive().optional(),
+  vehicleDeductions: VehicleDeductionsSchema.optional(),
+});
+
+export const GenerateMarketResearchRequestSchema = z.object({
+  vehicleId: z.string().min(1),
+});
+
+export const GenerateMarketResearchResponseSchema = z.object({
+  marketValuation: MarketValuationSchema.pick({
+    contextText: true,
+    dealerRealityText: true,
+    kbbText: true,
+    justificationText: true,
+    retailReadyPrice: true,
+    vehicleDeductions: true,
+  }),
 });
 
 export const InquirySchema = z.object({
@@ -324,6 +350,10 @@ export const VehicleHighlightSchema = z.object({
 
 const optionalString = z.string().optional().or(z.literal(''));
 
+export const FormMarketValuationSchema = MarketValuationSchema.extend({
+  retailReadyPrice: optionalString,
+});
+
 export const VehicleFormStateSchema = z.object({
   listingTitle: optionalString,
   description: optionalString,
@@ -350,7 +380,7 @@ export const VehicleFormStateSchema = z.object({
   mechanicalItem2Text: optionalString,
   mechanicalItem3Title: optionalString,
   mechanicalItem3Text: optionalString,
-  marketValuation: MarketValuationSchema.default({ comparables: [] }),
+  marketValuation: FormMarketValuationSchema.default({ comparables: [] }),
   highlight1Title: optionalString,
   highlight1Text: optionalString,
   highlight2Title: optionalString,
@@ -520,9 +550,13 @@ export type PopulateMonroneyFromVinResponse = z.infer<typeof PopulateMonroneyFro
 export type PopulateMonroneyFromStickerRequest = z.infer<typeof PopulateMonroneyFromStickerRequestSchema>;
 export type PopulateMonroneyFromStickerResponse = z.infer<typeof PopulateMonroneyFromStickerResponseSchema>;
 export type GenerateHeroImageRequest = z.infer<typeof GenerateHeroImageRequestSchema>;
+export type GenerateMarketResearchRequest = z.infer<typeof GenerateMarketResearchRequestSchema>;
+export type GenerateMarketResearchResponse = z.infer<typeof GenerateMarketResearchResponseSchema>;
 export type GalleryPhoto = z.infer<typeof GalleryPhotoSchema>;
 export type MarketComparable = z.infer<typeof MarketComparableSchema>;
+export type VehicleDeductions = z.infer<typeof VehicleDeductionsSchema>;
 export type MarketValuation = z.infer<typeof MarketValuationSchema>;
+export type FormMarketValuation = z.infer<typeof FormMarketValuationSchema>;
 export type Inquiry = z.infer<typeof InquirySchema>;
 export type InquiryRecord = z.infer<typeof InquiryRecordSchema>;
 export type PitchBlock = z.infer<typeof PitchBlockSchema>;

@@ -2,6 +2,7 @@ import type {
   MarketValuation,
   PitchBlock,
   VehicleDashboardUpdate,
+  VehicleDeductions,
   VehicleFormState,
   VehicleHighlight,
   VehicleResponse,
@@ -149,14 +150,40 @@ function sanitizeComparable(
   };
 }
 
-function emptyMarketValuation(): MarketValuation {
+function emptyMarketValuation(): VehicleFormState['marketValuation'] {
   return {
     contextText: '',
     dealerRealityText: '',
     kbbText: '',
     justificationText: '',
     comparables: [],
+    retailReadyPrice: '',
+    vehicleDeductions: {},
   };
+}
+
+
+function buildVehicleDeductions(
+  deductions?: VehicleFormState['marketValuation']['vehicleDeductions']
+): VehicleDeductions | undefined {
+  if (!deductions) return undefined;
+
+  const result: VehicleDeductions = {};
+  const tires = sanitizeOptionalNumber(deductions.tires);
+  const paint = sanitizeOptionalNumber(deductions.paint);
+  const mechanical = sanitizeOptionalNumber(deductions.mechanical);
+  const interior = sanitizeOptionalNumber(deductions.interior);
+  const other = sanitizeOptionalNumber(deductions.other);
+  const notes = optionalString(deductions.notes).trim();
+
+  if (tires != null && tires > 0) result.tires = tires;
+  if (paint != null && paint > 0) result.paint = paint;
+  if (mechanical != null && mechanical > 0) result.mechanical = mechanical;
+  if (interior != null && interior > 0) result.interior = interior;
+  if (other != null && other > 0) result.other = other;
+  if (notes) result.notes = notes;
+
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 function buildMarketValuation(state: VehicleFormState): MarketValuation | undefined {
@@ -165,6 +192,12 @@ function buildMarketValuation(state: VehicleFormState): MarketValuation | undefi
   const dealerRealityText = optionalString(mv.dealerRealityText).trim();
   const kbbText = optionalString(mv.kbbText).trim();
   const justificationText = optionalString(mv.justificationText).trim();
+  const retailReadyRaw = optionalString(mv.retailReadyPrice).trim();
+  let retailReadyPrice: number | undefined;
+  if (retailReadyRaw) {
+    retailReadyPrice = parseCurrencyString(retailReadyRaw);
+  }
+  const vehicleDeductions = buildVehicleDeductions(mv.vehicleDeductions);
   const comparables = (mv.comparables ?? [])
     .map(sanitizeComparable)
     .filter((c) => c.label.trim() && c.price > 0)
@@ -182,7 +215,15 @@ function buildMarketValuation(state: VehicleFormState): MarketValuation | undefi
       ...(c.sourceUrl?.trim() ? { sourceUrl: c.sourceUrl.trim() } : {}),
     }));
 
-  if (!contextText && !dealerRealityText && !kbbText && !justificationText && comparables.length === 0) {
+  if (
+    !contextText &&
+    !dealerRealityText &&
+    !kbbText &&
+    !justificationText &&
+    comparables.length === 0 &&
+    retailReadyPrice == null &&
+    !vehicleDeductions
+  ) {
     return undefined;
   }
 
@@ -191,6 +232,8 @@ function buildMarketValuation(state: VehicleFormState): MarketValuation | undefi
     ...(dealerRealityText ? { dealerRealityText } : {}),
     ...(kbbText ? { kbbText } : {}),
     ...(justificationText ? { justificationText } : {}),
+    ...(retailReadyPrice != null ? { retailReadyPrice } : {}),
+    ...(vehicleDeductions ? { vehicleDeductions } : {}),
     comparables,
   };
 }
@@ -235,6 +278,10 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
           kbbText: vehicle.marketValuation.kbbText ?? '',
           justificationText: vehicle.marketValuation.justificationText ?? '',
           comparables: vehicle.marketValuation.comparables ?? [],
+          retailReadyPrice: vehicle.marketValuation.retailReadyPrice
+            ? formatCurrency(vehicle.marketValuation.retailReadyPrice)
+            : '',
+          vehicleDeductions: vehicle.marketValuation.vehicleDeductions ?? {},
         }
       : emptyMarketValuation(),
     highlight1Title: highlights[0]?.title ?? '',
