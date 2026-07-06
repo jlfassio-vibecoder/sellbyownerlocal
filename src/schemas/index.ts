@@ -325,6 +325,10 @@ export const VehicleHighlightSchema = z.object({
 const optionalString = z.string().optional().or(z.literal(''));
 
 export const VehicleFormStateSchema = z.object({
+  listingTitle: optionalString,
+  description: optionalString,
+  drivetrain: optionalString,
+  locationCity: optionalString,
   mileage: z.string().min(1).max(20),
   price: z.string().min(1).max(20),
   windowStickerUrl: optionalString,
@@ -408,6 +412,8 @@ export const PopulateMonroneyFromStickerResponseSchema = z.object({
 
 export const VehicleDashboardUpdateSchema = z
   .object({
+    listingTitle: z.union([z.string().min(1), z.literal(''), z.null()]).optional(),
+    description: z.string().min(1).optional(),
     mileage: z.number().int().nonnegative().optional(),
     price: z.number().positive().optional(),
     videoUrl: httpHttpsUrl.optional(),
@@ -418,6 +424,8 @@ export const VehicleDashboardUpdateSchema = z
     marketValuation: MarketValuationSchema.partial().optional(),
     highlights: z.array(VehicleHighlightSchema).optional(),
     images: z.array(httpHttpsUrl).max(30).optional(),
+    specs: VehicleSpecsSchema.partial().optional(),
+    location: VehicleLocationSchema.partial().optional(),
   })
   .strict();
 
@@ -453,6 +461,7 @@ export const VehicleSchema = z.object({
   price: z.number().positive(),
   mileage: z.number().int().nonnegative(),
   description: z.string().min(1),
+  listingTitle: z.string().min(1).optional(),
   images: z.array(httpHttpsUrl),
   status: VehicleStatusSchema,
   sellerId: z.string().min(1),
