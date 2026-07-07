@@ -18,6 +18,10 @@ function normalizeUrl(url: string): string {
   return toDirectStorageObjectUrl(url.trim());
 }
 
+function isResolvableUrl(url: string): boolean {
+  return url.startsWith('data:') || isOwnStorageUrl(url);
+}
+
 /**
  * Resolve vehicle history report URLs for display and proxy allowlisting.
  * Prefers `historyReportUrls`; falls back to legacy `documents.carfaxReport`.
@@ -28,7 +32,7 @@ export function resolveHistoryReportUrls(vehicle: {
 }): string[] {
   const fromArray = (vehicle.historyReportUrls ?? [])
     .map((url) => url.trim())
-    .filter((url) => url && !isPlaceholderDocumentUrl(url));
+    .filter((url) => url && !isPlaceholderDocumentUrl(url) && isResolvableUrl(url));
 
   if (fromArray.length > 0) {
     return fromArray;

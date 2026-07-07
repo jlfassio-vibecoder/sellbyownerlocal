@@ -6,9 +6,17 @@ import MediaPickerModal from './MediaPickerModal';
 import type { DetailsSectionFormProps } from './components/form-section-types';
 import { INPUT_CLASS_SIMPLE } from './components/form-section-types';
 
-type PhotoGalleryEditorProps = Pick<DetailsSectionFormProps, 'watch' | 'setValue' | 'control'>;
+type PhotoGalleryEditorProps = Pick<
+  DetailsSectionFormProps,
+  'watch' | 'setValue' | 'control' | 'register'
+>;
 
-export default function PhotoGalleryEditor({ watch, setValue, control }: PhotoGalleryEditorProps) {
+export default function PhotoGalleryEditor({
+  watch,
+  setValue,
+  control,
+  register,
+}: PhotoGalleryEditorProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const libraryUrls = watch('images') ?? [];
   const galleryPhotos = watch('galleryPhotos') ?? [];
@@ -83,7 +91,7 @@ export default function PhotoGalleryEditor({ watch, setValue, control }: PhotoGa
                   </label>
                   <select
                     id={`galleryPhotos.${index}.category`}
-                    {...control.register(`galleryPhotos.${index}.category`)}
+                    {...register(`galleryPhotos.${index}.category`)}
                     className={INPUT_CLASS_SIMPLE}
                   >
                     {categoryOptions.map((category) => (
@@ -104,7 +112,7 @@ export default function PhotoGalleryEditor({ watch, setValue, control }: PhotoGa
                   <input
                     id={`galleryPhotos.${index}.caption`}
                     type="text"
-                    {...control.register(`galleryPhotos.${index}.caption`)}
+                    {...register(`galleryPhotos.${index}.caption`)}
                     className={INPUT_CLASS_SIMPLE}
                     placeholder="Driver's side profile"
                   />
@@ -120,7 +128,7 @@ export default function PhotoGalleryEditor({ watch, setValue, control }: PhotoGa
                   <input
                     id={`galleryPhotos.${index}.alt`}
                     type="text"
-                    {...control.register(`galleryPhotos.${index}.alt`)}
+                    {...register(`galleryPhotos.${index}.alt`)}
                     className={INPUT_CLASS_SIMPLE}
                     placeholder="Describe this photo for accessibility"
                   />

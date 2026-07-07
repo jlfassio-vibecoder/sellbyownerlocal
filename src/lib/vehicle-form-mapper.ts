@@ -390,9 +390,7 @@ export function formStateToVehiclePatch(
 
   patch.smogCertificateUrls = state.smogCertificateUrls;
 
-  if (state.historyReportUrls.length > 0) {
-    patch.historyReportUrls = state.historyReportUrls;
-  }
+  patch.historyReportUrls = state.historyReportUrls;
 
   const videoUrl = optionalString(state.videoUrl).trim();
   if (videoUrl) patch.videoUrl = videoUrl;

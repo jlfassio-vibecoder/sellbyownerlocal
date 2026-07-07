@@ -15,6 +15,7 @@ export default function GallerySection({
   watch,
   setValue,
   control,
+  register,
 }: GallerySectionProps) {
   const [activePicker, setActivePicker] = useState<ActivePicker>(null);
   const images = watch('images') ?? [];
@@ -94,7 +95,7 @@ export default function GallerySection({
           ) : null}
         </div>
 
-        <PhotoGalleryEditor watch={watch} setValue={setValue} control={control} />
+        <PhotoGalleryEditor watch={watch} setValue={setValue} control={control} register={register} />
       </div>
 
       {activePicker === 'hero' ? (
