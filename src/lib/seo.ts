@@ -1,0 +1,76 @@
+import type { VehicleResponse } from '../schemas';
+import { resolveHeroImageUrls } from './resolve-display-media';
+import { priceFormatter } from '../utils/formatters';
+
+export const DEFAULT_OG_IMAGE = '/og-default.jpg';
+
+export function resolveAbsoluteUrl(pathOrUrl: string, origin: string): string {
+  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+    return pathOrUrl;
+  }
+  const path = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+  return new URL(path, origin).href;
+}
+
+export function truncateDescription(text: string, max = 150): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max).trimEnd()}…`;
+}
+
+function extractTrimFromStyleLine(
+  styleLine: string,
+  make: string,
+  model: string
+): string | undefined {
+  const normalized = styleLine.trim();
+  if (!normalized) return undefined;
+
+  const lower = normalized.toLowerCase();
+  const makeLower = make.toLowerCase();
+  const modelLower = model.toLowerCase();
+
+  if (lower === makeLower || lower === modelLower) return undefined;
+  if (lower === `${makeLower} ${modelLower}`) return undefined;
+
+  const modelIndex = lower.indexOf(modelLower);
+  if (modelIndex >= 0) {
+    const afterModel = normalized.slice(modelIndex + model.length).trim();
+    if (afterModel.length > 0) return afterModel;
+  }
+
+  if (!lower.includes(makeLower) && !lower.includes(modelLower)) {
+    return normalized;
+  }
+
+  return undefined;
+}
+
+export function buildVehicleSeoTitle(vehicle: VehicleResponse): string {
+  const trim = vehicle.monroney?.styleLine
+    ? extractTrimFromStyleLine(vehicle.monroney.styleLine, vehicle.make, vehicle.model)
+    : undefined;
+
+  const base = trim
+    ? `${vehicle.year} ${vehicle.make} ${vehicle.model} ${trim}`
+    : `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+
+  return `${base} - ${priceFormatter.format(vehicle.price)}`;
+}
+
+export function buildVehicleSeoDescription(vehicle: VehicleResponse): string {
+  const subtitle = vehicle.sellersNote?.subtitle?.trim();
+  if (subtitle) return truncateDescription(subtitle);
+
+  const firstPitchBody = vehicle.sellersNote?.blocks?.[0]?.body?.trim();
+  if (firstPitchBody) return truncateDescription(firstPitchBody);
+
+  return truncateDescription(vehicle.description);
+}
+
+export function resolveVehicleOgImage(vehicle: VehicleResponse): string | undefined {
+  const galleryUrl = vehicle.galleryPhotos?.[0]?.url;
+  if (galleryUrl) return galleryUrl;
+
+  return resolveHeroImageUrls(vehicle)[0];
+}

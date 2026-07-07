@@ -18,14 +18,7 @@ import {
   resolveMarketImageUrls,
 } from './resolve-display-media';
 export { canEmbedPdf, isPdfUrl } from './pdf-url';
-
-export const priceFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-});
-
-export const mileageFormatter = new Intl.NumberFormat('en-US');
+export { mileageFormatter, priceFormatter } from '../utils/formatters';
 
 export const dateFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',
