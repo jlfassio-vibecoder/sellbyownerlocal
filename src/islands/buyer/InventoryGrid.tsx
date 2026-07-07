@@ -125,6 +125,7 @@ export default function InventoryGrid({ initialVehicles }: InventoryGridProps) {
   const updateFilters = useCallback((next: InventoryFilters) => {
     setFilters(next);
     const search = buildSearchFromFilters(next);
+    // Copilot suggestion ignored: pushState is intentional so browser Back restores prior filter state.
     window.history.pushState(null, '', `${window.location.pathname}${search}`);
   }, []);
 

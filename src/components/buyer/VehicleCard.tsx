@@ -39,9 +39,9 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
 
         {highlights.length > 0 && (
           <ul className="flex flex-wrap gap-1.5">
-            {highlights.map((highlight) => (
+            {highlights.map((highlight, index) => (
               <li
-                key={highlight}
+                key={`${highlight}-${index}`}
                 className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600"
               >
                 {highlight}

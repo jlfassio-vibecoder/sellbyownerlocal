@@ -38,7 +38,7 @@ const listingVehicle = displayMonroney ? { ...vehicle, monroney: displayMonroney
 const seoTitle = buildVehicleSeoTitle(listingVehicle);
 const seoDescription = buildVehicleSeoDescription(listingVehicle);
 const seoImage = resolveVehicleOgImage(listingVehicle);
-const canonicalUrl = new URL(`/vehicles/${id}`, Astro.url.origin).href;
+const canonicalUrl = `/vehicles/${encodeURIComponent(id)}`;
 ---
 
 <Layout

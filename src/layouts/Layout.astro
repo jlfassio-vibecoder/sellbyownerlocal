@@ -14,7 +14,7 @@ const {
   title = 'Sell By Owner Local',
   description = 'Browse vehicles for sale by owner in your area. No dealer markup.',
   ogImage,
-  ogUrl = Astro.url.href,
+  ogUrl = `${Astro.url.pathname}${Astro.url.search}`,
   bodyClass = 'min-h-screen bg-gray-50 text-gray-900',
 } = Astro.props;
 
