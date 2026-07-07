@@ -90,7 +90,9 @@ function ChartTooltipContent({
 
   const matchLevel = bar.matchLevel ?? 'exact';
   const badge = !bar.isListing ? MATCH_BADGE[matchLevel] : null;
-  const differences = bar.differences?.filter(Boolean) ?? [];
+  const differences = (bar.differences ?? [])
+    .map((d) => (typeof d === 'string' ? d.trim() : ''))
+    .filter(Boolean);
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm max-w-xs">
@@ -128,7 +130,9 @@ function buildChartData(price: number, mileage: number, valuation: MarketValuati
     // Copilot suggestion ignored: highlighted comparables are legacy listing duplicates; the seller listing bar is appended separately from vehicle price/mileage.
     .filter((point) => !point.highlighted)
     .map((point) => {
-      const differences = (point.differences ?? []).filter((d) => d?.trim());
+      const differences = (point.differences ?? [])
+        .map((d) => (typeof d === 'string' ? d.trim() : ''))
+        .filter(Boolean);
       return {
         name: formatComparableLabel(point),
         value: point.price,
