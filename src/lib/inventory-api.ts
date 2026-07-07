@@ -10,8 +10,7 @@ export function mapVehicleDoc(id: string, data: Record<string, unknown>) {
 }
 
 function toInventoryVehicle(vehicle: VehicleResponse): InventoryVehicle {
-  const heroImage =
-    vehicle.galleryPhotos?.[0]?.url ?? resolveHeroImageUrls(vehicle)[0] ?? '';
+  const heroImage = resolveHeroImageUrls(vehicle)[0] ?? '';
 
   return {
     id: vehicle.id,
