@@ -17,6 +17,18 @@ type ChartBar = {
   mileage: number;
   fill: string;
   sourceHost?: string;
+  isListing?: boolean;
+  matchLevel?: 'exact' | 'similar' | 'base';
+  differences?: string[];
+};
+
+const MATCH_BADGE: Record<
+  'exact' | 'similar' | 'base',
+  { label: string; className: string }
+> = {
+  exact: { label: 'Exact Match', className: 'bg-slate-800 text-slate-50' },
+  similar: { label: 'Similar Build', className: 'bg-slate-200 text-slate-700' },
+  base: { label: 'Base Model / Fewer Options', className: 'bg-gray-100 text-gray-600' },
 };
 
 const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
@@ -76,11 +88,37 @@ function ChartTooltipContent({
   const bar = payload[0]?.payload;
   if (!bar) return null;
 
+  const matchLevel = bar.matchLevel ?? 'exact';
+  const badge = !bar.isListing ? MATCH_BADGE[matchLevel] : null;
+  const differences = bar.differences?.filter(Boolean) ?? [];
+
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm">
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm max-w-xs">
       <p className="font-medium text-slate-900">{bar.name}</p>
-      <p className="text-slate-600">${bar.value.toLocaleString()}</p>
+      {badge ? (
+        <span
+          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium mt-1 ${badge.className}`}
+        >
+          {badge.label}
+        </span>
+      ) : null}
+      <p className="text-slate-600 mt-1">${bar.value.toLocaleString()}</p>
       {bar.sourceHost && <p className="text-slate-500">Source: {bar.sourceHost}</p>}
+      {!bar.isListing && differences.length > 0 ? (
+        <>
+          <hr className="my-2 border-slate-200" />
+          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            Apples-to-Apples:
+          </p>
+          <ul>
+            {differences.map((diff, index) => (
+              <li key={`${diff}-${index}`} className="text-[11px] text-slate-600 leading-tight mb-1">
+                {diff}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -89,21 +127,27 @@ function buildChartData(price: number, mileage: number, valuation: MarketValuati
   const dealerBars: ChartBar[] = valuation.comparables
     // Copilot suggestion ignored: highlighted comparables are legacy listing duplicates; the seller listing bar is appended separately from vehicle price/mileage.
     .filter((point) => !point.highlighted)
-    .map((point) => ({
-      name: formatComparableLabel(point),
-      value: point.price,
-      mileage: point.mileage ?? Number.POSITIVE_INFINITY,
-      fill: '#e2e8f0',
-      ...(point.sourceUrl?.trim()
-        ? { sourceHost: parseSourceHostname(point.sourceUrl.trim()) }
-        : {}),
-    }));
+    .map((point) => {
+      const differences = (point.differences ?? []).filter((d) => d?.trim());
+      return {
+        name: formatComparableLabel(point),
+        value: point.price,
+        mileage: point.mileage ?? Number.POSITIVE_INFINITY,
+        fill: '#e2e8f0',
+        matchLevel: point.matchLevel ?? 'exact',
+        ...(differences.length > 0 ? { differences } : {}),
+        ...(point.sourceUrl?.trim()
+          ? { sourceHost: parseSourceHostname(point.sourceUrl.trim()) }
+          : {}),
+      };
+    });
 
   const listingBar: ChartBar = {
     name: `This Listing (${formatMileageShort(mileage)})`,
     value: price,
     mileage,
     fill: '#dc2626',
+    isListing: true,
   };
 
   return [...dealerBars, listingBar];

@@ -285,6 +285,8 @@ export const MarketComparableSchema = z.object({
   drivetrain: z.string().optional(),
   color: z.string().optional(),
   sourceUrl: optionalComparableSourceUrl,
+  matchLevel: z.enum(['exact', 'similar', 'base']).default('exact'),
+  differences: z.array(z.string()).default([]),
 });
 
 export const VehicleDeductionsSchema = z.object({
