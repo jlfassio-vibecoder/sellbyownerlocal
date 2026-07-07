@@ -1,4 +1,5 @@
 import type {
+  ExtractServiceHistoryResponse,
   GenerateHighlightsResponse,
   GenerateListingResponse,
   GenerateMarketResearchResponse,
@@ -83,4 +84,20 @@ export async function generateHighlights(
   }
 
   return (await res.json()) as GenerateHighlightsResponse;
+}
+
+export async function extractServiceHistory(
+  vehicleId: string
+): Promise<ExtractServiceHistoryResponse> {
+  const res = await fetch('/api/ai/extract-service-history', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vehicleId }),
+  });
+
+  if (!res.ok) {
+    throw new AiApiError(await parseErrorResponse(res), res.status);
+  }
+
+  return (await res.json()) as ExtractServiceHistoryResponse;
 }

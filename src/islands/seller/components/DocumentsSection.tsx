@@ -1,6 +1,7 @@
 import DocumentUploadFields, { type DocumentField } from '../DocumentUploadFields';
 import KbbReportUploader from '../KbbReportUploader';
 import SmogCertificateUploader from '../SmogCertificateUploader';
+import ServiceHistoryEditor from '../ServiceHistoryEditor';
 import type { VehicleFormState } from '../../../schemas';
 import type { DetailsSectionFormProps } from './form-section-types';
 
@@ -12,6 +13,8 @@ export default function DocumentsSection({
   vehicleId,
   watch,
   setValue,
+  control,
+  register,
 }: DocumentsSectionProps) {
   const formState = watch() as VehicleFormState;
 
@@ -26,6 +29,15 @@ export default function DocumentsSection({
         }
         onHistoryReportUrlsChange={(urls) =>
           setValue('historyReportUrls', urls, { shouldDirty: true })
+        }
+        serviceHistoryEditor={
+          <ServiceHistoryEditor
+            vehicleId={vehicleId}
+            control={control}
+            register={register}
+            setValue={setValue}
+            watch={watch}
+          />
         }
       />
       <KbbReportUploader
