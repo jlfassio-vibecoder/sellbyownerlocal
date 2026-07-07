@@ -1,11 +1,19 @@
-import { GripVertical, Trash2 } from 'lucide-react';
-import type { UseFormRegister } from 'react-hook-form';
+import { GripVertical, Plus, Trash2 } from 'lucide-react';
+import type { UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import type { VehicleFormState } from '../../../schemas';
 import { GRID_INPUT_CLASS } from './form-section-types';
+
+const MATCH_LEVEL_OPTIONS = [
+  { value: 'exact', label: 'Exact Match' },
+  { value: 'similar', label: 'Similar Build' },
+  { value: 'base', label: 'Base Model' },
+] as const;
 
 interface ComparableRowProps {
   index: number;
   register: UseFormRegister<VehicleFormState>;
+  setValue: UseFormSetValue<VehicleFormState>;
+  watch: UseFormWatch<VehicleFormState>;
   draggingIndex: number | null;
   dragOverIndex: number | null;
   onDragStart: (index: number) => void;
@@ -17,6 +25,8 @@ interface ComparableRowProps {
 export default function ComparableRow({
   index,
   register,
+  setValue,
+  watch,
   draggingIndex,
   dragOverIndex,
   onDragStart,
@@ -25,6 +35,19 @@ export default function ComparableRow({
   onRemove,
 }: ComparableRowProps) {
   const base = `marketValuation.comparables.${index}` as const;
+  const differences = watch(`${base}.differences`) ?? [];
+
+  const appendDifference = () => {
+    setValue(`${base}.differences`, [...differences, ''], { shouldDirty: true });
+  };
+
+  const removeDifference = (diffIndex: number) => {
+    setValue(
+      `${base}.differences`,
+      differences.filter((_, i) => i !== diffIndex),
+      { shouldDirty: true }
+    );
+  };
 
   return (
     <div
@@ -49,7 +72,7 @@ export default function ComparableRow({
           <GripVertical size={18} />
         </div>
         <div className="min-w-0 flex-[1_1_10rem]">
-          <label className="block text-xs font-medium text-slate-600 mb-1">Label / Source</label>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Title / Source</label>
           <input
             {...register(`${base}.label`)}
             placeholder="Dealer"
@@ -78,7 +101,7 @@ export default function ComparableRow({
           type="button"
           onClick={() => onRemove(index)}
           className="shrink-0 p-2 text-slate-400 hover:text-red-600 transition-colors"
-          aria-label="Remove comparable"
+          aria-label="Remove comp"
         >
           <Trash2 size={18} />
         </button>
@@ -127,6 +150,55 @@ export default function ComparableRow({
             className={GRID_INPUT_CLASS}
           />
         </div>
+        <div className="min-w-0 flex-[1_1_10rem]">
+          <label className="block text-xs font-medium text-slate-600 mb-1">Match Level</label>
+          <select {...register(`${base}.matchLevel`)} className={GRID_INPUT_CLASS}>
+            {MATCH_LEVEL_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-2 pl-7">
+        <div className="flex items-center justify-between">
+          <label className="block text-xs font-medium text-slate-600">Factory Differences</label>
+          <button
+            type="button"
+            onClick={appendDifference}
+            className="flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700"
+          >
+            <Plus size={14} />
+            Add Difference
+          </button>
+        </div>
+        {differences.length === 0 ? (
+          <p className="text-xs text-slate-400 italic">
+            Use + for comp upgrades you lack, - for options the comp is missing.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {differences.map((_, diffIndex) => (
+              <div key={`${base}-diff-${diffIndex}`} className="flex items-center gap-2">
+                <input
+                  {...register(`${base}.differences.${diffIndex}`)}
+                  placeholder="- Lacks Air Suspension Delete"
+                  className={`${GRID_INPUT_CLASS} flex-1`}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeDifference(diffIndex)}
+                  className="shrink-0 p-1.5 text-slate-400 hover:text-red-600 transition-colors"
+                  aria-label="Remove difference"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

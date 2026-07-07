@@ -401,11 +401,20 @@ export default function MarketValuationSection({
             <button
               type="button"
               disabled={fields.length >= 5}
-              onClick={() => append({ label: '', price: 0 })}
+              onClick={() =>
+                append({
+                  label: '',
+                  price: 0,
+                  mileage: undefined,
+                  sourceUrl: '',
+                  matchLevel: 'exact',
+                  differences: [],
+                })
+              }
               className="flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Plus size={16} />
-              Add Comparable Vehicle
+              Add Comp
             </button>
           </div>
 
@@ -420,6 +429,8 @@ export default function MarketValuationSection({
                   key={field.id}
                   index={index}
                   register={register}
+                  setValue={setValue}
+                  watch={watch}
                   draggingIndex={draggingIndex}
                   dragOverIndex={dragOverIndex}
                   onDragStart={(i) => {

@@ -157,12 +157,18 @@ function sanitizeComparable(
   comparable: VehicleFormState['marketValuation']['comparables'][number]
 ) {
   const sourceUrl = optionalString(comparable.sourceUrl as string | undefined).trim();
+  const matchLevel = comparable.matchLevel ?? 'exact';
+  const differences = (comparable.differences ?? [])
+    .map((d) => (typeof d === 'string' ? d.trim() : ''))
+    .filter(Boolean);
   return {
     ...comparable,
     year: sanitizeOptionalNumber(comparable.year),
     mileage: sanitizeOptionalNumber(comparable.mileage),
     price: sanitizeOptionalNumber(comparable.price) ?? 0,
     sourceUrl: sourceUrl || undefined,
+    matchLevel,
+    differences,
   };
 }
 
@@ -229,6 +235,8 @@ function buildMarketValuation(state: VehicleFormState): MarketValuation | undefi
       ...(c.drivetrain?.trim() ? { drivetrain: c.drivetrain.trim() } : {}),
       ...(c.color?.trim() ? { color: c.color.trim() } : {}),
       ...(c.sourceUrl?.trim() ? { sourceUrl: c.sourceUrl.trim() } : {}),
+      matchLevel: c.matchLevel,
+      differences: c.differences,
     }));
 
   if (
