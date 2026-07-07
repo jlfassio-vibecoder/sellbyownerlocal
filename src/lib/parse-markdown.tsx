@@ -19,6 +19,7 @@ function parseInlineParts(text: string): InlinePart[] {
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
+  INLINE_PATTERN.lastIndex = 0;
   while ((match = INLINE_PATTERN.exec(text)) !== null) {
     if (match.index > lastIndex) {
       parts.push({ type: 'plain', text: text.slice(lastIndex, match.index) });

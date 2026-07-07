@@ -69,7 +69,10 @@ function applyBulletWrap(
 
   const block = text.slice(rangeStart, rangeEnd);
   const lines = block.split('\n');
-  const updatedLines = lines.map((line) => (line.startsWith('- ') ? line : `- ${line}`));
+  const updatedLines = lines.map((line) => {
+    if (line.trim() === '' || line.startsWith('- ')) return line;
+    return `- ${line}`;
+  });
   const updatedBlock = updatedLines.join('\n');
   const value = text.slice(0, rangeStart) + updatedBlock + text.slice(rangeEnd);
 

@@ -15,6 +15,7 @@ export function parseAccentText(text: string): AccentTextPart[] {
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
+  pattern.lastIndex = 0;
   while ((match = pattern.exec(text)) !== null) {
     if (match.index > lastIndex) {
       parts.push({ type: 'plain', text: text.slice(lastIndex, match.index) });
