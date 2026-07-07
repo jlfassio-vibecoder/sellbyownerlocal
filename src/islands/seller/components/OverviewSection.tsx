@@ -1,8 +1,13 @@
 import AutoTextarea from './AutoTextarea';
+import PitchBlockEditor from './PitchBlockEditor';
 import type { DetailsSectionFormProps } from './form-section-types';
 import { INPUT_CLASS_SIMPLE, TEXTAREA_CLASS } from './form-section-types';
 
-export default function OverviewSection({ register }: DetailsSectionFormProps) {
+export default function OverviewSection({
+  register,
+  watch,
+  setValue,
+}: DetailsSectionFormProps) {
   return (
     <>
       <h2 className="text-2xl font-bold text-slate-900 mb-6">Overview &amp; Seller&apos;s Note</h2>
@@ -61,6 +66,8 @@ export default function OverviewSection({ register }: DetailsSectionFormProps) {
           <label className="block text-sm font-medium text-slate-700 mb-2">Call to Action Box Text</label>
           <AutoTextarea {...register('ctaText')} className={TEXTAREA_CLASS} />
         </div>
+
+        <PitchBlockEditor watch={watch} setValue={setValue} />
       </div>
     </>
   );

@@ -3,12 +3,21 @@ import {
   FileText,
   Gauge,
   Palette,
-  ShieldCheck,
   Sofa,
   Truck,
   type LucideIcon,
 } from 'lucide-react';
 import type { PitchBlock, VehicleResponse } from '../schemas';
+import { isPlaceholderDocumentUrl, resolveOriginalStickerUrl } from './original-sticker-url';
+import { resolveHistoryReportUrls } from './history-report-urls';
+import { resolveKbbReportUrl } from './kbb-report-url';
+import { resolveSmogCertificateUrls } from './smog-certificate-url';
+import {
+  resolveCarouselImageUrls,
+  resolveHeroImageUrls,
+  resolveMarketImageUrls,
+} from './resolve-display-media';
+export { canEmbedPdf, isPdfUrl } from './pdf-url';
 
 export const priceFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -32,61 +41,12 @@ export const specItems = [
   { key: 'drivetrain', label: 'Drivetrain', icon: Truck },
 ] as const;
 
-const pdfUrlPattern = /\.pdf($|\?)/i;
-
-const NON_EMBEDDABLE_PDF_HOSTS = new Set(['www.w3.org', 'w3.org']);
-
-export function isPdfUrl(url: string) {
-  return url.startsWith('data:application/pdf') || pdfUrlPattern.test(url);
-}
-
-/** Whether a PDF URL can be shown in an iframe without CSP frame-ancestors errors. */
-export function canEmbedPdf(url: string): boolean {
-  if (url.startsWith('data:application/pdf')) return true;
-  if (url.startsWith('/')) return true;
-
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-    if (NON_EMBEDDABLE_PDF_HOSTS.has(host)) return false;
-
-    return (
-      host.endsWith('firebasestorage.app') ||
-      host.endsWith('googleusercontent.com') ||
-      host === 'storage.googleapis.com'
-    );
-  } catch {
-    return false;
-  }
-}
-
 const documentItems = [
   {
     key: 'windowSticker' as const,
     id: 'build-sheet',
     title: 'Original Window Sticker',
     description: 'Factory installed options and original MSRP.',
-    icon: FileText,
-  },
-  {
-    key: 'kbbReport' as const,
-    id: 'kbb',
-    title: 'Kelley Blue Book Report',
-    description: 'Official KBB valuation and condition report.',
-    icon: FileText,
-  },
-  {
-    key: 'carfaxReport' as const,
-    id: 'carfax',
-    title: 'Carfax Report',
-    description: 'Detailed vehicle history and condition report.',
-    icon: ShieldCheck,
-  },
-  {
-    key: 'smogReport' as const,
-    id: 'smog',
-    title: 'Smog Report',
-    description: 'Official emissions and smog check certification.',
     icon: FileText,
   },
 ];
@@ -122,25 +82,27 @@ function normalizePosterUrl(posterUrl: string): string {
   return posterUrl;
 }
 
-const documentNavLabels: Record<string, string> = {
-  kbb: 'KBB Report',
-  carfax: 'Carfax',
-  smog: 'Smog Report',
-};
+const documentNavLabels: Record<string, string> = {};
 
 export interface VehicleListingView {
   pageTitle: string;
   descriptionExcerpt: string;
   heroImage: string | undefined;
+  carouselImageUrls: string[];
+  marketImageUrls: string[];
   primaryTag: string | undefined;
   sortedMaintenance: VehicleResponse['maintenance'];
   availableDocuments: DocumentItem[];
   otherDocuments: DocumentItem[];
-  windowStickerUrl: string | undefined;
+  originalStickerUrl: string | undefined;
+  kbbReportUrl: string | undefined;
+  smogCertificateUrls: string[];
+  showGeneratedSticker: boolean;
   windowStickerBreakdown: VehicleResponse['windowStickerBreakdown'];
   monroney: VehicleResponse['monroney'];
   showWindowStickerSection: boolean;
   showDocumentsSection: boolean;
+  historyReportUrls: string[];
   walkaroundVideoUrl: string | undefined;
   walkaroundPosterUrl: string | undefined;
   walkaroundYoutubeId: string | null;
@@ -160,15 +122,27 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
 
   const availableDocuments = documentItems.flatMap((item) => {
     const url = vehicle.documents?.[item.key];
-    return url ? [{ ...item, url }] : [];
+    if (!url || isPlaceholderDocumentUrl(url)) return [];
+    return [{ ...item, url }];
   });
 
-  const windowStickerUrl = vehicle.documents?.windowSticker;
+  const originalStickerUrl = resolveOriginalStickerUrl(vehicle);
+  const kbbReportUrl = resolveKbbReportUrl(vehicle);
+  const smogCertificateUrls = resolveSmogCertificateUrls(vehicle);
+  const historyReportUrls = resolveHistoryReportUrls(vehicle);
   const windowStickerBreakdown = vehicle.windowStickerBreakdown;
   const monroney = vehicle.monroney;
+  const showGeneratedSticker = !originalStickerUrl && Boolean(monroney);
   const otherDocuments = availableDocuments.filter((doc) => doc.key !== 'windowSticker');
-  const showWindowStickerSection = Boolean(windowStickerUrl || windowStickerBreakdown || monroney);
-  const showDocumentsSection = showWindowStickerSection || otherDocuments.length > 0;
+  const showWindowStickerSection = Boolean(
+    originalStickerUrl || monroney || windowStickerBreakdown
+  );
+  const showDocumentsSection =
+    showWindowStickerSection ||
+    historyReportUrls.length > 0 ||
+    Boolean(kbbReportUrl) ||
+    Boolean(smogCertificateUrls.length > 0) ||
+    otherDocuments.length > 0;
 
   const walkaroundVideoUrl = vehicle.videoUrl;
   const walkaroundPosterUrl = vehicle.videoPosterUrl
@@ -184,7 +158,10 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
     vehicle.description.length > 200
       ? `${vehicle.description.slice(0, 200)}…`
       : vehicle.description;
-  const heroImage = vehicle.images[0];
+  const heroImageUrls = resolveHeroImageUrls(vehicle);
+  const heroImage = heroImageUrls[0];
+  const carouselImageUrls = resolveCarouselImageUrls(vehicle);
+  const marketImageUrls = resolveMarketImageUrls(vehicle);
   const primaryTag = vehicle.tags[0];
 
   const sellersNote = vehicle.sellersNote;
@@ -192,7 +169,8 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
   const pitchIntro = sellersNote?.intro ?? vehicle.description;
   const originalMsrp =
     sellersNote?.originalMsrp ?? monroney?.totalMsrp ?? windowStickerBreakdown?.totalMsrp;
-  const heroImagePending = vehicle.aiGeneration?.status === 'text_complete' && !vehicle.images[0];
+  const heroImagePending =
+    vehicle.aiGeneration?.status === 'text_complete' && !heroImageUrls[0];
   const pitchBlocks = sellersNote?.blocks ?? [];
   const ctaButtonLabel =
     sellersNote?.ctaButtonLabel ?? 'Contact Seller to Schedule a Showing';
@@ -215,6 +193,15 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
   if (showWindowStickerSection) {
     navSections.push({ id: 'build-sheet', label: 'Build Sheet' });
   }
+  if (historyReportUrls.length > 0) {
+    navSections.push({ id: 'carfax', label: 'Carfax' });
+  }
+  if (kbbReportUrl) {
+    navSections.push({ id: 'kbb', label: 'KBB Report' });
+  }
+  if (smogCertificateUrls.length > 0) {
+    navSections.push({ id: 'smog', label: 'Smog Report' });
+  }
   for (const doc of otherDocuments) {
     navSections.push({
       id: doc.id,
@@ -226,15 +213,21 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
     pageTitle,
     descriptionExcerpt,
     heroImage,
+    carouselImageUrls,
+    marketImageUrls,
     primaryTag,
     sortedMaintenance,
     availableDocuments,
     otherDocuments,
-    windowStickerUrl,
+    originalStickerUrl,
+    kbbReportUrl,
+    smogCertificateUrls,
+    showGeneratedSticker,
     windowStickerBreakdown,
     monroney,
     showWindowStickerSection,
     showDocumentsSection,
+    historyReportUrls,
     walkaroundVideoUrl,
     walkaroundPosterUrl,
     walkaroundYoutubeId,

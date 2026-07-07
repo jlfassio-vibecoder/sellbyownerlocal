@@ -283,6 +283,9 @@ function PartsContentBox({ monroney }: { monroney: Monroney }) {
   );
 }
 
+const GENERATED_STICKER_DISCLAIMER =
+  "DISCLAIMER: This is a digitally reproduced representation of the vehicle's equipment based on available market and VIN data. It is not an official OEM Monroney label and may contain inaccuracies.";
+
 export default function WindowSticker({
   monroney,
   vehicleTitle,
@@ -458,6 +461,10 @@ export default function WindowSticker({
           </div>
         </div>
       ) : null}
+
+      <p className="border-t border-black px-3 py-2 text-[8px] normal-case leading-snug text-gray-500">
+        {GENERATED_STICKER_DISCLAIMER}
+      </p>
     </div>
   );
 }

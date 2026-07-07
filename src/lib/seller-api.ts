@@ -34,7 +34,13 @@ export async function updateVehicle(
 export async function uploadDocument(
   vehicleId: string,
   file: File,
-  purpose: 'document' | 'gallery' = 'document'
+  purpose:
+    | 'document'
+    | 'gallery'
+    | 'original_sticker'
+    | 'history_report'
+    | 'kbb_report'
+    | 'smog_certificate' = 'document'
 ): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
@@ -52,6 +58,24 @@ export async function uploadDocument(
 
   const data = (await res.json()) as { url: string };
   return data.url;
+}
+
+export async function updateSmogCertificateUrls(
+  vehicleId: string,
+  urls: string[]
+): Promise<void> {
+  const res = await fetch(
+    `/api/seller/vehicles/${encodeURIComponent(vehicleId)}/smog-certificate-urls`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ urls }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
 }
 
 export async function getConversations(vehicleId: string): Promise<Conversation[]> {

@@ -5,7 +5,7 @@ const parseableDateString = z
   .min(1)
   .refine((value) => !Number.isNaN(Date.parse(value)), { message: 'Invalid date' });
 
-const httpHttpsUrl = z.string().refine((value) => {
+export const httpHttpsUrl = z.string().refine((value) => {
   try {
     const protocol = new URL(value).protocol;
     return protocol === 'http:' || protocol === 'https:';
@@ -230,6 +230,15 @@ export const GalleryPhotoSchema = z.object({
   alt: z.string().min(1),
 });
 
+export const GALLERY_PHOTO_CATEGORIES = [
+  'Exterior',
+  'Interior',
+  'Mechanical',
+  'Modifications',
+  'Documents',
+  'Other',
+] as const;
+
 const optionalComparableNumber = z.preprocess(
   (val) =>
     val === '' || val === null || val === undefined || Number.isNaN(val)
@@ -358,6 +367,13 @@ export const GenerateHighlightsResponseSchema = z.object({
 
 const optionalString = z.string().optional().or(z.literal(''));
 
+export const GalleryPhotoFormSchema = z.object({
+  url: httpHttpsUrl,
+  category: z.string().min(1).default('Exterior'),
+  caption: optionalString,
+  alt: optionalString,
+});
+
 export const FormMarketValuationSchema = MarketValuationSchema.extend({
   retailReadyPrice: optionalString,
 });
@@ -369,10 +385,10 @@ export const VehicleFormStateSchema = z.object({
   locationCity: optionalString,
   mileage: z.string().min(1).max(20),
   price: z.string().min(1).max(20),
-  windowStickerUrl: optionalString,
-  carfaxReportUrl: optionalString,
+  originalStickerUrl: optionalString,
+  historyReportUrls: z.array(httpHttpsUrl).default([]),
   kbbReportUrl: optionalString,
-  smogReportUrl: optionalString,
+  smogCertificateUrls: z.array(httpHttpsUrl).default([]),
   subtitle: optionalString,
   msrp: optionalString,
   sellersNoteIntro: optionalString,
@@ -400,6 +416,14 @@ export const VehicleFormStateSchema = z.object({
   videoUrl: optionalString,
   videoPosterUrl: optionalString,
   images: z.array(httpHttpsUrl).max(30).default([]),
+  heroImageUrls: z.array(httpHttpsUrl).default([]),
+  carouselImageUrls: z.array(httpHttpsUrl).default([]),
+  marketImageUrls: z.array(httpHttpsUrl).max(6).default([]),
+  pitchBlock0ImageUrls: z.array(httpHttpsUrl).max(3).default([]),
+  pitchBlock1ImageUrls: z.array(httpHttpsUrl).max(3).default([]),
+  pitchBlock2ImageUrls: z.array(httpHttpsUrl).max(3).default([]),
+  pitchBlock3ImageUrls: z.array(httpHttpsUrl).max(3).default([]),
+  galleryPhotos: z.array(GalleryPhotoFormSchema).default([]),
 });
 
 export const GenerateListingFormFieldsSchema = VehicleFormStateSchema.partial();
@@ -462,8 +486,16 @@ export const VehicleDashboardUpdateSchema = z
     marketValuation: MarketValuationSchema.partial().optional(),
     highlights: z.array(VehicleHighlightSchema).max(4).optional(),
     images: z.array(httpHttpsUrl).max(30).optional(),
+    heroImageUrls: z.array(httpHttpsUrl).optional(),
+    carouselImageUrls: z.array(httpHttpsUrl).optional(),
+    marketImageUrls: z.array(httpHttpsUrl).max(6).optional(),
     specs: VehicleSpecsSchema.partial().optional(),
     location: VehicleLocationSchema.partial().optional(),
+    originalStickerUrl: httpHttpsUrl.optional(),
+    kbbReportUrl: httpHttpsUrl.optional(),
+    smogCertificateUrls: z.array(httpHttpsUrl).optional(),
+    historyReportUrls: z.array(httpHttpsUrl).optional(),
+    galleryPhotos: z.array(GalleryPhotoSchema).optional(),
   })
   .strict();
 
@@ -501,6 +533,9 @@ export const VehicleSchema = z.object({
   description: z.string().min(1),
   listingTitle: z.string().min(1).optional(),
   images: z.array(httpHttpsUrl),
+  heroImageUrls: z.array(httpHttpsUrl).optional().default([]),
+  carouselImageUrls: z.array(httpHttpsUrl).optional().default([]),
+  marketImageUrls: z.array(httpHttpsUrl).optional().default([]),
   status: VehicleStatusSchema,
   sellerId: z.string().min(1),
   sellerName: z.string().min(1),
@@ -513,6 +548,11 @@ export const VehicleSchema = z.object({
   highlights: z.array(VehicleHighlightSchema).max(4).optional(),
   maintenance: z.array(MaintenanceRecordSchema).min(1),
   documents: VehicleDocumentsSchema.optional(),
+  originalStickerUrl: httpHttpsUrl.optional(),
+  kbbReportUrl: httpHttpsUrl.optional(),
+  smogCertificateUrls: z.array(httpHttpsUrl).optional().default([]),
+  smogCertificateUrl: httpHttpsUrl.optional(),
+  historyReportUrls: z.array(httpHttpsUrl).optional().default([]),
   windowStickerBreakdown: WindowStickerBreakdownSchema.optional(),
   monroney: MonroneySchema.optional(),
   aiGeneration: AiGenerationSchema.optional(),
@@ -563,6 +603,7 @@ export type GenerateMarketResearchResponse = z.infer<typeof GenerateMarketResear
 export type GenerateHighlightsRequest = z.infer<typeof GenerateHighlightsRequestSchema>;
 export type GenerateHighlightsResponse = z.infer<typeof GenerateHighlightsResponseSchema>;
 export type GalleryPhoto = z.infer<typeof GalleryPhotoSchema>;
+export type GalleryPhotoForm = z.infer<typeof GalleryPhotoFormSchema>;
 export type MarketComparable = z.infer<typeof MarketComparableSchema>;
 export type VehicleDeductions = z.infer<typeof VehicleDeductionsSchema>;
 export type MarketValuation = z.infer<typeof MarketValuationSchema>;

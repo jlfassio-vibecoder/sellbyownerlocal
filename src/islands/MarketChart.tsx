@@ -6,6 +6,7 @@ interface MarketChartProps {
   price: number;
   mileage: number;
   valuation: MarketValuation;
+  images?: string[];
 }
 
 type SortMode = 'default' | 'price' | 'mileage';
@@ -116,8 +117,9 @@ function sortChartData(data: ChartBar[], mode: SortMode): ChartBar[] {
   return sorted;
 }
 
-export default function MarketChart({ price, mileage, valuation }: MarketChartProps) {
+export default function MarketChart({ price, mileage, valuation, images = [] }: MarketChartProps) {
   const [sortMode, setSortMode] = useState<SortMode>('default');
+  const gridImages = images.slice(0, 6);
 
   const chartData = useMemo(() => {
     const data = buildChartData(price, mileage, valuation);
@@ -143,53 +145,84 @@ export default function MarketChart({ price, mileage, valuation }: MarketChartPr
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-              Pricing Comparison (Dealership Asking Prices)
-            </h3>
-            <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5 text-xs">
-              {SORT_OPTIONS.map(({ mode, label }) => (
-                <button
-                  key={mode}
-                  type="button"
-                  aria-pressed={sortMode === mode}
-                  onClick={() => setSortMode(mode)}
-                  className={
-                    sortMode === mode
-                      ? 'rounded-md bg-slate-900 px-2.5 py-1 font-medium text-white'
-                      : 'rounded-md px-2.5 py-1 font-medium text-slate-600 hover:bg-slate-50'
-                  }
-                >
-                  {label}
-                </button>
-              ))}
+        <div className="lg:col-span-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+                Pricing Comparison (Dealership Asking Prices)
+              </h3>
+              <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5 text-xs">
+                {SORT_OPTIONS.map(({ mode, label }) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={sortMode === mode}
+                    onClick={() => setSortMode(mode)}
+                    className={
+                      sortMode === mode
+                        ? 'rounded-md bg-slate-900 px-2.5 py-1 font-medium text-white'
+                        : 'rounded-md px-2.5 py-1 font-medium text-slate-600 hover:bg-slate-50'
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                  />
+                  <YAxis
+                    domain={[yMin, yMax]}
+                    tickFormatter={(value) => `$${value / 1000}k`}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                  />
+                  <Tooltip cursor={{ fill: 'transparent' }} content={<ChartTooltipContent />} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`${entry.name}-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: '#64748b' }}
-                />
-                <YAxis
-                  domain={[yMin, yMax]}
-                  tickFormatter={(value) => `$${value / 1000}k`}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: '#64748b' }}
-                />
-                <Tooltip cursor={{ fill: 'transparent' }} content={<ChartTooltipContent />} />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`${entry.name}-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+
+          <div className="mt-4">
+            <div className="flex flex-col rounded-xl bg-slate-900 p-5 text-white shadow-sm">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">
+                  This Listing
+                </span>
+                <span className="text-xl font-bold text-red-600">{priceFormatter.format(price)}</span>
+              </div>
+              <p className="text-xs leading-relaxed whitespace-pre-wrap text-slate-400">
+                {valuation.justificationText ||
+                  "A fair, data-backed price that reflects the vehicle's condition and recent maintenance."}
+              </p>
+            </div>
+
+            {gridImages.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {gridImages.map((src, index) => (
+                  <img
+                    key={`${src}-${index}`}
+                    src={src}
+                    alt={`Listing photo ${index + 1}`}
+                    className="aspect-[4/3] w-full rounded-lg border border-slate-700/50 object-cover"
+                    loading="lazy"
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -232,19 +265,6 @@ export default function MarketChart({ price, mileage, valuation }: MarketChartPr
                 </p>
               </>
             )}
-          </div>
-
-          <div className="flex flex-col rounded-xl bg-slate-900 p-5 text-white shadow-sm">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">
-                This Listing
-              </span>
-              <span className="text-xl font-bold text-red-600">{priceFormatter.format(price)}</span>
-            </div>
-            <p className="text-xs leading-relaxed whitespace-pre-wrap text-slate-400">
-              {valuation.justificationText ||
-                "A fair, data-backed price that reflects the vehicle's condition and recent maintenance."}
-            </p>
           </div>
         </div>
       </div>

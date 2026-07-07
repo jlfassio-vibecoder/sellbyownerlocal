@@ -3,6 +3,7 @@ import { useFieldArray } from 'react-hook-form';
 import { Brain, Check, CheckCircle, Loader2, Plus } from 'lucide-react';
 import { AiApiError, generateMarketResearch } from '../../../lib/ai-api';
 import { parseCurrencyString } from '../../../lib/vehicle-form-mapper';
+import MediaPickerModal from '../MediaPickerModal';
 import AutoTextarea from './AutoTextarea';
 import ComparableRow from './ComparableRow';
 import type { DetailsSectionFormProps } from './form-section-types';
@@ -79,8 +80,11 @@ export default function MarketValuationSection({
   const [activeDeductions, setActiveDeductions] = useState<ActiveDeductions>(DEFAULT_ACTIVE);
   const [askingPriceSet, setAskingPriceSet] = useState(false);
   const [priceSetToast, setPriceSetToast] = useState(false);
+  const [marketPickerOpen, setMarketPickerOpen] = useState(false);
   const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const marketImageUrls = watch('marketImageUrls') ?? [];
+  const libraryUrls = watch('images') ?? [];
   const retailReadyPrice = watch('marketValuation.retailReadyPrice');
   const vehicleDeductions = watch('marketValuation.vehicleDeductions');
   const hasResearchResults =
@@ -347,6 +351,34 @@ export default function MarketValuationSection({
           </div>
         ) : null}
 
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Market Valuation Photos
+          </label>
+          <p className="mb-3 text-xs text-slate-500">
+            Up to 6 images shown in the market valuation grid on the public listing.
+          </p>
+          <button
+            type="button"
+            onClick={() => setMarketPickerOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            🖼️ Select Market Images (Max 6)
+          </button>
+          {marketImageUrls.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {marketImageUrls.map((url, index) => (
+                <div
+                  key={`${url}-${index}`}
+                  className="h-16 w-16 overflow-hidden rounded-md border border-slate-200 bg-slate-100"
+                >
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
         {TEXT_FIELDS.map((field) => (
           <div key={field.name}>
             <label className="block text-sm font-medium text-slate-700 mb-1">{field.label}</label>
@@ -417,6 +449,18 @@ export default function MarketValuationSection({
           Asking price set, remember to save changes
         </div>
       ) : null}
+
+      <MediaPickerModal
+        isOpen={marketPickerOpen}
+        onClose={() => setMarketPickerOpen(false)}
+        libraryUrls={libraryUrls}
+        initialSelectedUrls={marketImageUrls}
+        maxCount={6}
+        title="Select market valuation images"
+        onSave={(urls) => {
+          setValue('marketImageUrls', urls, { shouldDirty: true });
+        }}
+      />
     </>
   );
 }

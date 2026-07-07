@@ -1,0 +1,60 @@
+/**
+ * Prefer the storage.googleapis.com object URL for PDF embeds; Firebase download
+ * URLs often load in a new tab but render blank inside iframes/objects.
+ */
+export function toDirectStorageObjectUrl(url: string): string {
+  if (url.startsWith('data:') || url.startsWith('/')) {
+    return url;
+  }
+
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+
+    if (host === 'firebasestorage.googleapis.com') {
+      const bucket = parsed.pathname.match(/\/b\/([^/]+)/)?.[1];
+      const encodedObject = parsed.pathname.match(/\/o\/(.+)$/)?.[1];
+      if (bucket && encodedObject) {
+        const objectPath = decodeURIComponent(encodedObject);
+        return `https://storage.googleapis.com/${bucket}/${objectPath}`;
+      }
+    }
+
+    if (host === 'storage.googleapis.com') {
+      return url;
+    }
+  } catch {
+    // fall through
+  }
+
+  return url;
+}
+
+/**
+ * Parse a public Storage URL into a GCS object path when it belongs to `bucketName`.
+ */
+export function parseOwnedStorageObjectPath(url: string, bucketName: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+
+    if (host === 'storage.googleapis.com') {
+      const segments = parsed.pathname.split('/').filter(Boolean);
+      if (segments.length < 2) return null;
+      const [bucket, ...pathParts] = segments;
+      if (bucket !== bucketName) return null;
+      return pathParts.join('/');
+    }
+
+    if (host === 'firebasestorage.googleapis.com') {
+      const bucket = parsed.pathname.match(/\/b\/([^/]+)/)?.[1];
+      const encodedObject = parsed.pathname.match(/\/o\/(.+)$/)?.[1];
+      if (!bucket || !encodedObject || bucket !== bucketName) return null;
+      return decodeURIComponent(encodedObject);
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}

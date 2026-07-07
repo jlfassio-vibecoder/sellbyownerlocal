@@ -113,6 +113,13 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
       firestoreUpdate.listingTitle = trimmed ? trimmed : FieldValue.delete();
     }
 
+    if (
+      Array.isArray(firestoreUpdate.galleryPhotos) &&
+      firestoreUpdate.galleryPhotos.length === 0
+    ) {
+      firestoreUpdate.galleryPhotos = FieldValue.delete();
+    }
+
     await db().collection('vehicles').doc(vehicleId).update(firestoreUpdate);
 
     return new Response(JSON.stringify({ success: true }), {

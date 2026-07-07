@@ -69,9 +69,9 @@ export default function MonroneyStickerUploadBar({
       );
 
       if (result.styleLine) {
-        setSuccess(`Site sticker generated: ${result.styleLine}`);
+        setSuccess(`Site sticker generated: ${result.styleLine}. Original upload saved for listing.`);
       } else {
-        setSuccess('Site window sticker generated from upload.');
+        setSuccess('Site window sticker generated from upload. Original upload saved for listing.');
       }
 
       if (result.partial && result.message) {

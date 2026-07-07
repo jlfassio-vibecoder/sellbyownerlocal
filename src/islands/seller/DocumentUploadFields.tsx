@@ -2,28 +2,24 @@ import { useRef, useState, type RefObject } from 'react';
 import { CheckCircle2, Loader2, Upload } from 'lucide-react';
 import { uploadDocument } from '../../lib/seller-api';
 import type { VehicleFormState } from '../../schemas';
+import HistoryReportUploader from './HistoryReportUploader';
 
-export type DocumentField =
-  | 'windowStickerUrl'
-  | 'carfaxReportUrl'
-  | 'kbbReportUrl'
-  | 'smogReportUrl';
+export type DocumentField = 'originalStickerUrl';
 
 interface DocumentUploadFieldsProps {
   vehicleId: string;
   formState: VehicleFormState;
   onFieldUpdate: (field: DocumentField, url: string) => void;
+  onHistoryReportUrlsChange: (urls: string[]) => void;
 }
 
 export default function DocumentUploadFields({
   vehicleId,
   formState,
   onFieldUpdate,
+  onHistoryReportUrlsChange,
 }: DocumentUploadFieldsProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const carfaxInputRef = useRef<HTMLInputElement>(null);
-  const kbbInputRef = useRef<HTMLInputElement>(null);
-  const smogInputRef = useRef<HTMLInputElement>(null);
   const [uploadingField, setUploadingField] = useState<DocumentField | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<DocumentField, string>>>({});
 
@@ -40,7 +36,8 @@ export default function DocumentUploadFields({
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
 
     try {
-      const url = await uploadDocument(vehicleId, file);
+      const purpose = field === 'originalStickerUrl' ? 'original_sticker' : 'document';
+      const url = await uploadDocument(vehicleId, file, purpose);
       onFieldUpdate(field, url);
     } catch (err) {
       console.error('Upload failed', err);
@@ -124,34 +121,17 @@ export default function DocumentUploadFields({
     <div className="pt-6 border-t border-slate-100">
       <h3 className="text-lg font-bold text-slate-900 mb-4">Documents</h3>
       {renderUploadZone(
-        'windowStickerUrl',
+        'originalStickerUrl',
         fileInputRef,
         'Window Sticker Document',
         'Document uploaded',
         'Click or drag to upload original window sticker'
       )}
-      {renderUploadZone(
-        'carfaxReportUrl',
-        carfaxInputRef,
-        'Carfax Report',
-        'Carfax Report uploaded',
-        'Click or drag to upload Carfax Report'
-      )}
-      {renderUploadZone(
-        'kbbReportUrl',
-        kbbInputRef,
-        'Kelley Blue Book Report',
-        'KBB Report uploaded',
-        'Click or drag to upload KBB Report'
-      )}
-      {renderUploadZone(
-        'smogReportUrl',
-        smogInputRef,
-        'Smog Report',
-        'Smog Report uploaded',
-        'Click or drag to upload Smog Report',
-        true
-      )}
+      <HistoryReportUploader
+        vehicleId={vehicleId}
+        urls={formState.historyReportUrls}
+        onUrlsChange={onHistoryReportUrlsChange}
+      />
     </div>
   );
 }
