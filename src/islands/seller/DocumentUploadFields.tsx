@@ -1,4 +1,4 @@
-import { useRef, useState, type RefObject } from 'react';
+import { useRef, useState, type ReactNode, type RefObject } from 'react';
 import { CheckCircle2, Loader2, Upload } from 'lucide-react';
 import { uploadDocument } from '../../lib/seller-api';
 import type { VehicleFormState } from '../../schemas';
@@ -11,6 +11,7 @@ interface DocumentUploadFieldsProps {
   formState: VehicleFormState;
   onFieldUpdate: (field: DocumentField, url: string) => void;
   onHistoryReportUrlsChange: (urls: string[]) => void;
+  serviceHistoryEditor?: ReactNode;
 }
 
 export default function DocumentUploadFields({
@@ -18,6 +19,7 @@ export default function DocumentUploadFields({
   formState,
   onFieldUpdate,
   onHistoryReportUrlsChange,
+  serviceHistoryEditor,
 }: DocumentUploadFieldsProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingField, setUploadingField] = useState<DocumentField | null>(null);
@@ -132,6 +134,7 @@ export default function DocumentUploadFields({
         urls={formState.historyReportUrls}
         onUrlsChange={onHistoryReportUrlsChange}
       />
+      {serviceHistoryEditor}
     </div>
   );
 }

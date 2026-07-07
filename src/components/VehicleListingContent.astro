@@ -3,7 +3,6 @@ import type { VehicleResponse } from '../schemas';
 import {
   buildVehicleListingView,
   canEmbedPdf,
-  dateFormatter,
   isPdfUrl,
   mileageFormatter,
   priceFormatter,
@@ -19,6 +18,7 @@ import VehicleSectionNav from '../islands/VehicleSectionNav';
 import WindowSticker from '../islands/WindowSticker';
 import SingleDocumentViewer from '../islands/SingleDocumentViewer.tsx';
 import HistoryReportViewer from '../islands/HistoryReportViewer.tsx';
+import ServiceTimeline from '../islands/ServiceTimeline';
 import { Check, Download } from 'lucide-react';
 
 interface Props {
@@ -34,7 +34,6 @@ const {
   carouselImageUrls,
   marketImageUrls,
   primaryTag,
-  sortedMaintenance,
   otherDocuments,
   originalStickerUrl,
   kbbReportUrl,
@@ -410,19 +409,7 @@ const monroneyStyleLine = monroney
         )
       }
 
-      <div class="relative space-y-6 border-l-2 border-slate-200 pl-6">
-        {
-          sortedMaintenance.map((record) => (
-            <div class="relative">
-              <div class="absolute top-1 -left-[25px] h-4 w-4 rounded-full border-2 border-white bg-red-600" />
-              <p class="text-xs font-semibold tracking-wider text-slate-400 uppercase">
-                {dateFormatter.format(new Date(record.date))}
-              </p>
-              <p class="mt-1 text-sm font-semibold text-slate-900">{record.service}</p>
-            </div>
-          ))
-        }
-      </div>
+      <ServiceTimeline client:visible records={vehicle.serviceRecords ?? []} />
     </div>
   </section>
 

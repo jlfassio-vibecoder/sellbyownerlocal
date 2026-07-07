@@ -12,6 +12,7 @@ import { resolveKbbReportUrl } from './kbb-report-url';
 import { resolveSmogCertificateUrls } from './smog-certificate-url';
 import { resolveOriginalStickerUrl } from './original-sticker-url';
 import { resolveHistoryReportUrls } from './history-report-urls';
+import { sortServiceRecordsByDate } from './service-record-sort';
 import {
   resolveCarouselImageUrls,
   resolveHeroImageUrls,
@@ -323,6 +324,13 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
       caption: photo.caption,
       alt: photo.alt,
     })),
+    serviceRecords: sortServiceRecordsByDate(
+      (vehicle.serviceRecords ?? []).map((r) => ({
+        ...r,
+        source: r.source ?? 'carfax',
+        isEdited: r.isEdited ?? false,
+      }))
+    ),
   };
 }
 
@@ -409,6 +417,8 @@ export function formStateToVehiclePatch(
   patch.marketImageUrls = state.marketImageUrls;
 
   patch.galleryPhotos = buildGalleryPhotos(state);
+
+  patch.serviceRecords = sortServiceRecordsByDate(state.serviceRecords);
 
   const listingTitleTrimmed = optionalString(state.listingTitle).trim();
   patch.listingTitle = listingTitleTrimmed || null;

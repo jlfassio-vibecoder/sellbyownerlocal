@@ -91,7 +91,6 @@ export interface VehicleListingView {
   carouselImageUrls: string[];
   marketImageUrls: string[];
   primaryTag: string | undefined;
-  sortedMaintenance: VehicleResponse['maintenance'];
   availableDocuments: DocumentItem[];
   otherDocuments: DocumentItem[];
   originalStickerUrl: string | undefined;
@@ -118,8 +117,6 @@ export interface VehicleListingView {
 }
 
 export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListingView {
-  const sortedMaintenance = [...vehicle.maintenance].sort((a, b) => b.date.localeCompare(a.date));
-
   const availableDocuments = documentItems.flatMap((item) => {
     const url = vehicle.documents?.[item.key];
     if (!url || isPlaceholderDocumentUrl(url)) return [];
@@ -216,7 +213,6 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
     carouselImageUrls,
     marketImageUrls,
     primaryTag,
-    sortedMaintenance,
     availableDocuments,
     otherDocuments,
     originalStickerUrl,

@@ -249,12 +249,7 @@ export function buildVehicleFromAiContent(options: {
       drivetrain: decoded.drivetrain,
     },
     features: content.features?.length ? content.features : ['See listing for features'],
-    maintenance: [
-      {
-        date: createdAt.split('T')[0]!,
-        service: 'AI-generated listing — verify service history with seller',
-      },
-    ],
+    serviceRecords: [],
     historyReportUrls: [],
     smogCertificateUrls: [],
     heroImageUrls: [],
@@ -340,12 +335,7 @@ function buildFullVehicleFromAiContent(options: {
     },
     features: content.features,
     highlights: content.highlights,
-    maintenance: [
-      {
-        date: createdAt.split('T')[0]!,
-        service: 'AI-generated listing — verify service history with seller',
-      },
-    ],
+    serviceRecords: [],
     historyReportUrls: [],
     smogCertificateUrls: [],
     heroImageUrls: [],

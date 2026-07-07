@@ -1,10 +1,5 @@
 import { z } from 'zod';
 
-const parseableDateString = z
-  .string()
-  .min(1)
-  .refine((value) => !Number.isNaN(Date.parse(value)), { message: 'Invalid date' });
-
 export const httpHttpsUrl = z.string().refine((value) => {
   try {
     const protocol = new URL(value).protocol;
@@ -49,9 +44,29 @@ export const VehicleSpecsSchema = z.object({
   drivetrain: z.string().min(1),
 });
 
-export const MaintenanceRecordSchema = z.object({
-  date: parseableDateString,
-  service: z.string().min(1),
+export const ServiceRecordSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  description: z.string(),
+  isHighlighted: z.boolean().default(false),
+  isHidden: z.boolean().default(false),
+  source: z.enum(['carfax', 'seller']).optional().default('carfax'),
+  isEdited: z.boolean().optional().default(false),
+});
+
+export const ServiceRecordFormSchema = ServiceRecordSchema;
+
+export const ExtractServiceHistoryRequestSchema = z.object({
+  vehicleId: z.string().trim().min(1),
+});
+
+export const ExtractServiceHistoryRecordSchema = z.object({
+  date: z.string().min(1),
+  description: z.string().min(1),
+});
+
+export const ExtractServiceHistoryResponseSchema = z.object({
+  records: z.array(ExtractServiceHistoryRecordSchema).max(30),
 });
 
 export const VehicleDocumentsSchema = z.object({
@@ -424,6 +439,7 @@ export const VehicleFormStateSchema = z.object({
   pitchBlock2ImageUrls: z.array(httpHttpsUrl).max(3).default([]),
   pitchBlock3ImageUrls: z.array(httpHttpsUrl).max(3).default([]),
   galleryPhotos: z.array(GalleryPhotoFormSchema).default([]),
+  serviceRecords: z.array(ServiceRecordFormSchema).default([]),
 });
 
 export const GenerateListingFormFieldsSchema = VehicleFormStateSchema.partial();
@@ -496,6 +512,7 @@ export const VehicleDashboardUpdateSchema = z
     smogCertificateUrls: z.array(httpHttpsUrl).optional(),
     historyReportUrls: z.array(httpHttpsUrl).optional(),
     galleryPhotos: z.array(GalleryPhotoSchema).optional(),
+    serviceRecords: z.array(ServiceRecordSchema).optional(),
   })
   .strict();
 
@@ -546,7 +563,7 @@ export const VehicleSchema = z.object({
   specs: VehicleSpecsSchema,
   features: z.array(z.string().min(1)).min(1),
   highlights: z.array(VehicleHighlightSchema).max(4).optional(),
-  maintenance: z.array(MaintenanceRecordSchema).min(1),
+  serviceRecords: z.array(ServiceRecordSchema).default([]),
   documents: VehicleDocumentsSchema.optional(),
   originalStickerUrl: httpHttpsUrl.optional(),
   kbbReportUrl: httpHttpsUrl.optional(),
@@ -572,7 +589,11 @@ export const VehicleResponseSchema = VehicleSchema.extend({ id: z.string() });
 export type User = z.infer<typeof UserSchema>;
 export type Vehicle = z.infer<typeof VehicleSchema>;
 export type VehicleSpecs = z.infer<typeof VehicleSpecsSchema>;
-export type MaintenanceRecord = z.infer<typeof MaintenanceRecordSchema>;
+export type ServiceRecord = z.infer<typeof ServiceRecordSchema>;
+export type ServiceRecordForm = z.infer<typeof ServiceRecordFormSchema>;
+export type ExtractServiceHistoryRequest = z.infer<typeof ExtractServiceHistoryRequestSchema>;
+export type ExtractServiceHistoryRecord = z.infer<typeof ExtractServiceHistoryRecordSchema>;
+export type ExtractServiceHistoryResponse = z.infer<typeof ExtractServiceHistoryResponseSchema>;
 export type VehicleDocuments = z.infer<typeof VehicleDocumentsSchema>;
 export type WindowStickerLineItem = z.infer<typeof WindowStickerLineItemSchema>;
 export type WindowStickerBreakdown = z.infer<typeof WindowStickerBreakdownSchema>;

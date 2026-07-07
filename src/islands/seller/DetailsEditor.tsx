@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { AlertCircle, CheckCircle, Save } from 'lucide-react';
 import { updateVehicle } from '../../lib/seller-api';
+import { sortServiceRecordsByDate } from '../../lib/service-record-sort';
 import type { VehicleFormState } from '../../schemas';
 import BasicsSection from './components/BasicsSection';
 import type { DetailsSection } from './components/details-nav-types';
@@ -93,8 +94,14 @@ export default function DetailsEditor({
   };
 
   const onValidSubmit = async (data: VehicleFormState) => {
+    const sortedData: VehicleFormState = {
+      ...data,
+      serviceRecords: sortServiceRecordsByDate(data.serviceRecords ?? []),
+    };
+
     try {
-      await updateVehicle(vehicleId, data);
+      await updateVehicle(vehicleId, sortedData);
+      reset(sortedData);
       showToast('Listing saved successfully!', 'success');
     } catch (err) {
       console.error('Failed to update details', err);

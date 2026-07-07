@@ -50,7 +50,11 @@ function buildVehiclePayload(vehicle: VehicleResponse): Record<string, unknown> 
     ...(vehicle.sellersNote ? { sellersNote: vehicle.sellersNote } : {}),
     ...(vehicle.mechanicalIntegrity ? { mechanicalIntegrity: vehicle.mechanicalIntegrity } : {}),
     ...(vehicle.highlights?.length ? { highlights: vehicle.highlights } : {}),
-    ...(vehicle.maintenance?.length ? { maintenance: vehicle.maintenance } : {}),
+    ...(vehicle.serviceRecords?.length
+      ? {
+          serviceRecords: vehicle.serviceRecords.filter((r) => !r.isHidden),
+        }
+      : {}),
     marketValuation: vehicle.marketValuation
       ? {
           contextText: vehicle.marketValuation.contextText,
