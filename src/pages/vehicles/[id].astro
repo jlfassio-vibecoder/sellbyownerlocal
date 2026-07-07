@@ -1,10 +1,14 @@
 ---
 import { db } from '../../lib/firebase-admin';
 import { VehicleResponseSchema } from '../../schemas';
-import { buildVehicleListingView } from '../../lib/vehicle-listing-view';
 import { resolveVehicleDisplayMonroney } from '../../lib/resolve-display-monroney';
+import {
+  buildVehicleSeoDescription,
+  buildVehicleSeoTitle,
+  resolveVehicleOgImage,
+} from '../../lib/seo';
+import Layout from '../../layouts/Layout.astro';
 import VehicleListingContent from '../../components/VehicleListingContent.astro';
-import '../../styles/global.css';
 
 const { id } = Astro.params;
 
@@ -28,23 +32,21 @@ if (!parsed.success) {
 }
 
 const vehicle = parsed.data;
-// Copilot suggestion ignored: SSR enrichment for derived Monroney only; caching belongs in a follow-up when write paths persist enriched data.
 const displayMonroney = await resolveVehicleDisplayMonroney(vehicle);
 const listingVehicle = displayMonroney ? { ...vehicle, monroney: displayMonroney } : vehicle;
-const { pageTitle, descriptionExcerpt } = buildVehicleListingView(listingVehicle);
+
+const seoTitle = buildVehicleSeoTitle(listingVehicle);
+const seoDescription = buildVehicleSeoDescription(listingVehicle);
+const seoImage = resolveVehicleOgImage(listingVehicle);
+const canonicalUrl = `/vehicles/${encodeURIComponent(id)}`;
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <meta name="description" content={descriptionExcerpt} />
-    <title>{pageTitle} · Sell By Owner Local</title>
-  </head>
-  <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
-    <VehicleListingContent vehicle={listingVehicle} />
-  </body>
-</html>
+<Layout
+  title={`${seoTitle} · Sell By Owner Local`}
+  description={seoDescription}
+  ogImage={seoImage}
+  ogUrl={canonicalUrl}
+  bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
+>
+  <VehicleListingContent vehicle={listingVehicle} />
+</Layout>

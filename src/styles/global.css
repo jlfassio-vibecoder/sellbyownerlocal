@@ -17,6 +17,48 @@
 );
 
 @layer utilities {
+  .font-brand {
+    font-family: "Bebas Neue", ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: 0.04em;
+  }
+
+  .site-header-bg {
+    background: linear-gradient(
+      to bottom,
+      #ffffff 0%,
+      #f8fcff 35%,
+      #e0f2fe 65%,
+      #bae6fd 85%,
+      #7dd3fc 100%
+    );
+  }
+
+  .site-header-bg::before,
+  .site-header-bg::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    background-repeat: repeat-x;
+    background-size: 1200px 100%;
+  }
+
+  .site-header-bg::before {
+    height: 3.5rem;
+    opacity: 0.45;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 56' preserveAspectRatio='none'%3E%3Cpath fill='%2338bdf8' d='M0 28c150 28 300-20 450 0s300 28 450 0 300-20 450 0v28H0z'/%3E%3C/svg%3E");
+    background-position: bottom center;
+  }
+
+  .site-header-bg::after {
+    height: 2.25rem;
+    opacity: 0.55;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 40' preserveAspectRatio='none'%3E%3Cpath fill='%230ea5e9' d='M0 20c200-16 400 16 600 0s400-16 600 0v20H0z'/%3E%3C/svg%3E");
+    background-position: bottom center;
+  }
+
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }

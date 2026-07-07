@@ -1,18 +1,9 @@
 import type { APIRoute } from 'astro';
-import { db } from '../../../lib/firebase-admin';
-import { VehicleResponseSchema } from '../../../schemas';
+import { getPublishedInventory } from '../../../lib/inventory-api';
 
 export const GET: APIRoute = async () => {
   try {
-    const snapshot = await db()
-      .collection('vehicles')
-      .where('status', '==', 'active')
-      .get();
-
-    const vehicles = snapshot.docs.flatMap((doc) => {
-      const parsed = VehicleResponseSchema.safeParse({ id: doc.id, ...doc.data() });
-      return parsed.success ? [parsed.data] : [];
-    });
+    const vehicles = await getPublishedInventory();
 
     return new Response(JSON.stringify({ vehicles }), {
       status: 200,
