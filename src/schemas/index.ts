@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { ACCENT_COLOR_VALUES } from '../lib/accent-colors';
+
+export const AccentColorSchema = z.enum(ACCENT_COLOR_VALUES);
 
 export const httpHttpsUrl = z.string().refine((value) => {
   try {
@@ -400,6 +403,7 @@ export const VehicleFormStateSchema = z.object({
   description: optionalString,
   drivetrain: optionalString,
   locationCity: optionalString,
+  accentColor: AccentColorSchema.default('red'),
   mileage: z.string().min(1).max(20),
   price: z.string().min(1).max(20),
   originalStickerUrl: optionalString,
@@ -515,6 +519,7 @@ export const VehicleDashboardUpdateSchema = z
     historyReportUrls: z.array(httpHttpsUrl).optional(),
     galleryPhotos: z.array(GalleryPhotoSchema).optional(),
     serviceRecords: z.array(ServiceRecordSchema).optional(),
+    accentColor: AccentColorSchema.optional(),
   })
   .strict();
 
@@ -551,6 +556,7 @@ export const VehicleSchema = z.object({
   mileage: z.number().int().nonnegative(),
   description: z.string().min(1),
   listingTitle: z.string().min(1).optional(),
+  accentColor: AccentColorSchema.default('red'),
   images: z.array(httpHttpsUrl),
   heroImageUrls: z.array(httpHttpsUrl).optional().default([]),
   carouselImageUrls: z.array(httpHttpsUrl).optional().default([]),

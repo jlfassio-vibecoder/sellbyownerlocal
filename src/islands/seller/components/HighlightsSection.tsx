@@ -2,18 +2,20 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AiApiError, generateHighlights } from '../../../lib/ai-api';
 import type { VehicleFormState } from '../../../schemas';
-import AutoTextarea from './AutoTextarea';
+import MarkdownTextarea from './MarkdownTextarea';
 import type { DetailsSectionFormProps } from './form-section-types';
-import { GRID_INPUT_CLASS, GRID_TEXTAREA_CLASS } from './form-section-types';
+import { GRID_TEXTAREA_CLASS } from './form-section-types';
 
-const HIGHLIGHT_FIELD_KEYS = [
-  ['highlight1Title', 'highlight1Text'],
-  ['highlight2Title', 'highlight2Text'],
-  ['highlight3Title', 'highlight3Text'],
-  ['highlight4Title', 'highlight4Text'],
-] as const satisfies ReadonlyArray<
-  readonly [keyof VehicleFormState, keyof VehicleFormState]
->;
+const HIGHLIGHT_FIELDS = [
+  { title: 'highlight1Title', text: 'highlight1Text', label: 'Highlight 1' },
+  { title: 'highlight2Title', text: 'highlight2Text', label: 'Highlight 2' },
+  { title: 'highlight3Title', text: 'highlight3Text', label: 'Highlight 3' },
+  { title: 'highlight4Title', text: 'highlight4Text', label: 'Highlight 4' },
+] as const satisfies ReadonlyArray<{
+  title: keyof VehicleFormState;
+  text: keyof VehicleFormState;
+  label: string;
+}>;
 
 interface HighlightsSectionProps extends DetailsSectionFormProps {
   vehicleId: string;
@@ -21,7 +23,7 @@ interface HighlightsSectionProps extends DetailsSectionFormProps {
 
 export default function HighlightsSection({
   vehicleId,
-  register,
+  watch,
   setValue,
 }: HighlightsSectionProps) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -35,9 +37,10 @@ export default function HighlightsSection({
       const result = await generateHighlights(vehicleId);
 
       result.highlights.forEach((highlight, index) => {
-        const [titleKey, textKey] = HIGHLIGHT_FIELD_KEYS[index]!;
-        setValue(titleKey, highlight.title, { shouldDirty: true });
-        setValue(textKey, highlight.text, { shouldDirty: true });
+        const field = HIGHLIGHT_FIELDS[index];
+        if (!field) return;
+        setValue(field.title, highlight.title, { shouldDirty: true });
+        setValue(field.text, highlight.text, { shouldDirty: true });
       });
     } catch (err) {
       console.error('Highlights generation failed', err);
@@ -79,51 +82,31 @@ export default function HighlightsSection({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <input
-          type="text"
-          {...register('highlight1Title')}
-          className={GRID_INPUT_CLASS}
-          placeholder="Highlight 1 Title"
-        />
-        <AutoTextarea
-          {...register('highlight1Text')}
-          className={GRID_TEXTAREA_CLASS}
-          placeholder="Highlight 1 Text"
-        />
-        <input
-          type="text"
-          {...register('highlight2Title')}
-          className={GRID_INPUT_CLASS}
-          placeholder="Highlight 2 Title"
-        />
-        <AutoTextarea
-          {...register('highlight2Text')}
-          className={GRID_TEXTAREA_CLASS}
-          placeholder="Highlight 2 Text"
-        />
-        <input
-          type="text"
-          {...register('highlight3Title')}
-          className={GRID_INPUT_CLASS}
-          placeholder="Highlight 3 Title"
-        />
-        <AutoTextarea
-          {...register('highlight3Text')}
-          className={GRID_TEXTAREA_CLASS}
-          placeholder="Highlight 3 Text"
-        />
-        <input
-          type="text"
-          {...register('highlight4Title')}
-          className={GRID_INPUT_CLASS}
-          placeholder="Highlight 4 Title"
-        />
-        <AutoTextarea
-          {...register('highlight4Text')}
-          className={GRID_TEXTAREA_CLASS}
-          placeholder="Highlight 4 Text"
-        />
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {HIGHLIGHT_FIELDS.map(({ title, text, label }) => (
+          <div key={title} className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">{label} Title</label>
+              <MarkdownTextarea
+                id={title}
+                value={(watch(title) as string | undefined) ?? ''}
+                onChange={(value) => setValue(title, value, { shouldDirty: true })}
+                className={GRID_TEXTAREA_CLASS}
+                placeholder={`${label} Title`}
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">{label} Text</label>
+              <MarkdownTextarea
+                id={text}
+                value={(watch(text) as string | undefined) ?? ''}
+                onChange={(value) => setValue(text, value, { shouldDirty: true })}
+                className={GRID_TEXTAREA_CLASS}
+                placeholder={`${label} Text`}
+              />
+            </div>
+          </div>
+        ))}
       </div>
     </>
   );

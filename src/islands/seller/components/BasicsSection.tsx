@@ -5,6 +5,10 @@ import MonroneyVinPopulateBar from './MonroneyVinPopulateBar';
 import OriginalStickerUploadField from './OriginalStickerUploadField';
 import VinPopulateBar from './VinPopulateBar';
 import type { VehicleFormState } from '../../../schemas';
+import { ACCENT_COLORS } from '../../../lib/accent-colors';
+
+const ACCENT_HIGHLIGHT_TIP =
+  "Pro tip: Wrap words in double equals to highlight them in your vehicle's accent color (e.g., 2017 RAM 1500 ==Night Edition==).";
 
 interface BasicsSectionProps extends DetailsSectionFormProps {
   vehicleId?: string;
@@ -25,6 +29,7 @@ export default function BasicsSection({
   onMonroneyUpdated,
 }: BasicsSectionProps) {
   const values = watch();
+  const accentColor = watch('accentColor') ?? 'red';
 
   return (
     <>
@@ -58,6 +63,7 @@ export default function BasicsSection({
                 Shown as the main heading on the public listing. Leave blank to use year, make, and
                 model.
               </p>
+              <p className="text-xs text-slate-400 mt-1 italic">{ACCENT_HIGHLIGHT_TIP}</p>
             </div>
 
             <div>
@@ -103,6 +109,40 @@ export default function BasicsSection({
                 placeholder="e.g. Santa Cruz, CA"
               />
               <p className="text-xs text-slate-500 mt-2">City shown on the public listing.</p>
+            </div>
+
+            <div>
+              <span className="block text-sm font-medium text-slate-700 mb-2">
+                Vehicle Accent Color
+              </span>
+              <input type="hidden" {...register('accentColor')} />
+              <div className="flex flex-wrap gap-3">
+                {ACCENT_COLORS.map((color) => {
+                  const isSelected = accentColor === color.value;
+                  return (
+                    <button
+                      key={color.value}
+                      type="button"
+                      title={color.label}
+                      aria-label={color.label}
+                      aria-pressed={isSelected}
+                      onClick={() =>
+                        setValue('accentColor', color.value as VehicleFormState['accentColor'], {
+                          shouldDirty: true,
+                        })
+                      }
+                      className={`h-9 w-9 rounded-full transition-shadow ${
+                        color.value === 'pearl-white' ? 'border border-slate-300' : ''
+                      } ${isSelected ? 'ring-2 ring-offset-2 ring-slate-900' : ''}`}
+                      style={{ backgroundColor: color.hex }}
+                    />
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                Drives accent colors on the public listing — title, chart, timeline, and
+                subheaders.
+              </p>
             </div>
           </div>
         </div>

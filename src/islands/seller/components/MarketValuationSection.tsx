@@ -4,7 +4,7 @@ import { Brain, Check, CheckCircle, Loader2, Plus } from 'lucide-react';
 import { AiApiError, generateMarketResearch } from '../../../lib/ai-api';
 import { parseCurrencyString } from '../../../lib/vehicle-form-mapper';
 import MediaPickerModal from '../MediaPickerModal';
-import AutoTextarea from './AutoTextarea';
+import MarkdownTextarea from './MarkdownTextarea';
 import ComparableRow from './ComparableRow';
 import type { DetailsSectionFormProps } from './form-section-types';
 import { TEXTAREA_CLASS_SHORT } from './form-section-types';
@@ -383,7 +383,12 @@ export default function MarketValuationSection({
           <div key={field.name}>
             <label className="block text-sm font-medium text-slate-700 mb-1">{field.label}</label>
             <p className="text-xs text-slate-500 mb-2">{field.helper}</p>
-            <AutoTextarea {...register(field.name)} className={TEXTAREA_CLASS_SHORT} />
+            <MarkdownTextarea
+              id={field.name}
+              value={(watch(field.name) as string | undefined) ?? ''}
+              onChange={(value) => setValue(field.name, value, { shouldDirty: true })}
+              className={TEXTAREA_CLASS_SHORT}
+            />
           </div>
         ))}
 

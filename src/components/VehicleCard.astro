@@ -1,12 +1,14 @@
 ---
 import type { VehicleResponse } from '../schemas';
 import { resolveHeroImageUrls } from '../lib/resolve-display-media';
+import { getAccent } from '../lib/accent-colors';
 
 interface Props {
   vehicle: VehicleResponse;
 }
 
 const { vehicle } = Astro.props;
+const accent = getAccent(vehicle.accentColor);
 const heroImage = resolveHeroImageUrls(vehicle)[0];
 
 const priceFormatter = new Intl.NumberFormat('en-US', {
@@ -37,7 +39,8 @@ const mileageFormatter = new Intl.NumberFormat('en-US');
   }
   <div class="space-y-2 p-4">
     <h2 class="text-lg font-semibold text-gray-900">
-      {vehicle.year} {vehicle.make} {vehicle.model}
+      {vehicle.year} {vehicle.make}{' '}
+      <span class={accent.tailwindText}>{vehicle.model}</span>
     </h2>
     <p class="text-lg font-semibold text-gray-900">{priceFormatter.format(vehicle.price)}</p>
     <p class="text-sm text-gray-500">
