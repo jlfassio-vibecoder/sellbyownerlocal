@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import type { ServiceRecord } from '../schemas';
 import { sortServiceRecordsByDate } from '../lib/service-record-sort';
+import { getAccent } from '../lib/accent-colors';
 
 type ServiceTimelineProps = {
   records: ServiceRecord[];
+  accentColor?: string;
 };
 
 type TimelineSegment =
@@ -83,10 +85,12 @@ function buildSegments(records: ServiceRecord[]): TimelineSegment[] {
   return segments;
 }
 
-function HighlightRow({ record }: { record: ServiceRecord }) {
+function HighlightRow({ record, accentBg }: { record: ServiceRecord; accentBg: string }) {
   return (
     <div className="relative">
-      <div className="absolute top-1 -left-[25px] h-4 w-4 rounded-full border-2 border-white bg-red-600" />
+      <div
+        className={`absolute top-1 -left-[25px] h-4 w-4 rounded-full border-2 border-white ${accentBg}`}
+      />
       <DateLine record={record} />
       <p className="mt-1 text-sm font-semibold text-slate-900">{record.description}</p>
     </div>
@@ -138,7 +142,8 @@ function RoutineGroup({
   );
 }
 
-export default function ServiceTimeline({ records }: ServiceTimelineProps) {
+export default function ServiceTimeline({ records, accentColor }: ServiceTimelineProps) {
+  const accent = getAccent(accentColor);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   const isAltered = useMemo(() => isTimelineAltered(records), [records]);
@@ -162,10 +167,16 @@ export default function ServiceTimeline({ records }: ServiceTimelineProps) {
         </p>
       )}
 
-      <div className="relative space-y-6 border-l-2 border-slate-200 pl-6">
+      <div className={`relative space-y-6 border-l-2 pl-6 ${accent.tailwindBorder}`}>
         {segments.map((segment) => {
           if (segment.type === 'highlight') {
-            return <HighlightRow key={segment.record.id} record={segment.record} />;
+            return (
+              <HighlightRow
+                key={segment.record.id}
+                record={segment.record}
+                accentBg={accent.tailwindBg}
+              />
+            );
           }
 
           const expanded = expandedGroups[segment.groupKey] ?? false;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Menu } from 'lucide-react';
 import MobileDrawer from './MobileDrawer';
+import { getAccent } from '../lib/accent-colors';
 
 export interface NavSection {
   id: string;
@@ -12,6 +13,7 @@ interface VehicleSectionNavProps {
   vin?: string;
   locationCity?: string;
   backHref?: string;
+  accentColor?: string;
   sections: NavSection[];
 }
 
@@ -22,8 +24,10 @@ export default function VehicleSectionNav({
   vin,
   locationCity,
   backHref = '/',
+  accentColor,
   sections,
 }: VehicleSectionNavProps) {
+  const accent = getAccent(accentColor);
   const [activeSection, setActiveSection] = useState('overview');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -66,7 +70,7 @@ export default function VehicleSectionNav({
       bordered ? 'border-b-2 pb-1' : 'border-b pb-2',
       'transition-colors',
       activeSection === sectionId
-        ? 'border-red-600 text-red-600'
+        ? `${accent.tailwindBorder} ${accent.tailwindText}`
         : bordered
           ? 'border-transparent text-slate-400 hover:border-slate-600 hover:text-white'
           : 'border-slate-800 text-slate-400 hover:border-slate-600 hover:text-white',
@@ -80,7 +84,9 @@ export default function VehicleSectionNav({
             <div className="flex min-w-0 flex-col">
               <span className="truncate text-xl font-bold tracking-tight">{pageTitle}</span>
               {subtitle && (
-                <span className="truncate text-[10px] font-semibold tracking-[0.2em] text-red-600 uppercase">
+                <span
+                  className={`truncate text-[10px] font-semibold tracking-[0.2em] uppercase ${accent.tailwindText}`}
+                >
                   {subtitle}
                 </span>
               )}

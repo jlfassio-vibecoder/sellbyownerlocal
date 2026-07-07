@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { MarketComparable, MarketValuation } from '../schemas';
+import MarkdownText from '../components/MarkdownText';
+import { getAccent } from '../lib/accent-colors';
 
 interface MarketChartProps {
   price: number;
   mileage: number;
   valuation: MarketValuation;
   images?: string[];
+  accentColor?: string;
 }
 
 type SortMode = 'default' | 'price' | 'mileage';
@@ -125,7 +128,12 @@ function ChartTooltipContent({
   );
 }
 
-function buildChartData(price: number, mileage: number, valuation: MarketValuation): ChartBar[] {
+function buildChartData(
+  price: number,
+  mileage: number,
+  valuation: MarketValuation,
+  listingFill: string
+): ChartBar[] {
   const dealerBars: ChartBar[] = valuation.comparables
     // Copilot suggestion ignored: highlighted comparables are legacy listing duplicates; the seller listing bar is appended separately from vehicle price/mileage.
     .filter((point) => !point.highlighted)
@@ -150,7 +158,7 @@ function buildChartData(price: number, mileage: number, valuation: MarketValuati
     name: `This Listing (${formatMileageShort(mileage)})`,
     value: price,
     mileage,
-    fill: '#dc2626',
+    fill: listingFill,
     isListing: true,
   };
 
@@ -165,14 +173,21 @@ function sortChartData(data: ChartBar[], mode: SortMode): ChartBar[] {
   return sorted;
 }
 
-export default function MarketChart({ price, mileage, valuation, images = [] }: MarketChartProps) {
+export default function MarketChart({
+  price,
+  mileage,
+  valuation,
+  images = [],
+  accentColor,
+}: MarketChartProps) {
+  const accent = getAccent(accentColor);
   const [sortMode, setSortMode] = useState<SortMode>('default');
   const gridImages = images.slice(0, 6);
 
   const chartData = useMemo(() => {
-    const data = buildChartData(price, mileage, valuation);
+    const data = buildChartData(price, mileage, valuation, accent.hex);
     return sortChartData(data, sortMode);
-  }, [price, mileage, valuation, sortMode]);
+  }, [price, mileage, valuation, sortMode, accent.hex]);
 
   const values = chartData.map((point) => point.value);
   const minValue = Math.min(...values);
@@ -187,16 +202,19 @@ export default function MarketChart({ price, mileage, valuation, images = [] }: 
     <section id="market" className="mb-16 pt-8">
       <div className="mb-8">
         <h2 className="mb-2 text-2xl font-bold text-slate-900">Market Valuation Context</h2>
-        <p className="max-w-2xl text-sm whitespace-pre-wrap text-slate-500">
-          {valuation.contextText || defaultIntro}
-        </p>
+        <div className="max-w-2xl text-sm text-slate-500">
+          <MarkdownText
+            text={valuation.contextText || defaultIntro}
+            accentClass={accent.tailwindText}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+              <h3 className={`text-[10px] font-bold tracking-widest uppercase ${accent.tailwindText}`}>
                 Pricing Comparison (Dealership Asking Prices)
               </h3>
               <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5 text-xs">
@@ -250,12 +268,19 @@ export default function MarketChart({ price, mileage, valuation, images = [] }: 
                 <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">
                   This Listing
                 </span>
-                <span className="text-xl font-bold text-red-600">{priceFormatter.format(price)}</span>
+                <span className={`text-xl font-bold ${accent.tailwindText}`}>
+                  {priceFormatter.format(price)}
+                </span>
               </div>
-              <p className="text-xs leading-relaxed whitespace-pre-wrap text-slate-400">
-                {valuation.justificationText ||
-                  "A fair, data-backed price that reflects the vehicle's condition and recent maintenance."}
-              </p>
+              <div className="text-xs leading-relaxed text-slate-400">
+                <MarkdownText
+                  text={
+                    valuation.justificationText ||
+                    "A fair, data-backed price that reflects the vehicle's condition and recent maintenance."
+                  }
+                  accentClass={accent.tailwindText}
+                />
+              </div>
             </div>
 
             {gridImages.length > 0 && (
@@ -280,8 +305,11 @@ export default function MarketChart({ price, mileage, valuation, images = [] }: 
               Dealer Retail Reality
             </span>
             {valuation.dealerRealityText ? (
-              <div className="text-xs leading-relaxed whitespace-pre-wrap text-slate-500">
-                {valuation.dealerRealityText}
+              <div className="text-xs leading-relaxed text-slate-500">
+                <MarkdownText
+                  text={valuation.dealerRealityText}
+                  accentClass={accent.tailwindText}
+                />
               </div>
             ) : (
               <>
@@ -300,8 +328,8 @@ export default function MarketChart({ price, mileage, valuation, images = [] }: 
               KBB Private Party Value
             </span>
             {valuation.kbbText ? (
-              <div className="text-xs leading-relaxed whitespace-pre-wrap text-slate-500">
-                {valuation.kbbText}
+              <div className="text-xs leading-relaxed text-slate-500">
+                <MarkdownText text={valuation.kbbText} accentClass={accent.tailwindText} />
               </div>
             ) : (
               <>

@@ -272,6 +272,7 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
     description: vehicle.description,
     drivetrain: vehicle.specs.drivetrain,
     locationCity: vehicle.location.city,
+    accentColor: vehicle.accentColor ?? 'red',
     mileage: formatMileage(vehicle.mileage),
     price: formatCurrency(vehicle.price),
     originalStickerUrl: resolveOriginalStickerUrl(vehicle) ?? '',
@@ -454,6 +455,8 @@ export function formStateToVehiclePatch(
     geohash: existing.location.geohash,
     city: locationCity,
   };
+
+  patch.accentColor = state.accentColor ?? 'red';
 
   return patch;
 }
