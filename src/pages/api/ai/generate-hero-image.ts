@@ -159,6 +159,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .doc(vehicleId)
       .update({
         images,
+        heroImageUrls: [url],
         aiGeneration: {
           status: 'complete',
           source: 'vin',

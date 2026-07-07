@@ -332,7 +332,6 @@ const FORD_DOCUMENTS_BANNER = {
 
 async function runSeed() {
   const createdAt = new Date().toISOString();
-  const DUMMY_PDF = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
 
   const userData = UserSchema.parse({
     displayName: 'Justin F.',
@@ -380,11 +379,6 @@ async function runSeed() {
           { date: '2024-06-02', service: 'Front brake pads and rotors replaced' },
           { date: '2023-09-20', service: 'Air suspension delete — coilover conversion' },
         ],
-        documents: {
-          kbbReport: DUMMY_PDF,
-          carfaxReport: DUMMY_PDF,
-          smogReport: DUMMY_PDF,
-        },
         videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
         videoPosterUrl: 'https://picsum.photos/seed/ramVideoPoster/1280/720',
         windowStickerBreakdown: RAM_WINDOW_STICKER_BREAKDOWN,
@@ -518,11 +512,6 @@ async function runSeed() {
           { date: '2024-08-22', service: 'Transmission fluid service' },
           { date: '2024-03-05', service: 'Brake inspection — pads at 70%' },
         ],
-        documents: {
-          kbbReport: DUMMY_PDF,
-          carfaxReport: DUMMY_PDF,
-          smogReport: DUMMY_PDF,
-        },
         videoUrl: 'https://www.youtube.com/watch?v=9xwazD5SyVg',
         videoPosterUrl: 'https://picsum.photos/seed/fordVideoPoster/1280/720',
         windowStickerBreakdown: FORD_WINDOW_STICKER_BREAKDOWN,

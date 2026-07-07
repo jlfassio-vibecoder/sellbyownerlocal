@@ -1,4 +1,5 @@
 import type {
+  GalleryPhoto,
   MarketValuation,
   PitchBlock,
   VehicleDashboardUpdate,
@@ -7,6 +8,15 @@ import type {
   VehicleHighlight,
   VehicleResponse,
 } from '../schemas';
+import { resolveKbbReportUrl } from './kbb-report-url';
+import { resolveSmogCertificateUrls } from './smog-certificate-url';
+import { resolveOriginalStickerUrl } from './original-sticker-url';
+import { resolveHistoryReportUrls } from './history-report-urls';
+import {
+  resolveCarouselImageUrls,
+  resolveHeroImageUrls,
+  resolveMarketImageUrls,
+} from './resolve-display-media';
 
 const DEFAULT_PITCH_BLOCKS: Pick<PitchBlock, 'title' | 'icon'>[] = [
   { title: 'The Peace of Mind Guarantee', icon: '🛡️' },
@@ -20,6 +30,13 @@ const FORM_BLOCK_BODIES: (keyof VehicleFormState)[] = [
   'maintenanceText',
   'utilityTowingText',
   'luxuryOptionsText',
+];
+
+const FORM_BLOCK_IMAGE_KEYS: (keyof VehicleFormState)[] = [
+  'pitchBlock0ImageUrls',
+  'pitchBlock1ImageUrls',
+  'pitchBlock2ImageUrls',
+  'pitchBlock3ImageUrls',
 ];
 
 function formatCurrency(value: number): string {
@@ -52,6 +69,21 @@ function optionalString(value: string | undefined): string {
   return value ?? '';
 }
 
+function buildGalleryPhotos(state: VehicleFormState): GalleryPhoto[] {
+  return (state.galleryPhotos ?? [])
+    .filter((photo) => photo.url?.trim())
+    .map((photo) => {
+      const caption = optionalString(photo.caption).trim() || 'Vehicle photo';
+      const alt = optionalString(photo.alt).trim() || caption;
+      return {
+        url: photo.url.trim(),
+        category: optionalString(photo.category).trim() || 'Exterior',
+        caption,
+        alt,
+      };
+    });
+}
+
 function buildPitchBlocks(
   state: VehicleFormState,
   existing: VehicleResponse
@@ -62,12 +94,14 @@ function buildPitchBlocks(
     const existingBlock = existingBlocks[index];
     const defaults = DEFAULT_PITCH_BLOCKS[index]!;
     const body = optionalString(state[bodyKey] as string | undefined);
+    const imageUrls =
+      (state[FORM_BLOCK_IMAGE_KEYS[index]!] as string[] | undefined) ?? [];
 
     return {
       title: existingBlock?.title ?? defaults.title,
       icon: existingBlock?.icon ?? defaults.icon,
       body: body || existingBlock?.body || '',
-      ...(existingBlock?.images ? { images: existingBlock.images } : {}),
+      ...(imageUrls.length > 0 ? { images: imageUrls } : {}),
     };
   });
 }
@@ -108,25 +142,6 @@ function buildMechanicalItems(state: VehicleFormState) {
   ].filter((item) => item.title && item.text);
 
   return items;
-}
-
-function buildDocuments(state: VehicleFormState) {
-  const documents: NonNullable<VehicleDashboardUpdate['documents']> = {};
-
-  if (state.windowStickerUrl?.trim()) {
-    documents.windowSticker = state.windowStickerUrl.trim();
-  }
-  if (state.carfaxReportUrl?.trim()) {
-    documents.carfaxReport = state.carfaxReportUrl.trim();
-  }
-  if (state.kbbReportUrl?.trim()) {
-    documents.kbbReport = state.kbbReportUrl.trim();
-  }
-  if (state.smogReportUrl?.trim()) {
-    documents.smogReport = state.smogReportUrl.trim();
-  }
-
-  return Object.keys(documents).length > 0 ? documents : undefined;
 }
 
 function sanitizeOptionalNumber(value: unknown): number | undefined {
@@ -250,10 +265,10 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
     locationCity: vehicle.location.city,
     mileage: formatMileage(vehicle.mileage),
     price: formatCurrency(vehicle.price),
-    windowStickerUrl: vehicle.documents?.windowSticker ?? '',
-    carfaxReportUrl: vehicle.documents?.carfaxReport ?? '',
-    kbbReportUrl: vehicle.documents?.kbbReport ?? '',
-    smogReportUrl: vehicle.documents?.smogReport ?? '',
+    originalStickerUrl: resolveOriginalStickerUrl(vehicle) ?? '',
+    historyReportUrls: resolveHistoryReportUrls(vehicle),
+    kbbReportUrl: resolveKbbReportUrl(vehicle) ?? '',
+    smogCertificateUrls: resolveSmogCertificateUrls(vehicle),
     subtitle: vehicle.sellersNote?.subtitle ?? '',
     msrp: vehicle.sellersNote?.originalMsrp
       ? formatCurrency(vehicle.sellersNote.originalMsrp)
@@ -263,6 +278,10 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
     maintenanceText: blocks[1]?.body ?? '',
     utilityTowingText: blocks[2]?.body ?? '',
     luxuryOptionsText: blocks[3]?.body ?? '',
+    pitchBlock0ImageUrls: blocks[0]?.images ?? [],
+    pitchBlock1ImageUrls: blocks[1]?.images ?? [],
+    pitchBlock2ImageUrls: blocks[2]?.images ?? [],
+    pitchBlock3ImageUrls: blocks[3]?.images ?? [],
     ctaText: vehicle.sellersNote?.ctaText ?? '',
     mechanicalIntegrityIntro: vehicle.mechanicalIntegrity?.intro ?? '',
     mechanicalItem1Title: mechanicalItems[0]?.title ?? '',
@@ -295,6 +314,15 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
     videoUrl: vehicle.videoUrl ?? '',
     videoPosterUrl: vehicle.videoPosterUrl ?? '',
     images: (vehicle.images ?? []).slice(0, 30),
+    heroImageUrls: resolveHeroImageUrls(vehicle),
+    carouselImageUrls: resolveCarouselImageUrls(vehicle),
+    marketImageUrls: resolveMarketImageUrls(vehicle),
+    galleryPhotos: (vehicle.galleryPhotos ?? []).map((photo) => ({
+      url: photo.url,
+      category: photo.category,
+      caption: photo.caption,
+      alt: photo.alt,
+    })),
   };
 }
 
@@ -350,10 +378,19 @@ export function formStateToVehiclePatch(
     patch.highlights = highlights;
   }
 
-  const documents = buildDocuments(state);
-  if (documents) {
-    patch.documents = documents;
+  const originalStickerUrl = optionalString(state.originalStickerUrl).trim();
+  if (originalStickerUrl) {
+    patch.originalStickerUrl = originalStickerUrl;
   }
+
+  const kbbReportUrl = optionalString(state.kbbReportUrl).trim();
+  if (kbbReportUrl) {
+    patch.kbbReportUrl = kbbReportUrl;
+  }
+
+  patch.smogCertificateUrls = state.smogCertificateUrls;
+
+  patch.historyReportUrls = state.historyReportUrls;
 
   const videoUrl = optionalString(state.videoUrl).trim();
   if (videoUrl) patch.videoUrl = videoUrl;
@@ -366,6 +403,12 @@ export function formStateToVehiclePatch(
     .filter((url) => url.length > 0)
     .slice(0, 30);
   patch.images = images;
+
+  patch.heroImageUrls = state.heroImageUrls;
+  patch.carouselImageUrls = state.carouselImageUrls;
+  patch.marketImageUrls = state.marketImageUrls;
+
+  patch.galleryPhotos = buildGalleryPhotos(state);
 
   const listingTitleTrimmed = optionalString(state.listingTitle).trim();
   patch.listingTitle = listingTitleTrimmed || null;

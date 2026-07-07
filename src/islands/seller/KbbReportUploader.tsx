@@ -1,18 +1,18 @@
 import { useRef, useState } from 'react';
 import { CheckCircle2, ExternalLink, Loader2, Upload } from 'lucide-react';
-import { uploadDocument } from '../../../lib/seller-api';
+import { uploadDocument } from '../../lib/seller-api';
 
-interface OriginalStickerUploadFieldProps {
+interface KbbReportUploaderProps {
   vehicleId: string;
-  originalStickerUrl?: string;
+  kbbReportUrl?: string;
   onFieldUpdate: (url: string) => void;
 }
 
-export default function OriginalStickerUploadField({
+export default function KbbReportUploader({
   vehicleId,
-  originalStickerUrl,
+  kbbReportUrl,
   onFieldUpdate,
-}: OriginalStickerUploadFieldProps) {
+}: KbbReportUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,51 +27,52 @@ export default function OriginalStickerUploadField({
     setError(null);
 
     try {
-      const url = await uploadDocument(vehicleId, file, 'original_sticker');
+      const url = await uploadDocument(vehicleId, file, 'kbb_report');
       onFieldUpdate(url);
     } catch (err) {
-      console.error('Original sticker upload failed', err);
+      console.error('KBB report upload failed', err);
       setError(err instanceof Error ? err.message : 'Failed to upload file. Please try again.');
     } finally {
       setUploading(false);
     }
   };
 
-  const filename = originalStickerUrl
-    ? decodeURIComponent(originalStickerUrl.split('/').pop()?.split('?')[0] ?? 'Uploaded file')
+  const filename = kbbReportUrl
+    ? decodeURIComponent(kbbReportUrl.split('/').pop()?.split('?')[0] ?? 'Uploaded file')
     : null;
 
   return (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-white p-4">
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
-        <Upload size={16} aria-hidden="true" />
-        Display original sticker on listing
+    <div className="mb-6">
+      <div className="mb-4 rounded-lg bg-blue-50 p-4 text-sm text-slate-700">
+        How to add your KBB Report: Go to kbb.com, enter your vehicle details, and select
+        &apos;Private Party Value&apos; (NOT Trade-In Value). Print to PDF or take a screenshot of
+        the final graph.
       </div>
-      <p className="mb-3 text-xs text-slate-500">
-        Upload the factory PDF or photo to show on the public listing instead of the generated site
-        sticker.
-      </p>
+
+      <label className="mb-2 block text-sm font-medium text-slate-700">
+        Kelley Blue Book Report
+      </label>
 
       <input
         type="file"
         ref={fileInputRef}
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) handleUpload(file);
+          if (file) void handleUpload(file);
         }}
         className="hidden"
-        accept=".pdf,image/png,image/jpeg,image/webp"
+        accept=".pdf,image/png,image/jpeg"
         disabled={uploading}
       />
 
-      {originalStickerUrl ? (
+      {kbbReportUrl ? (
         <div className="mb-3 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3">
           <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-green-600" aria-hidden="true" />
           <div className="min-w-0">
-            <p className="text-xs font-medium text-green-800">Original sticker on file</p>
+            <p className="text-xs font-medium text-green-800">KBB report uploaded</p>
             <p className="truncate text-xs text-green-700">{filename}</p>
             <a
-              href={originalStickerUrl}
+              href={kbbReportUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-green-800 hover:text-green-900"
@@ -87,22 +88,23 @@ export default function OriginalStickerUploadField({
         type="button"
         onClick={() => fileInputRef.current?.click()}
         disabled={uploading}
-        className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50 disabled:opacity-70"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-white px-4 py-8 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 disabled:opacity-70"
       >
         {uploading ? (
           <>
-            <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+            <Loader2 size={20} className="animate-spin text-slate-400" aria-hidden="true" />
             Uploading…
           </>
-        ) : originalStickerUrl ? (
-          'Replace original sticker'
         ) : (
-          'Upload original sticker'
+          <>
+            <Upload size={20} className="text-slate-500" aria-hidden="true" />
+            {kbbReportUrl ? 'Replace KBB report' : 'Click to upload KBB report (PDF or image)'}
+          </>
         )}
       </button>
 
       {error ? (
-        <p className="mt-2 text-xs text-red-600" role="alert">
+        <p className="mt-2 text-sm text-red-600" role="alert">
           {error}
         </p>
       ) : null}

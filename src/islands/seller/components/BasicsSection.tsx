@@ -170,8 +170,8 @@ export default function BasicsSection({
             />
             <OriginalStickerUploadField
               vehicleId={vehicleId}
-              windowStickerUrl={values.windowStickerUrl}
-              onFieldUpdate={(url) => setValue('windowStickerUrl', url, { shouldDirty: true })}
+              originalStickerUrl={values.originalStickerUrl}
+              onFieldUpdate={(url) => setValue('originalStickerUrl', url, { shouldDirty: true })}
             />
           </div>
         </div>

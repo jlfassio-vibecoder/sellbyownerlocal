@@ -1,4 +1,6 @@
 import DocumentUploadFields, { type DocumentField } from '../DocumentUploadFields';
+import KbbReportUploader from '../KbbReportUploader';
+import SmogCertificateUploader from '../SmogCertificateUploader';
 import type { VehicleFormState } from '../../../schemas';
 import type { DetailsSectionFormProps } from './form-section-types';
 
@@ -22,6 +24,19 @@ export default function DocumentsSection({
         onFieldUpdate={(field: DocumentField, url: string) =>
           setValue(field, url, { shouldDirty: true })
         }
+        onHistoryReportUrlsChange={(urls) =>
+          setValue('historyReportUrls', urls, { shouldDirty: true })
+        }
+      />
+      <KbbReportUploader
+        vehicleId={vehicleId}
+        kbbReportUrl={formState.kbbReportUrl}
+        onFieldUpdate={(url) => setValue('kbbReportUrl', url, { shouldDirty: true })}
+      />
+      <SmogCertificateUploader
+        vehicleId={vehicleId}
+        urls={formState.smogCertificateUrls}
+        onUrlsChange={(urls) => setValue('smogCertificateUrls', urls, { shouldDirty: true })}
       />
     </>
   );

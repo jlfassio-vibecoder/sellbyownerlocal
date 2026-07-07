@@ -43,7 +43,7 @@ const SECTION_LABELS: Record<SectionId, string> = {
   market: 'Market Valuation',
   highlights: 'Highlights & Utility',
   video: 'Video',
-  gallery: 'Gallery Photos',
+  gallery: 'Media Library',
   documents: 'Documents',
 };
 
@@ -140,10 +140,10 @@ export default function DetailsEditor({
     video: !!(values.videoUrl && values.videoPosterUrl),
     gallery: !!(values.images && values.images.length > 0),
     documents: !!(
-      values.windowStickerUrl ||
-      values.carfaxReportUrl ||
+      values.originalStickerUrl ||
+      (values.historyReportUrls && values.historyReportUrls.length > 0) ||
       values.kbbReportUrl ||
-      values.smogReportUrl
+      (values.smogCertificateUrls && values.smogCertificateUrls.length > 0)
     ),
   };
 

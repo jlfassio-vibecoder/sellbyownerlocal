@@ -255,6 +255,11 @@ export function buildVehicleFromAiContent(options: {
         service: 'AI-generated listing — verify service history with seller',
       },
     ],
+    historyReportUrls: [],
+    smogCertificateUrls: [],
+    heroImageUrls: [],
+    carouselImageUrls: [],
+    marketImageUrls: [],
     aiGeneration,
   };
 
@@ -341,6 +346,11 @@ function buildFullVehicleFromAiContent(options: {
         service: 'AI-generated listing — verify service history with seller',
       },
     ],
+    historyReportUrls: [],
+    smogCertificateUrls: [],
+    heroImageUrls: [],
+    carouselImageUrls: [],
+    marketImageUrls: [],
     monroney,
     aiGeneration,
     ...(prospect ? { dealerProspect: prospect } : {}),

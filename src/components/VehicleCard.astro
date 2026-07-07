@@ -1,11 +1,13 @@
 ---
 import type { VehicleResponse } from '../schemas';
+import { resolveHeroImageUrls } from '../lib/resolve-display-media';
 
 interface Props {
   vehicle: VehicleResponse;
 }
 
 const { vehicle } = Astro.props;
+const heroImage = resolveHeroImageUrls(vehicle)[0];
 
 const priceFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -21,9 +23,9 @@ const mileageFormatter = new Intl.NumberFormat('en-US');
   class="block overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-lg"
 >
   {
-    vehicle.images.length > 0 ? (
+    heroImage ? (
       <img
-        src={vehicle.images[0]}
+        src={heroImage}
         alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
         class="aspect-[4/3] w-full object-cover"
       />

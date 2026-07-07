@@ -1,5 +1,4 @@
 import type { APIRoute } from 'astro';
-import { randomUUID } from 'node:crypto';
 import {
   AuthError,
   ForbiddenError,
@@ -8,60 +7,48 @@ import {
   requireSeller,
   unauthorizedResponse,
 } from '../../../lib/auth';
-import { db, storageBucket } from '../../../lib/firebase-admin';
+import { db } from '../../../lib/firebase-admin';
+import {
+  ALLOWED_VEHICLE_UPLOAD_MIME_TYPES,
+  uploadVehicleFile,
+} from '../../../lib/storage-upload';
 import { UploadResponseSchema, VehicleResponseSchema } from '../../../schemas';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const MAX_DOCUMENT_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_GALLERY_FILE_SIZE = 20 * 1024 * 1024;
 
-const ALLOWED_MIME_TYPES = new Set([
-  'application/pdf',
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-]);
-
-const MIME_TO_EXT: Record<string, string> = {
-  'application/pdf': 'pdf',
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-};
-
 const GALLERY_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
-/** UBLA buckets reject per-object ACLs; public read must be set at bucket IAM instead. */
-function isUniformBucketLevelAccessError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  if (/uniform bucket-level access/i.test(message)) {
-    return true;
-  }
+type UploadPurpose =
+  | 'document'
+  | 'gallery'
+  | 'original_sticker'
+  | 'history_report'
+  | 'kbb_report'
+  | 'smog_certificate';
 
-  const apiError = error as { code?: number; errors?: Array<{ message?: string; reason?: string }> };
-  if (apiError.code === 400) {
-    return (
-      apiError.errors?.some(
-        (entry) =>
-          /uniform bucket-level access/i.test(entry.message ?? '') ||
-          (entry.reason === 'invalid' && /access control/i.test(entry.message ?? ''))
-      ) ?? false
-    );
-  }
-
-  return false;
+function parsePurpose(raw: FormDataEntryValue | null): UploadPurpose {
+  if (raw === 'gallery') return 'gallery';
+  if (raw === 'original_sticker') return 'original_sticker';
+  if (raw === 'history_report') return 'history_report';
+  if (raw === 'kbb_report') return 'kbb_report';
+  if (raw === 'smog_certificate') return 'smog_certificate';
+  return 'document';
 }
 
-async function makeObjectPublicIfSupported(
-  gcsFile: ReturnType<ReturnType<typeof storageBucket>['file']>
-): Promise<void> {
-  try {
-    await gcsFile.makePublic();
-  } catch (error) {
-    if (isUniformBucketLevelAccessError(error)) {
-      return;
-    }
-    throw error;
+function inferContentType(file: File): string | null {
+  if (file.type && ALLOWED_VEHICLE_UPLOAD_MIME_TYPES.has(file.type)) {
+    return file.type;
   }
+
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.pdf')) return 'application/pdf';
+  if (name.endsWith('.png')) return 'image/png';
+  if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'image/jpeg';
+  if (name.endsWith('.webp')) return 'image/webp';
+
+  return file.type || null;
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -71,8 +58,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const formData = await request.formData();
     const file = formData.get('file');
     const vehicleId = formData.get('vehicleId');
-    const purposeRaw = formData.get('purpose');
-    const purpose = purposeRaw === 'gallery' ? 'gallery' : 'document';
+    const purpose = parsePurpose(formData.get('purpose'));
 
     if (!(file instanceof File)) {
       return new Response(JSON.stringify({ error: 'No file provided' }), {
@@ -128,34 +114,83 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
 
-    if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    const contentType = inferContentType(file);
+    if (!contentType || !ALLOWED_VEHICLE_UPLOAD_MIME_TYPES.has(contentType)) {
       return new Response(
         JSON.stringify({ error: 'Invalid file type. Allowed: PDF, PNG, JPEG, WebP' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    if (purpose === 'gallery' && !GALLERY_MIME_TYPES.has(file.type)) {
+    if (purpose === 'gallery' && !GALLERY_MIME_TYPES.has(contentType)) {
       return new Response(
         JSON.stringify({ error: 'Gallery uploads must be PNG, JPEG, or WebP images' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const ext = MIME_TO_EXT[file.type] ?? 'bin';
-    const folder = purpose === 'gallery' ? 'gallery' : 'documents';
-    const filename = `vehicles/${trimmedVehicleId}/${folder}/${Date.now()}-${randomUUID()}.${ext}`;
-    const bucket = storageBucket();
-    const gcsFile = bucket.file(filename);
+    const folder =
+      purpose === 'gallery'
+        ? 'gallery'
+        : purpose === 'original_sticker'
+          ? 'original_sticker'
+          : purpose === 'history_report'
+            ? 'history_report'
+            : purpose === 'kbb_report'
+              ? 'kbb_report'
+              : purpose === 'smog_certificate'
+                ? 'smog_certificate'
+                : 'documents';
+
     const buffer = Buffer.from(await file.arrayBuffer());
-
-    await gcsFile.save(buffer, {
-      metadata: { contentType: file.type },
+    const url = await uploadVehicleFile({
+      vehicleId: trimmedVehicleId,
+      buffer,
+      contentType,
+      folder,
     });
-    // Uploaded files are public on listing pages; UBLA buckets rely on bucket IAM instead of makePublic().
-    await makeObjectPublicIfSupported(gcsFile);
 
-    const url = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+    if (purpose === 'original_sticker') {
+      await db()
+        .collection('vehicles')
+        .doc(trimmedVehicleId)
+        .update({
+          originalStickerUrl: url,
+          'documents.windowSticker': FieldValue.delete(),
+        });
+    }
+
+    if (purpose === 'history_report') {
+      await db()
+        .collection('vehicles')
+        .doc(trimmedVehicleId)
+        .update({
+          historyReportUrls: FieldValue.arrayUnion(url),
+          'documents.carfaxReport': FieldValue.delete(),
+        });
+    }
+
+    if (purpose === 'kbb_report') {
+      await db()
+        .collection('vehicles')
+        .doc(trimmedVehicleId)
+        .update({
+          kbbReportUrl: url,
+          'documents.kbbReport': FieldValue.delete(),
+        });
+    }
+
+    if (purpose === 'smog_certificate') {
+      await db()
+        .collection('vehicles')
+        .doc(trimmedVehicleId)
+        .update({
+          smogCertificateUrls: FieldValue.arrayUnion(url),
+          smogCertificateUrl: FieldValue.delete(),
+          'documents.smogReport': FieldValue.delete(),
+        });
+    }
+
     const response = UploadResponseSchema.parse({ url });
 
     return new Response(JSON.stringify(response), {

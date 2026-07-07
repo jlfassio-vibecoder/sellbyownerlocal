@@ -13,9 +13,15 @@ import {
   generateMonroneyFromSticker,
 } from '../../../../../lib/ai/generate-monroney-from-sticker';
 import { db } from '../../../../../lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { fetchFederalMonroneyData } from '../../../../../lib/federal-data';
 import { enrichMonroneyFromVinDecode } from '../../../../../lib/monroney-style-line';
 import { checkRateLimit } from '../../../../../lib/rate-limit';
+import {
+  extractBase64FromDataUri,
+  extractMimeTypeFromDataUri,
+} from '../../../../../lib/sticker-file';
+import { uploadVehicleFile } from '../../../../../lib/storage-upload';
 import { decodeVin } from '../../../../../lib/vin-decoder';
 import {
   MonroneySchema,
@@ -171,6 +177,18 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
       return jsonError(mapped.message, mapped.status);
     }
 
+    const contentType = extractMimeTypeFromDataUri(parsed.data.stickerFile);
+    const stickerBuffer = Buffer.from(
+      extractBase64FromDataUri(parsed.data.stickerFile),
+      'base64'
+    );
+    const originalStickerUrl = await uploadVehicleFile({
+      vehicleId,
+      buffer: stickerBuffer,
+      contentType,
+      folder: 'original_sticker',
+    });
+
     const monroney = resolveMonroneyFromAi(aiResult.monroney, decoded, federal);
     if (!monroney) {
       return jsonError('Could not extract usable window sticker data from the upload', 422);
@@ -179,6 +197,8 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
     const generatedAt = new Date().toISOString();
     const update: Record<string, unknown> = {
       monroney,
+      originalStickerUrl,
+      'documents.windowSticker': FieldValue.delete(),
       aiGeneration: {
         status: aiResult.partial ? 'partial' : 'text_complete',
         source: 'sticker',
