@@ -258,8 +258,13 @@ export default function InventoryGrid({ initialVehicles }: InventoryGridProps) {
 
         {filteredVehicles.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {filteredVehicles.map((vehicle) => (
-              <VehicleCard key={vehicle.id} vehicle={vehicle} />
+            {filteredVehicles.map((vehicle, index) => (
+              <VehicleCard
+                key={vehicle.id}
+                vehicle={vehicle}
+                rank={index}
+                position={index + 1}
+              />
             ))}
           </div>
         ) : (

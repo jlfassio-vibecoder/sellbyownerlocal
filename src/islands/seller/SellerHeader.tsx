@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  BarChart3,
   CheckCircle2,
   Copy,
   LogOut,
@@ -12,7 +13,7 @@ import {
 } from 'lucide-react';
 import MobileDrawer from '../MobileDrawer';
 
-export type SellerTab = 'messages' | 'inquiries' | 'details';
+export type SellerTab = 'messages' | 'inquiries' | 'insights' | 'details';
 
 interface SellerHeaderBaseProps {
   inquiryCount?: number;
@@ -126,6 +127,7 @@ export default function SellerHeader(props: SellerHeaderProps) {
   const tabs: TabConfig[] = [
     { id: 'messages', label: 'Live Chat', icon: MessageCircle },
     { id: 'inquiries', label: 'Contact Forms', icon: Users },
+    { id: 'insights', label: 'Insights', icon: BarChart3 },
     { id: 'details', label: 'Listing Details', icon: Settings },
   ];
 

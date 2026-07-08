@@ -32,15 +32,17 @@ interface BuyerContext {
   userDisplayName: string;
   userPhone: string;
   loginHref: string;
+  saveLoginHref?: string;
 }
 
 interface Props {
   vehicle: VehicleResponse;
   analyticsEnabled?: boolean;
   buyerContext?: BuyerContext;
+  initialSaved?: boolean;
 }
 
-const { vehicle, analyticsEnabled = true, buyerContext } = Astro.props;
+const { vehicle, analyticsEnabled = true, buyerContext, initialSaved = false } = Astro.props;
 const view = buildVehicleListingView(vehicle);
 const {
   pageTitle,
@@ -96,6 +98,17 @@ const analyticsSectionIds = navSections.map((section) => section.id);
   locationCity={vehicle.location.city}
   accentColor={vehicle.accentColor}
   sections={navSections}
+  saveVehicle={
+    buyerContext
+      ? {
+          vehicleId: vehicle.id,
+          isLoggedIn: buyerContext.isLoggedIn,
+          verificationTier: buyerContext.verificationTier,
+          loginHref: buyerContext.saveLoginHref ?? buyerContext.loginHref,
+          initialSaved,
+        }
+      : undefined
+  }
 />
 
 <main class="relative mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">

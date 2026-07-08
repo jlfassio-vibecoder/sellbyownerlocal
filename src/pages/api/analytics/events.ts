@@ -14,6 +14,16 @@ const PAGE_VIEW_RATE_LIMIT = {
   max: 1,
 };
 
+const IMPRESSION_RATE_LIMIT = {
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 1,
+};
+
+const PAGE_LEAVE_RATE_LIMIT = {
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 1,
+};
+
 export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   try {
     const sessionId = getAnonSessionId(cookies);
@@ -64,6 +74,13 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
 
     const { vehicleId, eventType, metadata } = parsed.data;
 
+    if (eventType === 'save_vehicle') {
+      return new Response(JSON.stringify({ error: 'Event type not allowed' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     if (eventType === 'page_view') {
       const pageViewLimit = checkRateLimit(
         `analytics:pv:${sessionId}:${vehicleId}`,
@@ -71,6 +88,34 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       );
 
       if (!pageViewLimit.allowed) {
+        return new Response(JSON.stringify({ ok: true, deduplicated: true }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    if (eventType === 'impression') {
+      const impressionLimit = checkRateLimit(
+        `analytics:imp:${sessionId}:${vehicleId}`,
+        IMPRESSION_RATE_LIMIT
+      );
+
+      if (!impressionLimit.allowed) {
+        return new Response(JSON.stringify({ ok: true, deduplicated: true }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    if (eventType === 'page_leave') {
+      const pageLeaveLimit = checkRateLimit(
+        `analytics:leave:${sessionId}:${vehicleId}`,
+        PAGE_LEAVE_RATE_LIMIT
+      );
+
+      if (!pageLeaveLimit.allowed) {
         return new Response(JSON.stringify({ ok: true, deduplicated: true }), {
           status: 201,
           headers: { 'Content-Type': 'application/json' },

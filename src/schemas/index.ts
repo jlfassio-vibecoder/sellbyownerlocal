@@ -566,12 +566,18 @@ export const ListingEventTypeSchema = z.enum([
   'photo_view',
   'carousel_swipe',
   'section_view',
+  'impression',
+  'page_leave',
+  'save_vehicle',
 ]);
 
 export const ListingEventMetadataSchema = z.object({
   photoIndex: z.number().int().nonnegative().optional(),
   sectionId: z.string().min(1).max(50).optional(),
-  surface: z.enum(['hero', 'carousel', 'gallery']).optional(),
+  surface: z.enum(['hero', 'carousel', 'gallery', 'search_grid']).optional(),
+  rank: z.number().int().nonnegative().optional(),
+  position: z.number().int().positive().optional(),
+  durationSeconds: z.number().nonnegative().optional(),
 });
 
 export const ListingEventCreateSchema = z.object({
@@ -583,6 +589,69 @@ export const ListingEventCreateSchema = z.object({
 export const ListingEventSchema = ListingEventCreateSchema.extend({
   sessionId: z.string().min(1),
   timestamp: z.string().datetime(),
+});
+
+export const SavedVehicleSchema = z.object({
+  vehicleId: z.string().min(1),
+  buyerUid: z.string().min(1),
+  savedAt: z.string().datetime(),
+});
+
+export const SavedVehicleToggleResponseSchema = z.object({
+  saved: z.boolean(),
+});
+
+export const SavedVehicleStatusResponseSchema = z.object({
+  saved: z.boolean(),
+});
+
+export const ListingAnalyticsRangeSchema = z.enum(['7d', '30d', 'all']);
+
+export const ListingAnalyticsSummarySchema = z.object({
+  searchImpressions: z.number().int().nonnegative(),
+  clickThroughRate: z.number().nonnegative(),
+  totalPageViews: z.number().int().nonnegative(),
+  uniqueVisitors: z.number().int().nonnegative(),
+  avgDwellTimeSeconds: z.number().nonnegative(),
+  totalPhotoEngagements: z.number().int().nonnegative(),
+  totalSectionViews: z.number().int().nonnegative(),
+  activeSaves: z.number().int().nonnegative(),
+  inquiryCount: z.number().int().nonnegative(),
+});
+
+export const ListingAnalyticsSectionSchema = z.object({
+  sectionId: z.string(),
+  label: z.string(),
+  viewCount: z.number().int().nonnegative(),
+  uniqueSessions: z.number().int().nonnegative(),
+});
+
+export const ListingAnalyticsDailySchema = z.object({
+  date: z.string(),
+  impressions: z.number().int().nonnegative(),
+  pageViews: z.number().int().nonnegative(),
+  uniqueVisitors: z.number().int().nonnegative(),
+});
+
+export const ListingAnalyticsPhotosSchema = z.object({
+  carouselSwipes: z.number().int().nonnegative(),
+  photoViews: z.number().int().nonnegative(),
+  bySurface: z.object({
+    hero: z.number().int().nonnegative(),
+    carousel: z.number().int().nonnegative(),
+    gallery: z.number().int().nonnegative(),
+  }),
+});
+
+export const ListingAnalyticsResponseSchema = z.object({
+  vehicleId: z.string().min(1),
+  range: ListingAnalyticsRangeSchema,
+  since: z.string().datetime(),
+  until: z.string().datetime(),
+  summary: ListingAnalyticsSummarySchema,
+  sections: z.array(ListingAnalyticsSectionSchema),
+  daily: z.array(ListingAnalyticsDailySchema),
+  photos: ListingAnalyticsPhotosSchema,
 });
 
 export const MessageSchema = z.object({
@@ -717,6 +786,15 @@ export type ListingEventType = z.infer<typeof ListingEventTypeSchema>;
 export type ListingEventMetadata = z.infer<typeof ListingEventMetadataSchema>;
 export type ListingEventCreate = z.infer<typeof ListingEventCreateSchema>;
 export type ListingEvent = z.infer<typeof ListingEventSchema>;
+export type SavedVehicle = z.infer<typeof SavedVehicleSchema>;
+export type SavedVehicleToggleResponse = z.infer<typeof SavedVehicleToggleResponseSchema>;
+export type SavedVehicleStatusResponse = z.infer<typeof SavedVehicleStatusResponseSchema>;
+export type ListingAnalyticsRange = z.infer<typeof ListingAnalyticsRangeSchema>;
+export type ListingAnalyticsSummary = z.infer<typeof ListingAnalyticsSummarySchema>;
+export type ListingAnalyticsSection = z.infer<typeof ListingAnalyticsSectionSchema>;
+export type ListingAnalyticsDaily = z.infer<typeof ListingAnalyticsDailySchema>;
+export type ListingAnalyticsPhotos = z.infer<typeof ListingAnalyticsPhotosSchema>;
+export type ListingAnalyticsResponse = z.infer<typeof ListingAnalyticsResponseSchema>;
 export type Message = z.infer<typeof MessageSchema>;
 export type Conversation = z.infer<typeof ConversationSchema>;
 export type MessageCreate = z.infer<typeof MessageCreateSchema>;

@@ -50,7 +50,10 @@ const initialFormState = vehicleToFormState(vehicle);
 
 const tabParam = Astro.url.searchParams.get('tab');
 const initialTab =
-  tabParam === 'messages' || tabParam === 'inquiries' || tabParam === 'details'
+  tabParam === 'messages' ||
+  tabParam === 'inquiries' ||
+  tabParam === 'insights' ||
+  tabParam === 'details'
     ? tabParam
     : 'messages';
 

@@ -1,9 +1,10 @@
 # Tiered Buyer Verification — Architectural Roadmap
 
 **Project:** Sell By Owner Local (`sellbyownerlocal`)  
-**Document date:** July 7, 2026  
-**Status:** In progress — Tier 0 analytics + Tier 1 phone OTP and inquiry gating implemented  
-**Companion doc:** [`DASHBOARD_MIGRATION.md`](DASHBOARD_MIGRATION.md) (seller dashboard Phases 1–4 complete)
+**Document date:** July 8, 2026  
+**Status:** Phases 1–2 complete; Phase 3 partial; hybrid inquiry gating live (chat remains Tier 0)  
+**Companion doc:** [`DASHBOARD_MIGRATION.md`](DASHBOARD_MIGRATION.md) (seller dashboard Phases 1–4 complete)  
+**Tier 0 surface:** [`docs/TIER0_PUBLIC_SURFACE.md`](docs/TIER0_PUBLIC_SURFACE.md)
 
 ---
 
@@ -13,11 +14,11 @@ The platform’s **recommended go-to-market posture** is a three-tier verificati
 
 | Tier | Friction | Buyer capability | Business value |
 |------|----------|------------------|----------------|
-| **0 — Anonymous** | None | Browse listings, photos, Monroney/build data, AI reconditioning content | Page views, photo engagement, top-of-funnel analytics |
-| **1 — Phone OTP** | Low | Live chat with seller; optional verified contact identity | Blocks bots, VOIP, and international scam traffic on messaging |
+| **0 — Anonymous** | None | Browse listings, photos, Monroney/build data, AI reconditioning content, **live chat**, listing analytics | Page views, photo engagement, top-of-funnel analytics |
+| **1 — Phone OTP** | Low | **Send seller inquiries** (contact form); verified profile on `/account` | Blocks bots on high-intent lead capture; optional identity for sellers |
 | **2 — Full KYC** | High | Schedule test drive, make an offer, enter escrow | Trust premium for sellers; clean handoff to KeySavvy/Caramel AML flows |
 
-**Today:** Tier 0 browsing, chat, and anonymous listing analytics are live. Tier 1 phone OTP step-up and inquiry gating (`phone_verified`) are implemented on `/account` and `POST /api/inquiries`. Live chat remains anonymous (Tier 0). Tier 2 (full KYC) is not yet implemented.
+**Today (July 8, 2026):** Tier 0 browsing, **anonymous live chat**, and listing analytics are live. Tier 1 phone OTP step-up is implemented on `/account` (`PhoneOtpForm` + `POST /api/auth/phone/verify`). **Inquiries are gated** behind `phone_verified` (`ContactForm` UX + `POST /api/inquiries` enforcement). **Live chat intentionally remains Tier 0** (hybrid policy). Tier 2 (full KYC), VOIP line-type filtering, and Phase 4 chat gating are not implemented.
 
 Each section below is **one implementation phase** — sized to become a single Cursor/agent plan.
 
@@ -27,85 +28,97 @@ Each section below is **one implementation phase** — sized to become a single 
 
 ```mermaid
 flowchart TB
-  subgraph public [Public - No Auth]
+  subgraph public [Public - No Auth Tier 0]
     Home["/"]
     Listing["/vehicles/{slug}"]
+    AnalyticsAPI["POST /api/analytics/events"]
     MsgAPI["POST /api/messages buyer"]
     MsgGet["GET /api/messages/{sessionId}"]
   end
 
-  subgraph gated [Authenticated + phone_verified]
-    InvAPI["POST /api/inquiries"]
-  end
-
   subgraph auth [Authenticated - Firebase Session Cookie]
     Login["/login AuthForm"]
-    Account["/account"]
+    Account["/account profile + phone OTP"]
     Seller["/seller/*"]
     SellerAPI["/api/seller/*"]
+  end
+
+  subgraph gated [Authenticated + phone_verified Tier 1]
+    InvAPI["POST /api/inquiries"]
   end
 
   subgraph firestore [Firestore]
     Vehicles["vehicles/{id}"]
     Messages["messages"]
-    Inquiries["inquiries"]
-    Users["users/{id} stats only"]
+    Inquiries["inquiries + buyerUid"]
+    Users["users/{uid} verificationTier"]
+    Events["listing_events"]
   end
 
-  Listing --> InvAPI
+  Listing --> AnalyticsAPI
   Listing --> MsgAPI
   Listing --> MsgGet
+  Listing --> InvAPI
   Login --> auth
+  Account --> Users
   Seller --> SellerAPI
   InvAPI --> Inquiries
   MsgAPI --> Messages
+  AnalyticsAPI --> Events
   SellerAPI --> Messages
   SellerAPI --> Inquiries
 ```
 
-### What works today (Tier 0)
+### What works today
 
-| Capability | Implementation | Key paths |
-|------------|----------------|-----------|
-| Public listing SSR | No auth on `/vehicles/[id]` | `src/pages/vehicles/[id].astro`, `VehicleListingContent.astro` |
-| Monroney / build sheet / docs | Public proxy APIs | `src/pages/api/vehicles/[vehicleId]/*` |
-| Anonymous inquiries | IP rate limit (5 / 15 min) | `ContactForm.tsx`, `POST /api/inquiries` |
-| Anonymous live chat | `localStorage` session ID + IP rate limit (20 / 15 min) | `ChatWidget.tsx`, `POST /api/messages` |
-| Seller auth | HTTP-only `__session` cookie, 5-day expiry | `src/lib/auth.ts`, `POST /api/auth/session` |
-| Seller dashboard | Inquiries + chat + listing editor | `SellerVehicleShell`, `ChatPanel`, `InquiriesPanel` |
+| Capability | Tier | Implementation | Key paths |
+|------------|------|----------------|-----------|
+| Public listing SSR | 0 | No auth on `/vehicles/[slug]`; hybrid slug + canonical redirect | `src/pages/vehicles/[id].astro`, `src/utils/url-helpers.ts` |
+| Monroney / build sheet / docs | 0 | Public proxy APIs | `src/pages/api/vehicles/[vehicleId]/*` |
+| Anonymous listing analytics | 0 | `anon_session` cookie + `listing_events` | `src/middleware.ts`, `src/pages/api/analytics/events.ts`, `ListingAnalytics.tsx` |
+| Anonymous live chat | 0 | `localStorage` session ID + IP rate limit (20 / 15 min) | `ChatWidget.tsx`, `POST /api/messages` |
+| Email/password auth | — | HTTP-only `__session` cookie, 5-day expiry | `src/lib/auth.ts`, `POST /api/auth/session` |
+| User profile provisioning | — | `users/{uid}` on session create; tier from Firestore | `src/lib/buyer-profile.ts`, `POST /api/auth/session` |
+| Verification tier on session | — | `getSession` enriches with `verificationTier` | `src/lib/auth.ts` |
+| Account page | 1 | Profile editor, tier badge, phone OTP step-up | `src/pages/account/index.astro`, `ProfileEditor.tsx`, `PhoneOtpAccountVerify.tsx` |
+| Phone OTP (Tier 1) | 1 | Firebase Phone Auth + invisible reCAPTCHA; server tier upgrade | `PhoneOtpForm.tsx`, `POST /api/auth/phone/verify` |
+| Gated inquiries | 1 | Session + `phone_verified` required | `ContactForm.tsx`, `POST /api/inquiries` |
+| Seller dashboard | — | Inquiries + chat + listing editor | `SellerVehicleShell`, `ChatPanel`, `InquiriesPanel` |
 
-### Critical gaps vs. tiered model
+### Remaining gaps
 
-| Gap | Impact |
-|-----|--------|
-| No `verificationTier` on users or sessions | Cannot gate actions by trust level |
-| Chat uses unguessable `sessionId` only — no buyer UID | Seller sees `Buyer {last4}`; no verified identity |
-| No phone auth / OTP / VOIP filtering | Messaging is open to bots and scammers |
-| No test-drive or make-offer flows | Nothing to trigger Tier 2 KYC |
-| No KYC or escrow integrations | Cannot hand off to KeySavvy/Caramel |
-| No engagement analytics (page views, photo swipes) | “De-anchoring data” for dealers not yet measurable |
-| Marketing claims “ID-verified” without implementation | Trust/legal mismatch |
-| `users/{uid}` not provisioned on signup | Profile is stats-only, seeded manually in dev |
-| In-memory IP rate limits | Resets on deploy; not durable anti-abuse |
+| Gap | Impact | Target phase |
+|-----|--------|--------------|
+| No VOIP / line-type filtering on phone OTP | Scam numbers may pass Tier 1 | Phase 3 follow-up |
+| Chat uses unguessable `sessionId` only — no buyer UID on messages | Seller sees anonymous session label | Phase 4 (if chat gating is adopted) |
+| No test-drive or make-offer flows | Nothing to trigger Tier 2 KYC | Phase 5 |
+| No KYC or escrow integrations | Cannot hand off to KeySavvy/Caramel | Phases 6–7 |
+| No seller-facing analytics dashboard | Dealers cannot see funnel metrics in UI | Phase 8 |
+| In-memory IP rate limits | Resets on deploy; not durable anti-abuse | Phase 8 |
+| Firestore security rules not in repo | API-only auth today | Cross-cutting |
+| Marketing “ID-verified” claims | Tier 2 not live; copy may overstate | Ongoing |
 
 ### Auth naming note
 
-`requireSeller` / `SellerSession` in `src/lib/auth.ts` apply to **any** authenticated Firebase user — there is no separate buyer role yet. Future phases should introduce `BuyerSession`, `verificationTier`, and shared session helpers without breaking seller routes.
+`requireSeller` / `SellerSession` in `src/lib/auth.ts` apply to **any** authenticated Firebase user — there is no separate buyer role yet. `UserSession` and `requireVerificationTier` are implemented; `SellerSession` remains a backward-compatible alias.
 
 ---
 
 ## Target Architecture (To-Be)
+
+**Hybrid policy (implemented):** Inquiries require Tier 1; live chat stays Tier 0. Phase 4 chat gating is **deferred** unless product reverses this decision.
 
 ```mermaid
 flowchart TB
   subgraph tier0 [Tier 0 Anonymous]
     Browse[Browse listing + media]
     Telemetry[POST /api/analytics/events]
+    ChatAnon[Live chat send/receive]
   end
 
   subgraph tier1 [Tier 1 Phone OTP]
-    OTP[Phone OTP sign-in]
-    ChatGated[OTP required to send chat]
+    OTP[Phone OTP on /account]
+    InquiriesGated[POST /api/inquiries]
   end
 
   subgraph tier2 [Tier 2 KYC]
@@ -116,41 +129,42 @@ flowchart TB
   end
 
   Browse --> Telemetry
+  Browse --> ChatAnon
   Browse --> OTP
-  OTP --> ChatGated
-  ChatGated --> KYC
+  OTP --> InquiriesGated
+  OTP --> KYC
   KYC --> TestDrive
   KYC --> Offer
   Offer --> Escrow
 ```
 
-### Proposed verification tier enum
+### Verification tier enum (implemented)
 
 ```typescript
-// Future: src/schemas/index.ts
+// src/schemas/index.ts
 export const VerificationTierSchema = z.enum([
-  'anonymous',      // Tier 0 — default, no account
-  'phone_verified', // Tier 1 — OTP mobile confirmed, non-VOIP
-  'identity_verified', // Tier 2 — KYC passed
+  'anonymous',         // Tier 0 — default at signup
+  'phone_verified',    // Tier 1 — OTP mobile linked via Firebase
+  'identity_verified', // Tier 2 — KYC passed (not yet available)
 ]);
 ```
 
-### Proposed buyer profile extension
+### Buyer profile fields (implemented)
 
 ```typescript
-// Future: extend UserSchema or add buyers/{uid}
+// src/schemas/index.ts — UserSchema
 {
   displayName: string;
-  phone?: string;              // E.164, verified at Tier 1
-  phoneVerifiedAt?: string;    // ISO datetime
+  stats: { averageRating: number; itemsSold: number };
   verificationTier: VerificationTier;
+  phone?: string;              // E.164, set at Tier 1
+  phoneVerifiedAt?: string;    // ISO datetime
   kyc?: {
     provider: 'stripe_identity' | 'persona' | 'keysavvy' | 'caramel';
     status: 'pending' | 'verified' | 'failed';
     verifiedAt?: string;
     externalId?: string;
   };
-  stats: { averageRating; itemsSold }; // existing seller fields
 }
 ```
 
@@ -158,20 +172,23 @@ export const VerificationTierSchema = z.enum([
 
 ## Phase Overview
 
-| Phase | Name | Tier | Depends on |
-|-------|------|------|------------|
-| **1** | Anonymous Browse & Engagement Telemetry | 0 | — |
-| **2** | Verification Schema & Auth Abstractions | Foundation | Phase 1 |
-| **3** | Phone OTP Sign-In | 1 | Phase 2 |
-| **4** | OTP-Gated Live Chat | 1 | Phase 3 |
-| **5** | High-Stakes Action Framework | 2 (shell) | Phase 2 |
-| **6** | KYC Identity Verification | 2 | Phase 5 |
-| **7** | Escrow Partner Integration | 2 + transaction | Phase 6 |
-| **8** | Seller Verified Analytics Dashboard | All tiers | Phases 1, 4, 6 |
+| Phase | Name | Tier | Status | Depends on |
+|-------|------|------|--------|------------|
+| **1** | Anonymous Browse & Engagement Telemetry | 0 | **Complete** | — |
+| **2** | Verification Schema & Auth Abstractions | Foundation | **Complete** | Phase 1 |
+| **3** | Phone OTP Sign-In | 1 | **Partial** | Phase 2 |
+| **3b** | Inquiry Gating (hybrid) | 1 | **Complete** | Phase 3 (core OTP) |
+| **4** | OTP-Gated Live Chat | 1 | **Deferred** | Phase 3 — chat stays Tier 0 by policy |
+| **5** | High-Stakes Action Framework | 2 (shell) | Not started | Phase 2 |
+| **6** | KYC Identity Verification | 2 | Not started | Phase 5 |
+| **7** | Escrow Partner Integration | 2 + transaction | Not started | Phase 6 |
+| **8** | Seller Verified Analytics Dashboard | All tiers | Not started | Phases 1, 4, 6 |
 
 ---
 
 ## Phase 1 — Anonymous Browse & Engagement Telemetry
+
+**Status:** Complete (July 2026)
 
 **Goal:** Preserve zero-friction public access while capturing the metrics needed for dealership “de-anchoring” narratives (page views, photo interactions).
 
@@ -192,20 +209,23 @@ export const VerificationTierSchema = z.enum([
 
 ### Key files (create / modify)
 
-| Action | Path |
-|--------|------|
-| Create | `src/lib/analytics.ts`, `src/pages/api/analytics/events.ts` |
-| Create | `src/schemas` — `ListingEventSchema` |
-| Modify | `src/islands/ImageCarousel.tsx`, `VehicleListingContent.astro` |
-| Modify | `src/lib/rate-limit.ts` (or move to Redis/Firestore counter in Phase 8) |
+| Action | Path | Done |
+|--------|------|------|
+| Create | `src/lib/analytics.ts`, `src/lib/analytics-session.ts`, `src/pages/api/analytics/events.ts` | Yes |
+| Create | `src/middleware.ts` — scoped `anon_session` cookie | Yes |
+| Create | `src/lib/listing-analytics-client.ts`, `src/islands/ListingAnalytics.tsx` | Yes |
+| Create | `src/schemas` — `ListingEventSchema` | Yes |
+| Modify | `src/islands/ImageCarousel.tsx`, `VehicleListingContent.astro` | Yes |
+| Create | `docs/TIER0_PUBLIC_SURFACE.md` | Yes |
+| Modify | `firestore.indexes.json` — `listing_events` composite index | Yes |
 
 ### Acceptance criteria
 
-- [ ] Anonymous user can view full listing without login (regression test)
-- [ ] Page view recorded once per listing per anon session per session window
-- [ ] Carousel interaction events fire without blocking UI
-- [ ] No buyer PII stored at Tier 0
-- [ ] `npm run check && npm run build` pass
+- [x] Anonymous user can view full listing without login (regression test)
+- [x] Page view recorded once per listing per anon session per session window
+- [x] Carousel interaction events fire without blocking UI
+- [x] No buyer PII stored at Tier 0
+- [x] `npm run check && npm run build` pass
 
 ### Out of scope
 
@@ -217,6 +237,8 @@ export const VerificationTierSchema = z.enum([
 ---
 
 ## Phase 2 — Verification Schema & Auth Abstractions
+
+**Status:** Complete (July 2026)
 
 **Goal:** Introduce data models and server helpers for verification tiers without changing buyer UX yet.
 
@@ -241,21 +263,23 @@ export const VerificationTierSchema = z.enum([
 
 ### Key files
 
-| Action | Path |
-|--------|------|
-| Modify | `src/schemas/index.ts` |
-| Modify | `src/lib/auth.ts` |
-| Modify | `src/pages/api/auth/session.ts` (attach tier from Firestore on session create) |
-| Modify | `src/pages/account/index.astro` |
-| Create | `src/lib/buyer-profile.ts` |
-| Create | `scripts/backfill-user-profiles.ts` |
+| Action | Path | Done |
+|--------|------|------|
+| Modify | `src/schemas/index.ts` | Yes |
+| Modify | `src/lib/auth.ts` | Yes |
+| Modify | `src/pages/api/auth/session.ts` (provision profile on session create) | Yes |
+| Modify | `src/pages/api/users/[id].ts` (`PublicUserResponseSchema`) | Yes |
+| Modify | `src/pages/account/index.astro` | Yes |
+| Create | `src/lib/buyer-profile.ts` | Yes |
+| Create | `src/components/VerificationTierBadge.astro` | Yes |
+| Create | `scripts/backfill-user-profiles.ts` | Yes |
 
 ### Acceptance criteria
 
-- [ ] New signup creates `users/{uid}` with `verificationTier: 'anonymous'` (or tier after phone in Phase 3)
-- [ ] `requireVerificationTier('phone_verified')` returns 403 with structured error code
-- [ ] Seller routes unchanged
-- [ ] Zod schemas validate new fields; old documents still parse with defaults
+- [x] New signup creates `users/{uid}` with `verificationTier: 'anonymous'`
+- [x] `requireVerificationTier('phone_verified')` returns 403 with structured error code
+- [x] Seller routes unchanged
+- [x] Zod schemas validate new fields; old documents still parse with defaults
 
 ### Out of scope
 
@@ -266,7 +290,9 @@ export const VerificationTierSchema = z.enum([
 
 ## Phase 3 — Phone OTP Sign-In
 
-**Goal:** Implement Tier 1 identity — verified mobile number via OTP, with VOIP/high-risk number blocking.
+**Status:** Partial (July 2026) — core OTP + account UX shipped; VOIP lookup and standalone phone login not done
+
+**Goal:** Implement Tier 1 identity — verified mobile number via OTP.
 
 **Entry criteria:** Phase 2 complete.
 
@@ -278,48 +304,86 @@ export const VerificationTierSchema = z.enum([
 | **Twilio Verify + custom token** | Strong fraud signals, Lookup API | More custom session wiring |
 | **Stripe Identity (phone only)** | Unified with future KYC | Heavier integration |
 
-**Recommendation:** Firebase Phone Auth for OTP UX + **Twilio Lookup v2** (or similar) server-side before sending code to reject VOIP/Google Voice.
+**Chosen provider:** Firebase Phone Auth (client SDK + invisible reCAPTCHA). Server confirms via `POST /api/auth/phone/verify` after `linkWithPhoneNumber` on existing email account.
+
+**Not yet implemented:** Twilio Lookup VOIP rejection, `POST /api/auth/phone/send` (SMS sent client-side), phone-only sign-in tab on `/login`.
 
 ### Scope
 
-1. **New auth UI:** `PhoneOtpForm.tsx` island — phone input, send code, verify code
-2. **API routes:**
-   - `POST /api/auth/phone/send` — validate number, lookup line type, send OTP
-   - `POST /api/auth/phone/verify` — confirm code, set `phoneVerifiedAt`, tier → `phone_verified`, issue session cookie
-3. **Link phone to existing email account** (optional merge flow on `/account`)
-4. **Firestore:** store `phone` (E.164), `phoneVerifiedAt`, `verificationTier`
-5. **Homepage / listing CTAs:** “Sign in with phone to message seller” (copy only; gating in Phase 4)
+1. **Auth UI:** `PhoneOtpForm.tsx` — phone input, invisible reCAPTCHA, OTP verify — **done**
+2. **Account wrapper:** `PhoneOtpAccountVerify.tsx` calls server after OTP — **done**
+3. **API:** `POST /api/auth/phone/verify` — verify idToken, set `phone`, `phoneVerifiedAt`, tier → `phone_verified` — **done**
+4. **Profile editor:** `ProfileEditor.tsx` + `PATCH /api/users/[id]` for `displayName` — **done**
+5. **Link phone to existing email account** via `linkWithPhoneNumber` on `/account` — **done**
+6. **VOIP / line-type lookup** before send — **not done**
+7. **Phone tab on `/login`** — **not done**
 
 ### Key files
 
-| Action | Path |
-|--------|------|
-| Create | `src/islands/PhoneOtpForm.tsx` |
-| Create | `src/pages/api/auth/phone/send.ts`, `verify.ts` |
-| Create | `src/lib/phone-verification.ts`, `src/lib/line-type-lookup.ts` |
-| Modify | `src/islands/AuthForm.tsx` or `/login` — tab for phone vs email |
-| Modify | `src/pages/index.astro` hero subtext (accurate tier language) |
+| Action | Path | Done |
+|--------|------|------|
+| Create | `src/islands/PhoneOtpForm.tsx` | Yes |
+| Create | `src/islands/PhoneOtpAccountVerify.tsx` | Yes |
+| Create | `src/pages/api/auth/phone/verify.ts` | Yes |
+| Create | `src/islands/buyer/ProfileEditor.tsx` | Yes |
+| Modify | `src/pages/api/users/[id].ts` — PATCH displayName | Yes |
+| Modify | `src/pages/account/index.astro` | Yes |
+| Create | `src/lib/phone-verification.ts`, `src/lib/line-type-lookup.ts` | No |
+| Create | `src/pages/api/auth/phone/send.ts` | No (client sends SMS) |
 
 ### Acceptance criteria
 
 - [ ] VOIP numbers rejected with user-friendly error
-- [ ] Valid mobile receives OTP and completes sign-in
-- [ ] Session cookie issued; `verificationTier === 'phone_verified'`
-- [ ] Rate limits on send (per IP + per phone)
-- [ ] Existing email/password seller login still works
+- [x] Valid mobile receives OTP and completes verification on `/account`
+- [x] Firestore `verificationTier === 'phone_verified'` after server verify
+- [ ] Rate limits on send (per IP + per phone) beyond Firebase defaults
+- [x] Existing email/password seller login still works
 
-### Out of scope
+### Out of scope (completed elsewhere)
 
-- Blocking chat until Phase 4
-- Driver’s license KYC
+- Inquiry gating — see Phase 3b below
+- Driver’s license KYC — Phase 6
+
+---
+
+## Phase 3b — Inquiry Gating (Hybrid Policy)
+
+**Status:** Complete (July 2026)
+
+**Goal:** Gate seller inquiries behind Tier 1 while keeping live chat anonymous (Tier 0).
+
+### Scope
+
+1. **API:** `POST /api/inquiries` requires session + `requireVerificationTier('phone_verified')`; stores `buyerUid`, `verificationTier` — **done**
+2. **UI:** `ContactForm.tsx` — logged-out CTA, anonymous overlay with verify-phone link, prefill from profile — **done**
+3. **SSR:** `vehicles/[id].astro` passes `buyerContext` to listing — **done**
+4. **Chat:** `ChatWidget.tsx` and buyer `POST /api/messages` unchanged — **done**
+
+### Key files
+
+| Action | Path | Done |
+|--------|------|------|
+| Modify | `src/pages/api/inquiries/index.ts` | Yes |
+| Modify | `src/islands/ContactForm.tsx` | Yes |
+| Modify | `src/components/VehicleListingContent.astro` | Yes |
+| Modify | `src/pages/vehicles/[id].astro` | Yes |
+
+### Acceptance criteria
+
+- [x] Unauthenticated user cannot submit inquiry (401 / login CTA)
+- [x] Logged-in `anonymous` tier sees verify-phone prompt; cannot submit
+- [x] `phone_verified` user can submit inquiry
+- [x] Anonymous buyer chat still works without login
 
 ---
 
 ## Phase 4 — OTP-Gated Live Chat
 
-**Goal:** Require Tier 1 (`phone_verified`) before a buyer can **send** chat messages; preserve read-only chat preview or prompt-to-verify UX.
+**Status:** Deferred — hybrid policy keeps chat at Tier 0
 
-**Entry criteria:** Phase 3 complete.
+**Goal:** ~~Require Tier 1 (`phone_verified`) before a buyer can **send** chat messages~~ **Not adopted.** Product decision: inquiries are gated (Phase 3b); chat remains anonymous for lowest friction.
+
+**Entry criteria:** N/A unless policy changes.
 
 ### Scope
 
@@ -355,9 +419,10 @@ export const VerificationTierSchema = z.enum([
 - [ ] Seller reply flow unchanged (auth + ownership)
 - [ ] Homepage/marketing copy updated: messaging requires phone verification
 
-### Policy decision (document in plan)
+### Policy decision (recorded)
 
-**Contact form (`POST /api/inquiries`):** Recommended to **keep anonymous** in Phase 4 (low-friction lead capture) but pre-fill from verified profile when logged in. Optional follow-up plan: gate inquiries behind OTP same as chat.
+**Contact form (`POST /api/inquiries`):** **Gated behind `phone_verified`** (implemented in Phase 3b).  
+**Live chat (`POST /api/messages` buyer):** **Remains anonymous** (Tier 0). Do not add `requireVerificationTier` to buyer message flow unless product reverses this decision.
 
 ---
 
@@ -524,7 +589,7 @@ export const VerificationTierSchema = z.enum([
 
 - **Firestore rules:** Not in repo today — each phase should add rules matching API auth (especially `messages`, `inquiries`, `users`, `listing_events`)
 - **PII minimization:** Phone full number only in secure store; display masked; DL data never in Firestore
-- **Marketing accuracy:** Update `index.astro` hero bullets after Phase 4+ to match real tiers
+- **Marketing accuracy:** Homepage hero updated for tier language; Tier 2 “ID-verified” claims should remain disabled until Phase 6
 - **COPPA / consent:** Phone collection requires SMS disclosure and opt-in copy
 
 ### Existing code to preserve
@@ -538,64 +603,76 @@ export const VerificationTierSchema = z.enum([
 
 ### Suggested implementation order
 
+Phases 1, 2, and 3b are **complete**. Phase 3 VOIP follow-up, Phase 5 (intents), and Phase 8 (seller dashboard) are the highest-value next steps. Phase 4 is **deferred** (chat stays Tier 0).
+
 ```mermaid
 gantt
   title Verification Roadmap
   dateFormat YYYY-MM-DD
   section Foundation
-  Phase1 Telemetry     :p1, 2026-07-08, 2w
-  Phase2 Schema        :p2, after p1, 2w
+  Phase1 Telemetry done     :done, p1, 2026-07-01, 2026-07-07
+  Phase2 Schema done        :done, p2, 2026-07-07, 2026-07-08
   section Tier1
-  Phase3 OTP           :p3, after p2, 3w
-  Phase4 Chat Gate     :p4, after p3, 2w
+  Phase3 OTP partial        :active, p3, 2026-07-08, 3w
+  Phase3b Inquiry gate done :done, p3b, 2026-07-08, 1d
+  Phase4 Chat Gate deferred :p4, after p3, 2w
   section Tier2
-  Phase5 Intents       :p5, after p2, 2w
-  Phase6 KYC           :p6, after p5, 4w
-  Phase7 Escrow        :p7, after p6, 4w
+  Phase5 Intents            :p5, 2026-07-15, 2w
+  Phase6 KYC                :p6, after p5, 4w
+  Phase7 Escrow             :p7, after p6, 4w
   section Insights
-  Phase8 Analytics     :p8, after p4, 3w
+  Phase8 Analytics          :p8, after p1, 3w
 ```
-
-Phases 5 and 3–4 can overlap after Phase 2 if staffed in parallel.
 
 ---
 
-## Appendix A — File Index (Current)
+## Appendix A — File Index
 
 | Domain | Paths |
 |--------|-------|
-| Auth | `src/lib/auth.ts`, `src/lib/firebase-client.ts`, `src/islands/AuthForm.tsx`, `src/pages/api/auth/session.ts` |
-| Public listing | `src/pages/vehicles/[id].astro`, `src/components/VehicleListingContent.astro` |
-| Chat | `src/islands/ChatWidget.tsx`, `src/pages/api/messages/*`, `src/islands/seller/ChatPanel.tsx` |
-| Inquiries | `src/islands/ContactForm.tsx`, `src/pages/api/inquiries/index.ts`, `InquiriesPanel.tsx` |
+| Auth | `src/lib/auth.ts`, `src/lib/buyer-profile.ts`, `src/lib/firebase-client.ts`, `src/islands/AuthForm.tsx`, `src/pages/api/auth/session.ts`, `src/pages/api/auth/phone/verify.ts` |
+| Account / Tier 1 | `src/pages/account/index.astro`, `src/islands/buyer/ProfileEditor.tsx`, `src/islands/PhoneOtpForm.tsx`, `src/islands/PhoneOtpAccountVerify.tsx`, `src/components/VerificationTierBadge.astro` |
+| Public listing | `src/pages/vehicles/[id].astro`, `src/components/VehicleListingContent.astro`, `src/utils/url-helpers.ts` |
+| Analytics (Tier 0) | `src/middleware.ts`, `src/lib/analytics-session.ts`, `src/lib/analytics.ts`, `src/lib/listing-analytics-client.ts`, `src/islands/ListingAnalytics.tsx`, `src/pages/api/analytics/events.ts` |
+| Chat (Tier 0) | `src/islands/ChatWidget.tsx`, `src/pages/api/messages/*`, `src/islands/seller/ChatPanel.tsx` |
+| Inquiries (Tier 1 gated) | `src/islands/ContactForm.tsx`, `src/pages/api/inquiries/index.ts`, `InquiriesPanel.tsx` |
 | Schemas | `src/schemas/index.ts` |
 | Rate limit | `src/lib/rate-limit.ts` |
-| Account | `src/pages/account/index.astro` |
+| Docs | `docs/TIER0_PUBLIC_SURFACE.md`, `scripts/backfill-user-profiles.ts` |
 
 ---
 
-## Appendix B — Open Product Decisions
+## Appendix B — Product Decisions (Recorded)
 
-Record decisions before starting Phase 3:
-
-1. **Contact form tier:** Stay anonymous vs require phone OTP like chat?
-2. **OTP provider:** Firebase Phone Auth + Twilio Lookup vs Twilio Verify end-to-end?
-3. **KYC provider:** Stripe Identity vs Persona vs escrow-only KYC?
-4. **Anonymous chat read:** Can unverified buyers read seller replies or only after OTP?
-5. **International buyers:** Block non-US numbers at Tier 1?
+| # | Decision | Outcome | Date |
+|---|----------|---------|------|
+| 1 | **Contact form tier** | Gate behind `phone_verified` (not anonymous) | July 2026 |
+| 2 | **Chat tier** | Keep anonymous (Tier 0); defer Phase 4 chat gating | July 2026 |
+| 3 | **OTP provider** | Firebase Phone Auth + invisible reCAPTCHA; server verify via idToken | July 2026 |
+| 4 | **VOIP filtering** | Not yet implemented; Twilio Lookup deferred | — |
+| 5 | **KYC provider** | Stripe Identity vs Persona vs escrow-only — TBD | — |
+| 6 | **Anonymous chat read** | Unverified buyers can read/send chat without login | July 2026 |
+| 7 | **International buyers** | US E.164 (+1) assumed in `PhoneOtpForm`; non-US TBD | — |
 
 ---
 
 ## Appendix C — Success Metrics (PMF)
 
-| Metric | Tier | Target narrative |
-|--------|------|------------------|
-| Listing page views | 0 | Top-of-funnel volume |
-| Photo / carousel engagement | 0 | Serious shopper signal |
-| Phone-verified chat starts | 1 | Bot-scrubbed conversations |
-| KYC-qualified test drives / offers | 2 | High-intent, scam-free pipeline |
-| View-to-offer ratio | 0 → 2 | Dealer de-anchoring proof |
+| Metric | Tier | Target narrative | Status |
+|--------|------|------------------|--------|
+| Listing page views | 0 | Top-of-funnel volume | Collecting (`listing_events`) |
+| Photo / carousel engagement | 0 | Serious shopper signal | Collecting |
+| Phone-verified inquiries | 1 | Bot-scrubbed lead capture | Gated + trackable via `buyerUid` |
+| Phone-verified chat starts | 1 | Bot-scrubbed conversations | N/A — chat not gated |
+| KYC-qualified test drives / offers | 2 | High-intent, scam-free pipeline | Not started |
+| View-to-offer ratio | 0 → 2 | Dealer de-anchoring proof | Phase 8 dashboard |
 
 ---
 
-*Each phase above is intended to map 1:1 to an implementation plan in Cursor. Start with Phase 1 unless product priority requires OTP (Phase 3) first.*
+## Next recommended work
+
+1. **Phase 3 follow-up:** Twilio Lookup (or equivalent) VOIP rejection before OTP send
+2. **Phase 5:** Test drive / make-offer intent framework with Tier 2 gates
+3. **Phase 8:** Seller analytics dashboard consuming `listing_events` + inquiry/chat funnel (chat remains anonymous in metrics)
+
+*Phases 1–2 and hybrid inquiry gating (3b) are complete. Phase 4 chat gating is deferred by product policy.*

@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Menu } from 'lucide-react';
+import type { VerificationTier } from '../schemas';
 import AccentText from '../components/AccentText';
 import MobileDrawer from './MobileDrawer';
+import SaveVehicleButton from './SaveVehicleButton';
 import { getAccent } from '../lib/accent-colors';
 
 export interface NavSection {
   id: string;
   label: string;
+}
+
+interface SaveVehicleProps {
+  vehicleId: string;
+  isLoggedIn: boolean;
+  verificationTier: VerificationTier;
+  loginHref: string;
+  initialSaved?: boolean;
 }
 
 interface VehicleSectionNavProps {
@@ -16,6 +26,7 @@ interface VehicleSectionNavProps {
   backHref?: string;
   accentColor?: string;
   sections: NavSection[];
+  saveVehicle?: SaveVehicleProps;
 }
 
 const DESKTOP_SHORTCUT_IDS = ['pitch', 'gallery', 'carfax'];
@@ -27,6 +38,7 @@ export default function VehicleSectionNav({
   backHref = '/',
   accentColor,
   sections,
+  saveVehicle,
 }: VehicleSectionNavProps) {
   const accent = getAccent(accentColor);
   const [activeSection, setActiveSection] = useState('overview');
@@ -119,6 +131,15 @@ export default function VehicleSectionNav({
                 {section.label}
               </button>
             ))}
+            {saveVehicle && (
+              <SaveVehicleButton
+                vehicleId={saveVehicle.vehicleId}
+                isLoggedIn={saveVehicle.isLoggedIn}
+                verificationTier={saveVehicle.verificationTier}
+                loginHref={saveVehicle.loginHref}
+                initialSaved={saveVehicle.initialSaved}
+              />
+            )}
             <button
               type="button"
               onClick={() => setIsDrawerOpen(true)}
@@ -129,6 +150,15 @@ export default function VehicleSectionNav({
           </div>
 
           <div className="flex items-center gap-4 pl-3 md:hidden sm:pl-4">
+            {saveVehicle && (
+              <SaveVehicleButton
+                vehicleId={saveVehicle.vehicleId}
+                isLoggedIn={saveVehicle.isLoggedIn}
+                verificationTier={saveVehicle.verificationTier}
+                loginHref={saveVehicle.loginHref}
+                initialSaved={saveVehicle.initialSaved}
+              />
+            )}
             <a href={backHref} className="text-sm text-slate-400 transition-colors hover:text-white">
               ← Back
             </a>

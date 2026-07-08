@@ -4,6 +4,7 @@ import ChatPanel from './ChatPanel';
 import SellerLayout, { type SellerTab } from './SellerLayout';
 import DetailsEditor from './DetailsEditor';
 import InquiriesPanel from './InquiriesPanel';
+import InsightsPanel from './InsightsPanel';
 
 interface SellerVehicleShellProps {
   vehicleId: string;
@@ -37,6 +38,8 @@ export default function SellerVehicleShell({
       <ChatPanel vehicleId={vehicleId} vehicleTitle={vehicleTitle} />
     ) : activeTab === 'inquiries' ? (
       <InquiriesPanel inquiries={initialInquiries} />
+    ) : activeTab === 'insights' ? (
+      <InsightsPanel vehicleId={vehicleId} />
     ) : (
       <DetailsEditor
         vehicleId={vehicleId}

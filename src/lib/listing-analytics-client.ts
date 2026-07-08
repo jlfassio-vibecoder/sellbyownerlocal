@@ -85,3 +85,41 @@ export function trackCarouselSwipe(
 ): void {
   trackListingEvent(vehicleId, 'carousel_swipe', { photoIndex, surface });
 }
+
+export function trackImpressionOnce(
+  vehicleId: string,
+  options: { rank?: number; position?: number }
+): void {
+  if (typeof sessionStorage === 'undefined') return;
+
+  const key = sessionStorageKey('imp', vehicleId);
+  if (sessionStorage.getItem(key)) return;
+
+  sessionStorage.setItem(key, '1');
+  trackListingEvent(vehicleId, 'impression', {
+    surface: 'search_grid',
+    ...(options.rank !== undefined ? { rank: options.rank } : {}),
+    ...(options.position !== undefined ? { position: options.position } : {}),
+  });
+}
+
+export function trackPageLeave(vehicleId: string, durationSeconds: number): void {
+  trackListingEvent(vehicleId, 'page_leave', { durationSeconds });
+}
+
+export function sendPageLeaveBeacon(vehicleId: string, durationSeconds: number): void {
+  const payload = buildPayload(vehicleId, 'page_leave', { durationSeconds });
+
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const blob = new Blob([payload], { type: 'application/json' });
+      if (navigator.sendBeacon(API_PATH, blob)) {
+        return;
+      }
+    }
+  } catch {
+    // Fall through to fetch
+  }
+
+  trackPageLeave(vehicleId, durationSeconds);
+}

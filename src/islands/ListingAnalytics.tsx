@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
+  sendPageLeaveBeacon,
   trackHeroPhotoViewOnce,
   trackPageViewOnce,
   trackSectionViewOnce,
@@ -11,8 +12,39 @@ interface ListingAnalyticsProps {
 }
 
 export default function ListingAnalytics({ vehicleId, sectionIds }: ListingAnalyticsProps) {
+  const leaveSentRef = useRef(false);
+  const mountedAtRef = useRef(0);
+
   useEffect(() => {
     trackPageViewOnce(vehicleId);
+    mountedAtRef.current = Date.now();
+  }, [vehicleId]);
+
+  useEffect(() => {
+    const sendLeave = () => {
+      if (leaveSentRef.current) return;
+
+      const durationSeconds = Math.round((Date.now() - mountedAtRef.current) / 1000);
+      if (durationSeconds < 1) return;
+
+      leaveSentRef.current = true;
+      sendPageLeaveBeacon(vehicleId, durationSeconds);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        sendLeave();
+      }
+    };
+
+    window.addEventListener('pagehide', sendLeave);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pagehide', sendLeave);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      sendLeave();
+    };
   }, [vehicleId]);
 
   useEffect(() => {

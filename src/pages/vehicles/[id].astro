@@ -61,6 +61,15 @@ const canonicalUrl = `/vehicles/${canonicalSlug}`;
 const session = await getOptionalSession(Astro.request, Astro.cookies);
 const profile = session ? await getUserProfile(session.uid) : null;
 
+let initialSaved = false;
+if (session) {
+  const saveDoc = await db()
+    .collection('saved_vehicles')
+    .doc(`${session.uid}_${vehicle.id}`)
+    .get();
+  initialSaved = saveDoc.exists;
+}
+
 const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
@@ -68,6 +77,7 @@ const buyerContext = {
   userDisplayName: profile?.displayName ?? '',
   userPhone: profile?.phone ?? '',
   loginHref: `/login?next=${encodeURIComponent(`${canonicalUrl}#contact`)}`,
+  saveLoginHref: `/login?next=${encodeURIComponent(canonicalUrl)}`,
 };
 ---
 
@@ -78,5 +88,5 @@ const buyerContext = {
   ogUrl={canonicalUrl}
   bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
 >
-  <VehicleListingContent vehicle={listingVehicle} buyerContext={buyerContext} />
+  <VehicleListingContent vehicle={listingVehicle} buyerContext={buyerContext} initialSaved={initialSaved} />
 </Layout>
