@@ -1,0 +1,27 @@
+---
+import type { VerificationTier } from '../schemas';
+
+interface Props {
+  tier: VerificationTier;
+}
+
+const { tier } = Astro.props;
+
+const labels: Record<VerificationTier, string> = {
+  anonymous: 'Account Created',
+  phone_verified: 'Phone Verified',
+  identity_verified: 'Identity Verified',
+};
+
+const styles: Record<VerificationTier, string> = {
+  anonymous: 'bg-slate-100 text-slate-700',
+  phone_verified: 'bg-green-100 text-green-800',
+  identity_verified: 'bg-green-100 text-green-800',
+};
+---
+
+<span
+  class={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[tier]}`}
+>
+  {labels[tier]}
+</span>

@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import {
+  BarChart3,
   CheckCircle2,
   Copy,
   LogOut,
   Menu,
   MessageCircle,
   Settings,
+  UserCircle,
   Users,
   type LucideIcon,
 } from 'lucide-react';
 import MobileDrawer from '../MobileDrawer';
 
-export type SellerTab = 'messages' | 'inquiries' | 'details';
+export type SellerTab = 'messages' | 'inquiries' | 'insights' | 'details';
 
 interface SellerHeaderBaseProps {
   inquiryCount?: number;
@@ -125,6 +127,7 @@ export default function SellerHeader(props: SellerHeaderProps) {
   const tabs: TabConfig[] = [
     { id: 'messages', label: 'Live Chat', icon: MessageCircle },
     { id: 'inquiries', label: 'Contact Forms', icon: Users },
+    { id: 'insights', label: 'Insights', icon: BarChart3 },
     { id: 'details', label: 'Listing Details', icon: Settings },
   ];
 
@@ -187,6 +190,13 @@ export default function SellerHeader(props: SellerHeaderProps) {
               <CheckCircle2 size={16} className="text-green-500" />
               System Online
             </div>
+            <a
+              href="/account"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+            >
+              <UserCircle size={14} />
+              Account
+            </a>
             <button
               type="button"
               onClick={onSignOut}
@@ -244,6 +254,14 @@ export default function SellerHeader(props: SellerHeaderProps) {
           {sellerUid ? (
             <SellerUidBadge uid={sellerUid} onCopy={copyUid} className="mb-4 px-1" />
           ) : null}
+          <a
+            href="/account"
+            className="mb-2 flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+            onClick={() => setIsDrawerOpen(false)}
+          >
+            <UserCircle size={16} />
+            Account
+          </a>
           <button
             type="button"
             onClick={handleSignOut}

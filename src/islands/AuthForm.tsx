@@ -13,6 +13,10 @@ type AuthMode = 'signin' | 'signup';
 const inputClassName =
   'w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none transition-colors';
 
+interface AuthFormProps {
+  embedded?: boolean;
+}
+
 interface PasswordFieldProps {
   id: string;
   label: string;
@@ -103,7 +107,7 @@ function getFirebaseErrorMessage(error: unknown, mode: AuthMode): string {
   }
 }
 
-export default function AuthForm() {
+export default function AuthForm({ embedded = false }: AuthFormProps) {
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -166,6 +170,93 @@ export default function AuthForm() {
   const submitLabel = mode === 'signup' ? 'Create Account' : 'Sign In';
   const loadingLabel = mode === 'signup' ? 'Creating account...' : 'Signing in...';
 
+  const formContent = (
+    <>
+      <div className="flex gap-2 mb-6 p-1 bg-slate-100 rounded-lg">
+        <button
+          type="button"
+          onClick={() => handleModeChange('signin')}
+          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            mode === 'signin'
+              ? 'bg-red-600 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Sign In
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeChange('signup')}
+          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            mode === 'signup'
+              ? 'bg-red-600 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Create Account
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {error && (
+          <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+            {error}
+          </div>
+        )}
+
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+            Email
+          </label>
+          <input
+            type="email"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+            className={inputClassName}
+            placeholder="you@example.com"
+          />
+        </div>
+
+        <PasswordField
+          id="password"
+          label="Password"
+          value={password}
+          onChange={setPassword}
+          show={showPassword}
+          onToggleShow={() => setShowPassword((v) => !v)}
+          autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+        />
+
+        {mode === 'signup' && (
+          <PasswordField
+            id="confirmPassword"
+            label="Confirm Password"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            show={showConfirmPassword}
+            onToggleShow={() => setShowConfirmPassword((v) => !v)}
+            autoComplete="new-password"
+          />
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors"
+        >
+          {loading ? loadingLabel : submitLabel}
+        </button>
+      </form>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="font-sans">{formContent}</div>;
+  }
+
   return (
     <div className="font-sans bg-[#f8f9fa] min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -177,84 +268,7 @@ export default function AuthForm() {
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-          <div className="flex gap-2 mb-6 p-1 bg-slate-100 rounded-lg">
-            <button
-              type="button"
-              onClick={() => handleModeChange('signin')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                mode === 'signin'
-                  ? 'bg-red-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => handleModeChange('signup')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                mode === 'signup'
-                  ? 'bg-red-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Create Account
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                className={inputClassName}
-                placeholder="you@example.com"
-              />
-            </div>
-
-            <PasswordField
-              id="password"
-              label="Password"
-              value={password}
-              onChange={setPassword}
-              show={showPassword}
-              onToggleShow={() => setShowPassword((v) => !v)}
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-            />
-
-            {mode === 'signup' && (
-              <PasswordField
-                id="confirmPassword"
-                label="Confirm Password"
-                value={confirmPassword}
-                onChange={setConfirmPassword}
-                show={showConfirmPassword}
-                onToggleShow={() => setShowConfirmPassword((v) => !v)}
-                autoComplete="new-password"
-              />
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors"
-            >
-              {loading ? loadingLabel : submitLabel}
-            </button>
-          </form>
+          {formContent}
         </div>
       </div>
     </div>

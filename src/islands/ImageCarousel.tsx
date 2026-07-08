@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { trackCarouselSwipe, trackPhotoView } from '../lib/listing-analytics-client';
 
 interface ImageCarouselProps {
   images: string[];
   altPrefix?: string;
+  vehicleId?: string;
 }
 
-export default function ImageCarousel({ images, altPrefix = 'Vehicle image' }: ImageCarouselProps) {
+export default function ImageCarousel({ images, altPrefix = 'Vehicle image', vehicleId }: ImageCarouselProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -35,6 +37,9 @@ export default function ImageCarousel({ images, altPrefix = 'Vehicle image' }: I
   const openModal = (index: number) => {
     setCurrentIndex(index);
     setModalOpen(true);
+    if (vehicleId) {
+      trackPhotoView(vehicleId, index, 'carousel');
+    }
   };
 
   const closeModal = () => {
@@ -43,12 +48,24 @@ export default function ImageCarousel({ images, altPrefix = 'Vehicle image' }: I
 
   const nextImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setCurrentIndex((prev) => (prev + 1) % gallery.length);
+    setCurrentIndex((prev) => {
+      const next = (prev + 1) % gallery.length;
+      if (vehicleId) {
+        trackCarouselSwipe(vehicleId, next, 'carousel');
+      }
+      return next;
+    });
   };
 
   const prevImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setCurrentIndex((prev) => (prev - 1 + gallery.length) % gallery.length);
+    setCurrentIndex((prev) => {
+      const next = (prev - 1 + gallery.length) % gallery.length;
+      if (vehicleId) {
+        trackCarouselSwipe(vehicleId, next, 'carousel');
+      }
+      return next;
+    });
   };
 
   if (gallery.length === 0) {

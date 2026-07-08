@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-ram1500-a6aad1c3-783c-48e0-a179-f80c48018571",
+      "indexes": "firestore.indexes.json"
+    }
+  ]
+}

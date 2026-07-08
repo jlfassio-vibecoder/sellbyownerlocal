@@ -4,9 +4,11 @@ import ChatPanel from './ChatPanel';
 import SellerLayout, { type SellerTab } from './SellerLayout';
 import DetailsEditor from './DetailsEditor';
 import InquiriesPanel from './InquiriesPanel';
+import InsightsPanel from './InsightsPanel';
 
 interface SellerVehicleShellProps {
   vehicleId: string;
+  publicListingPath: string;
   vehicleTitle: string;
   vehicleVin?: string;
   hasMonroney?: boolean;
@@ -18,6 +20,7 @@ interface SellerVehicleShellProps {
 
 export default function SellerVehicleShell({
   vehicleId,
+  publicListingPath,
   vehicleTitle,
   vehicleVin,
   hasMonroney: initialHasMonroney = false,
@@ -35,9 +38,12 @@ export default function SellerVehicleShell({
       <ChatPanel vehicleId={vehicleId} vehicleTitle={vehicleTitle} />
     ) : activeTab === 'inquiries' ? (
       <InquiriesPanel inquiries={initialInquiries} />
+    ) : activeTab === 'insights' ? (
+      <InsightsPanel vehicleId={vehicleId} />
     ) : (
       <DetailsEditor
         vehicleId={vehicleId}
+        publicListingPath={publicListingPath}
         vehicleVin={vehicleVin}
         hasMonroney={hasMonroney}
         onMonroneyUpdated={() => setHasMonroney(true)}

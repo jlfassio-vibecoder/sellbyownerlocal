@@ -1,5 +1,5 @@
 ---
-import type { VehicleResponse } from '../schemas';
+import type { VehicleResponse, VerificationTier } from '../schemas';
 import {
   buildVehicleListingView,
   canEmbedPdf,
@@ -10,6 +10,7 @@ import {
 } from '../lib/vehicle-listing-view';
 import { buildMonroneyStyleLineFromVehicle } from '../lib/monroney-style-line';
 import { getAccent } from '../lib/accent-colors';
+import ListingAnalytics from '../islands/ListingAnalytics';
 import ImageCarousel from '../islands/ImageCarousel';
 import ChatWidget from '../islands/ChatWidget';
 import Gallery from '../islands/Gallery';
@@ -24,11 +25,24 @@ import AccentText from './AccentText';
 import MarkdownText from './MarkdownText';
 import { Check, Download } from 'lucide-react';
 
-interface Props {
-  vehicle: VehicleResponse;
+interface BuyerContext {
+  isLoggedIn: boolean;
+  verificationTier: VerificationTier;
+  userEmail: string;
+  userDisplayName: string;
+  userPhone: string;
+  loginHref: string;
+  saveLoginHref?: string;
 }
 
-const { vehicle } = Astro.props;
+interface Props {
+  vehicle: VehicleResponse;
+  analyticsEnabled?: boolean;
+  buyerContext?: BuyerContext;
+  initialSaved?: boolean;
+}
+
+const { vehicle, analyticsEnabled = true, buyerContext, initialSaved = false } = Astro.props;
 const view = buildVehicleListingView(vehicle);
 const {
   pageTitle,
@@ -64,7 +78,18 @@ const monroneyStyleLine = monroney
   ? buildMonroneyStyleLineFromVehicle(vehicle, monroney)
   : undefined;
 const accent = getAccent(vehicle.accentColor);
+const analyticsSectionIds = navSections.map((section) => section.id);
 ---
+
+{
+  analyticsEnabled && (
+    <ListingAnalytics
+      client:load
+      vehicleId={vehicle.id}
+      sectionIds={analyticsSectionIds}
+    />
+  )
+}
 
 <VehicleSectionNav
   client:load
@@ -73,6 +98,17 @@ const accent = getAccent(vehicle.accentColor);
   locationCity={vehicle.location.city}
   accentColor={vehicle.accentColor}
   sections={navSections}
+  saveVehicle={
+    buyerContext
+      ? {
+          vehicleId: vehicle.id,
+          isLoggedIn: buyerContext.isLoggedIn,
+          verificationTier: buyerContext.verificationTier,
+          loginHref: buyerContext.saveLoginHref ?? buyerContext.loginHref,
+          initialSaved,
+        }
+      : undefined
+  }
 />
 
 <main class="relative mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -169,7 +205,9 @@ const accent = getAccent(vehicle.accentColor);
         <div class="absolute inset-0 z-10 flex items-end bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent p-6">
           <div class="flex w-full items-end justify-between text-white">
             <div>
-              <h2 class="text-2xl font-bold drop-shadow-md">{pageTitle}</h2>
+              <h2 class="text-2xl font-bold drop-shadow-md">
+                <AccentText text={pageTitle} accentClass={accent.tailwindText} />
+              </h2>
               <p class="mt-1 text-sm text-slate-100 drop-shadow-md">
                 Listed by {vehicle.sellerName}
               </p>
@@ -191,6 +229,7 @@ const accent = getAccent(vehicle.accentColor);
     client:load
     images={carouselImageUrls}
     altPrefix={pageTitle}
+    vehicleId={analyticsEnabled ? vehicle.id : undefined}
   />
 
   {
@@ -522,7 +561,17 @@ const accent = getAccent(vehicle.accentColor);
     </div>
   </section>
 
-  <ContactForm client:load vehicleId={vehicle.id} sellerId={vehicle.sellerId} />
+  <ContactForm
+    client:load
+    vehicleId={vehicle.id}
+    sellerId={vehicle.sellerId}
+    isLoggedIn={buyerContext?.isLoggedIn ?? false}
+    verificationTier={buyerContext?.verificationTier ?? 'anonymous'}
+    userEmail={buyerContext?.userEmail ?? ''}
+    userDisplayName={buyerContext?.userDisplayName ?? ''}
+    userPhone={buyerContext?.userPhone ?? ''}
+    loginHref={buyerContext?.loginHref ?? '/login'}
+  />
 
   {
     showDocumentsSection ? (

@@ -1,6 +1,8 @@
 ---
 import { db } from '../../lib/firebase-admin';
 import { VehicleResponseSchema } from '../../schemas';
+import { getOptionalSession } from '../../lib/auth';
+import { getUserProfile } from '../../lib/buyer-profile';
 import { resolveVehicleDisplayMonroney } from '../../lib/resolve-display-monroney';
 import {
   buildVehicleSeoDescription,
@@ -9,6 +11,7 @@ import {
 } from '../../lib/seo';
 import Layout from '../../layouts/Layout.astro';
 import VehicleListingContent from '../../components/VehicleListingContent.astro';
+import { generateVehicleSlug, resolveFirestoreIdCandidates } from '../../utils/url-helpers';
 
 const { id } = Astro.params;
 
@@ -16,9 +19,18 @@ if (!id) {
   return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
 }
 
-const doc = await db().collection('vehicles').doc(id).get();
+const slug = id;
+let doc = null;
 
-if (!doc.exists) {
+for (const candidate of resolveFirestoreIdCandidates(slug)) {
+  const snapshot = await db().collection('vehicles').doc(candidate).get();
+  if (snapshot.exists) {
+    doc = snapshot;
+    break;
+  }
+}
+
+if (!doc) {
   return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
 }
 
@@ -26,19 +38,47 @@ const parsed = VehicleResponseSchema.safeParse({ id: doc.id, ...doc.data() });
 
 if (!parsed.success) {
   if (import.meta.env.DEV) {
-    console.error(`Vehicle ${id} failed validation:`, parsed.error.flatten());
+    console.error(`Vehicle ${slug} failed validation:`, parsed.error.flatten());
   }
   return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
 }
 
 const vehicle = parsed.data;
+const canonicalSlug = generateVehicleSlug(vehicle);
+
+if (slug !== canonicalSlug) {
+  return Astro.redirect(`/vehicles/${canonicalSlug}`, 301);
+}
+
 const displayMonroney = await resolveVehicleDisplayMonroney(vehicle);
 const listingVehicle = displayMonroney ? { ...vehicle, monroney: displayMonroney } : vehicle;
 
 const seoTitle = buildVehicleSeoTitle(listingVehicle);
 const seoDescription = buildVehicleSeoDescription(listingVehicle);
 const seoImage = resolveVehicleOgImage(listingVehicle);
-const canonicalUrl = `/vehicles/${encodeURIComponent(id)}`;
+const canonicalUrl = `/vehicles/${canonicalSlug}`;
+
+const session = await getOptionalSession(Astro.request, Astro.cookies);
+const profile = session ? await getUserProfile(session.uid) : null;
+
+let initialSaved = false;
+if (session) {
+  const saveDoc = await db()
+    .collection('saved_vehicles')
+    .doc(`${session.uid}_${vehicle.id}`)
+    .get();
+  initialSaved = saveDoc.exists;
+}
+
+const buyerContext = {
+  isLoggedIn: !!session,
+  verificationTier: session?.verificationTier ?? 'anonymous',
+  userEmail: session?.email ?? '',
+  userDisplayName: profile?.displayName ?? '',
+  userPhone: profile?.phone ?? '',
+  loginHref: `/login?next=${encodeURIComponent(`${canonicalUrl}#contact`)}`,
+  saveLoginHref: `/login?next=${encodeURIComponent(canonicalUrl)}`,
+};
 ---
 
 <Layout
@@ -48,5 +88,5 @@ const canonicalUrl = `/vehicles/${encodeURIComponent(id)}`;
   ogUrl={canonicalUrl}
   bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
 >
-  <VehicleListingContent vehicle={listingVehicle} />
+  <VehicleListingContent vehicle={listingVehicle} buyerContext={buyerContext} initialSaved={initialSaved} />
 </Layout>
