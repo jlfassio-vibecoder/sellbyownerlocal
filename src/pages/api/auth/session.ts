@@ -29,14 +29,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   try {
     const decoded = await auth().verifyIdToken(parsed.data.idToken);
-    const sessionCookie = await createSessionCookie(parsed.data.idToken);
-
-    cookies.set(SESSION_COOKIE_NAME, sessionCookie, getSessionCookieOptions());
 
     const verificationTier = await provisionUserProfile(decoded.uid, {
       displayName: decoded.name,
       email: decoded.email,
     });
+
+    const sessionCookie = await createSessionCookie(parsed.data.idToken);
+    cookies.set(SESSION_COOKIE_NAME, sessionCookie, getSessionCookieOptions());
 
     return new Response(JSON.stringify({ success: true, verificationTier }), {
       status: 200,

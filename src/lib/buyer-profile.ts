@@ -118,9 +118,11 @@ export async function upgradeToPhoneVerified(
 ): Promise<VerificationTier> {
   const ref = db().collection('users').doc(uid);
   const existing = await ref.get();
-  const currentTier = existing.exists
-    ? VerificationTierSchema.safeParse(existing.data()?.verificationTier).data ?? 'anonymous'
-    : 'anonymous';
+  let currentTier: VerificationTier = 'anonymous';
+  if (existing.exists) {
+    const tierParsed = VerificationTierSchema.safeParse(existing.data()?.verificationTier);
+    currentTier = tierParsed.success ? tierParsed.data : 'anonymous';
+  }
 
   if (currentTier === 'identity_verified') {
     await ref.set(

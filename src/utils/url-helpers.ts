@@ -1,5 +1,6 @@
 const FIRESTORE_AUTO_ID_PATTERN = /^[a-zA-Z0-9]{20}$/;
 const HYBRID_SLUG_YEAR_PREFIX = /^\d{4}-/;
+const MAX_FIRESTORE_ID_CANDIDATES = 8;
 
 export interface VehicleSlugInput {
   year: number;
@@ -44,7 +45,7 @@ export function resolveFirestoreIdCandidates(slug: string): string[] {
     }
   }
 
-  return [...candidates];
+  return [...candidates].slice(0, MAX_FIRESTORE_ID_CANDIDATES);
 }
 
 export function getVehicleListingPath(vehicle: VehicleSlugInput): string {

@@ -22,12 +22,17 @@ See also: [`VERIFICATION_ROADMAP.md`](../VERIFICATION_ROADMAP.md) Phase 1.
 | GET | `/api/vehicles/{vehicleId}/history-report` | Document proxy |
 | GET | `/api/vehicles/{vehicleId}/smog-certificate` | Document proxy |
 | GET | `/api/users/{id}` | Public seller profile |
-| POST | `/api/inquiries` | Contact form (IP rate limited) |
 | POST | `/api/messages` | Buyer chat send (IP rate limited) |
 | GET | `/api/messages/{sessionId}` | Chat history (session capability token) |
 | POST | `/api/analytics/events` | Anonymous listing engagement telemetry |
 | POST | `/api/auth/session` | Create session cookie after Firebase sign-in |
 | POST | `/api/auth/logout` | Clear session cookie |
+
+## Gated routes (not Tier 0)
+
+| Method | Route | Requirement |
+|--------|-------|-------------|
+| POST | `/api/inquiries` | Session + `phone_verified` tier (IP rate limited) |
 
 ## Analytics exclusions
 

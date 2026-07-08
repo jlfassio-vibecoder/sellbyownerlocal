@@ -2,7 +2,7 @@
 
 **Project:** Sell By Owner Local (`sellbyownerlocal`)  
 **Document date:** July 7, 2026  
-**Status:** Planning — no verification tiers implemented yet  
+**Status:** In progress — Tier 0 analytics + Tier 1 phone OTP and inquiry gating implemented  
 **Companion doc:** [`DASHBOARD_MIGRATION.md`](DASHBOARD_MIGRATION.md) (seller dashboard Phases 1–4 complete)
 
 ---
@@ -17,7 +17,7 @@ The platform’s **recommended go-to-market posture** is a three-tier verificati
 | **1 — Phone OTP** | Low | Live chat with seller; optional verified contact identity | Blocks bots, VOIP, and international scam traffic on messaging |
 | **2 — Full KYC** | High | Schedule test drive, make an offer, enter escrow | Trust premium for sellers; clean handoff to KeySavvy/Caramel AML flows |
 
-**Today:** Tier 0 is largely implemented. Tiers 1 and 2 exist only in marketing copy (e.g. homepage “100% ID-verified transparency”). Auth is unified Firebase **email/password** for sellers; buyers can chat and submit inquiries **without any account**.
+**Today:** Tier 0 browsing, chat, and anonymous listing analytics are live. Tier 1 phone OTP step-up and inquiry gating (`phone_verified`) are implemented on `/account` and `POST /api/inquiries`. Live chat remains anonymous (Tier 0). Tier 2 (full KYC) is not yet implemented.
 
 Each section below is **one implementation phase** — sized to become a single Cursor/agent plan.
 
@@ -30,9 +30,12 @@ flowchart TB
   subgraph public [Public - No Auth]
     Home["/"]
     Listing["/vehicles/{slug}"]
-    InvAPI["POST /api/inquiries"]
     MsgAPI["POST /api/messages buyer"]
     MsgGet["GET /api/messages/{sessionId}"]
+  end
+
+  subgraph gated [Authenticated + phone_verified]
+    InvAPI["POST /api/inquiries"]
   end
 
   subgraph auth [Authenticated - Firebase Session Cookie]
