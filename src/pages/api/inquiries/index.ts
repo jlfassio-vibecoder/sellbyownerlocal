@@ -1,4 +1,12 @@
 import type { APIRoute } from 'astro';
+import {
+  AuthError,
+  requireSeller,
+  requireVerificationTier,
+  unauthorizedResponse,
+  verificationRequiredResponse,
+  VerificationRequiredError,
+} from '../../../lib/auth';
 import { db } from '../../../lib/firebase-admin';
 import { checkRateLimit, getClientIp } from '../../../lib/rate-limit';
 import { InquirySchema } from '../../../schemas';
@@ -8,8 +16,11 @@ const INQUIRY_RATE_LIMIT = {
   max: 5,
 };
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   try {
+    const session = await requireSeller(request, cookies);
+    requireVerificationTier(session, 'phone_verified');
+
     const clientIp = getClientIp(request, clientAddress);
     const rateLimit = checkRateLimit(`inquiries:${clientIp}`, INQUIRY_RATE_LIMIT);
 
@@ -75,6 +86,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       phone,
       email,
       message: message || '',
+      buyerUid: session.uid,
+      verificationTier: session.verificationTier,
       timestamp: new Date().toISOString(),
     });
 
@@ -83,6 +96,12 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return unauthorizedResponse(error.message);
+    }
+    if (error instanceof VerificationRequiredError) {
+      return verificationRequiredResponse(error);
+    }
     console.error('POST /api/inquiries failed', error);
     return new Response(JSON.stringify({ error: 'Failed to submit inquiry' }), {
       status: 500,

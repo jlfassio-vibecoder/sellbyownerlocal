@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Menu } from 'lucide-react';
+import AccentText from '../components/AccentText';
 import MobileDrawer from './MobileDrawer';
 import { getAccent } from '../lib/accent-colors';
 
@@ -17,7 +18,7 @@ interface VehicleSectionNavProps {
   sections: NavSection[];
 }
 
-const DESKTOP_SHORTCUT_IDS = ['pitch', 'gallery', 'market', 'build-sheet', 'carfax'];
+const DESKTOP_SHORTCUT_IDS = ['pitch', 'gallery', 'carfax'];
 
 export default function VehicleSectionNav({
   pageTitle,
@@ -78,11 +79,25 @@ export default function VehicleSectionNav({
 
   return (
     <>
-      <nav className="sticky top-0 z-40 flex h-16 flex-shrink-0 items-center justify-between bg-slate-900 px-8 text-white shadow-sm">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 flex-1 items-center gap-4">
+      <nav className="sticky top-0 z-40 flex h-16 flex-shrink-0 items-center justify-between bg-slate-900 pr-4 pl-0 text-white shadow-sm sm:pr-6 lg:pr-8">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between pr-4 pl-0 sm:pr-6 lg:pr-8">
+          <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+            <a
+              href={backHref}
+              className="hidden shrink-0 items-center gap-1.5 pl-3 text-slate-400 transition-colors hover:text-white sm:pl-4 md:flex"
+            >
+              <span className="text-base leading-none" aria-hidden="true">
+                ←
+              </span>
+              <span className="flex flex-col text-[11px] leading-tight font-medium uppercase tracking-wide">
+                <span>All</span>
+                <span>Listings</span>
+              </span>
+            </a>
             <div className="flex min-w-0 flex-col">
-              <span className="truncate text-xl font-bold tracking-tight">{pageTitle}</span>
+              <span className="truncate text-xl font-bold tracking-tight">
+                <AccentText text={pageTitle} accentClass={accent.tailwindText} />
+              </span>
               {subtitle && (
                 <span
                   className={`truncate text-[10px] font-semibold tracking-[0.2em] uppercase ${accent.tailwindText}`}
@@ -111,15 +126,9 @@ export default function VehicleSectionNav({
             >
               More <Menu size={16} />
             </button>
-            <a
-              href={backHref}
-              className="ml-2 text-sm text-slate-400 transition-colors hover:text-white"
-            >
-              ← All listings
-            </a>
           </div>
 
-          <div className="flex items-center gap-4 md:hidden">
+          <div className="flex items-center gap-4 pl-3 md:hidden sm:pl-4">
             <a href={backHref} className="text-sm text-slate-400 transition-colors hover:text-white">
               ← Back
             </a>

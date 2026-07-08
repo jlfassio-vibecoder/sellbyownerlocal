@@ -9,6 +9,7 @@ import { mapInquiryDoc } from '../../../lib/inquiries';
 import { vehicleToFormState } from '../../../lib/vehicle-form-mapper';
 import { VehicleResponseSchema } from '../../../schemas';
 import SellerVehicleShell from '../../../islands/seller/SellerVehicleShell';
+import { getVehicleListingPath } from '../../../utils/url-helpers';
 import '../../../styles/global.css';
 
 const { vehicleId } = Astro.params;
@@ -44,6 +45,7 @@ try {
 
 const vehicle = parsed.data;
 const vehicleTitle = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+const publicListingPath = getVehicleListingPath(vehicle);
 const initialFormState = vehicleToFormState(vehicle);
 
 const tabParam = Astro.url.searchParams.get('tab');
@@ -78,6 +80,7 @@ const initialInquiries = inquirySnapshot.docs.flatMap((doc) => {
     <SellerVehicleShell
       client:load
       vehicleId={vehicleId}
+      publicListingPath={publicListingPath}
       vehicleTitle={vehicleTitle}
       vehicleVin={vehicle.vin}
       hasMonroney={Boolean(vehicle.monroney)}

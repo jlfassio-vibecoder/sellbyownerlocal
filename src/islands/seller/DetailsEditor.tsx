@@ -18,6 +18,7 @@ import VideoSection from './components/VideoSection';
 
 interface DetailsEditorProps {
   vehicleId: string;
+  publicListingPath: string;
   vehicleVin?: string;
   hasMonroney?: boolean;
   onMonroneyUpdated?: () => void;
@@ -50,6 +51,7 @@ const SECTION_LABELS: Record<SectionId, string> = {
 
 export default function DetailsEditor({
   vehicleId,
+  publicListingPath,
   vehicleVin,
   hasMonroney = false,
   onMonroneyUpdated,
@@ -174,6 +176,7 @@ export default function DetailsEditor({
       >
         <DesktopRailNav
           vehicleId={vehicleId}
+          publicListingPath={publicListingPath}
           sections={sections}
           activeId={activeSection}
           onSelect={(id) => setActiveSection(id as SectionId)}

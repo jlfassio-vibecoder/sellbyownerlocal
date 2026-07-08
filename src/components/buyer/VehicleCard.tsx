@@ -1,5 +1,6 @@
 import type { InventoryVehicle } from '../../types/inventory-vehicle';
 import { mileageFormatter, priceFormatter } from '../../utils/formatters';
+import { getVehicleListingPath } from '../../utils/url-helpers';
 
 interface VehicleCardProps {
   vehicle: InventoryVehicle;
@@ -10,7 +11,7 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
 
   return (
     <a
-      href={`/vehicles/${vehicle.id}`}
+      href={getVehicleListingPath(vehicle)}
       className="block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-lg"
     >
       {vehicle.heroImage ? (

@@ -7,6 +7,7 @@ import InquiriesPanel from './InquiriesPanel';
 
 interface SellerVehicleShellProps {
   vehicleId: string;
+  publicListingPath: string;
   vehicleTitle: string;
   vehicleVin?: string;
   hasMonroney?: boolean;
@@ -18,6 +19,7 @@ interface SellerVehicleShellProps {
 
 export default function SellerVehicleShell({
   vehicleId,
+  publicListingPath,
   vehicleTitle,
   vehicleVin,
   hasMonroney: initialHasMonroney = false,
@@ -38,6 +40,7 @@ export default function SellerVehicleShell({
     ) : (
       <DetailsEditor
         vehicleId={vehicleId}
+        publicListingPath={publicListingPath}
         vehicleVin={vehicleVin}
         hasMonroney={hasMonroney}
         onMonroneyUpdated={() => setHasMonroney(true)}

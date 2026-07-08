@@ -1,11 +1,17 @@
 import type { AstroCookies } from 'astro';
 import { auth } from './firebase-admin';
+import { meetsVerificationTier, resolveVerificationTier } from './buyer-profile';
+import type { VerificationTier } from '../schemas';
 
-export interface SellerSession {
+export interface UserSession {
   uid: string;
   email?: string;
   isDealer: boolean;
+  verificationTier: VerificationTier;
 }
+
+/** @deprecated Use UserSession — kept for backward compatibility */
+export type SellerSession = UserSession;
 
 export const SESSION_COOKIE_NAME = '__session';
 const SESSION_EXPIRY_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
@@ -28,6 +34,19 @@ export class ForbiddenError extends Error {
   }
 }
 
+export class VerificationRequiredError extends ForbiddenError {
+  readonly code = 'VERIFICATION_REQUIRED' as const;
+  readonly requiredTier: VerificationTier;
+  readonly currentTier: VerificationTier;
+
+  constructor(requiredTier: VerificationTier, currentTier: VerificationTier) {
+    super('Verification required');
+    this.name = 'VerificationRequiredError';
+    this.requiredTier = requiredTier;
+    this.currentTier = currentTier;
+  }
+}
+
 export function extractToken(request: Request, cookies: AstroCookies): string | null {
   const sessionCookie = cookies.get(SESSION_COOKIE_NAME)?.value;
   if (sessionCookie) return sessionCookie;
@@ -40,7 +59,13 @@ export function extractToken(request: Request, cookies: AstroCookies): string | 
   return null;
 }
 
-export async function verifySellerToken(token: string): Promise<SellerSession> {
+interface DecodedTokenBase {
+  uid: string;
+  email?: string;
+  isDealer: boolean;
+}
+
+async function decodeToken(token: string): Promise<DecodedTokenBase> {
   try {
     const decoded = await auth().verifySessionCookie(token, true);
     return {
@@ -62,10 +87,24 @@ export async function verifySellerToken(token: string): Promise<SellerSession> {
   }
 }
 
-export async function requireSeller(
+export async function enrichSession(base: DecodedTokenBase): Promise<UserSession> {
+  const verificationTier = await resolveVerificationTier(base.uid);
+  return {
+    uid: base.uid,
+    email: base.email,
+    isDealer: base.isDealer,
+    verificationTier,
+  };
+}
+
+export async function verifySellerToken(token: string): Promise<UserSession> {
+  return enrichSession(await decodeToken(token));
+}
+
+export async function getSession(
   request: Request,
   cookies: AstroCookies
-): Promise<SellerSession> {
+): Promise<UserSession> {
   const token = extractToken(request, cookies);
   if (!token) {
     throw new AuthError();
@@ -73,10 +112,47 @@ export async function requireSeller(
   return verifySellerToken(token);
 }
 
+export async function getOptionalSession(
+  request: Request,
+  cookies: AstroCookies
+): Promise<UserSession | null> {
+  const token = extractToken(request, cookies);
+  if (!token) return null;
+
+  try {
+    return await verifySellerToken(token);
+  } catch {
+    return null;
+  }
+}
+
+export async function requireSeller(
+  request: Request,
+  cookies: AstroCookies
+): Promise<UserSession> {
+  return getSession(request, cookies);
+}
+
+export async function getOptionalSellerSession(
+  request: Request,
+  cookies: AstroCookies
+): Promise<UserSession | null> {
+  return getOptionalSession(request, cookies);
+}
+
+export function requireVerificationTier(
+  session: UserSession,
+  requiredTier: VerificationTier
+): void {
+  if (!meetsVerificationTier(session.verificationTier, requiredTier)) {
+    throw new VerificationRequiredError(requiredTier, session.verificationTier);
+  }
+}
+
 export async function requireDealer(
   request: Request,
   cookies: AstroCookies
-): Promise<SellerSession> {
+): Promise<UserSession> {
   const session = await requireSeller(request, cookies);
   if (!session.isDealer) {
     throw new ForbiddenError('Dealer access required');
@@ -88,7 +164,7 @@ export async function requireDealerOrRedirect(
   request: Request,
   cookies: AstroCookies,
   loginPath = '/login'
-): Promise<SellerSession | Response> {
+): Promise<UserSession | Response> {
   try {
     return await requireDealer(request, cookies);
   } catch (error) {
@@ -103,7 +179,7 @@ export async function requireSellerOrRedirect(
   request: Request,
   cookies: AstroCookies,
   loginPath = '/login'
-): Promise<SellerSession | Response> {
+): Promise<UserSession | Response> {
   try {
     return await requireSeller(request, cookies);
   } catch {
@@ -123,6 +199,21 @@ export function forbiddenResponse(message = 'Forbidden'): Response {
     status: 403,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+export function verificationRequiredResponse(error: VerificationRequiredError): Response {
+  return new Response(
+    JSON.stringify({
+      error: error.message,
+      code: error.code,
+      requiredTier: error.requiredTier,
+      currentTier: error.currentTier,
+    }),
+    {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    }
+  );
 }
 
 export function assertVehicleOwner(uid: string, vehicleSellerId: string): void {

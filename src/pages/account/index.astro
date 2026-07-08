@@ -1,13 +1,25 @@
 ---
 import { requireSellerOrRedirect } from '../../lib/auth';
+import { getUserProfile } from '../../lib/buyer-profile';
+import type { VerificationTier } from '../../schemas';
 import AccountUidBanner from '../../components/AccountUidBanner.astro';
+import VerificationTierBadge from '../../components/VerificationTierBadge.astro';
+import ProfileEditor from '../../islands/buyer/ProfileEditor';
+import PhoneOtpAccountVerify from '../../islands/PhoneOtpAccountVerify';
 import '../../styles/global.css';
 
 const session = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (session instanceof Response) return session;
 
+const profile = await getUserProfile(session.uid);
+const verificationTier: VerificationTier = profile?.verificationTier ?? session.verificationTier;
+
 const displayEmail = session.email ?? 'Your account';
 const uid = session.uid;
+
+const showVerifyPhone = verificationTier === 'anonymous';
+const showVerifyIdentity = verificationTier === 'phone_verified';
+const showFullyVerified = verificationTier === 'identity_verified';
 ---
 
 <html lang="en">
@@ -29,6 +41,70 @@ const uid = session.uid;
 
     <main class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <AccountUidBanner uid={uid} />
+
+      <section class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-bold text-slate-900">Profile</h2>
+        <p class="mt-1 mb-6 text-sm text-slate-500">Update how your name appears to sellers.</p>
+        <ProfileEditor
+          client:load
+          userId={uid}
+          displayName={profile?.displayName ?? ''}
+          email={displayEmail}
+        />
+      </section>
+
+      <section class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Verification Status</h2>
+            <p class="mt-1 text-sm text-slate-500">
+              Build trust with sellers by verifying your identity over time.
+            </p>
+          </div>
+          <VerificationTierBadge tier={verificationTier} />
+        </div>
+
+        {
+          showVerifyPhone && (
+            <div
+              id="verify-phone"
+              class="mt-6 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4"
+            >
+              <p class="mb-4 text-sm text-slate-600">
+                Verify your mobile number to send inquiries to sellers.
+              </p>
+              <PhoneOtpAccountVerify client:load />
+            </div>
+          )
+        }
+
+        {
+          showVerifyIdentity && (
+            <div class="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4">
+              <p class="text-sm text-slate-600">
+                Complete identity verification to schedule test drives and make offers.
+              </p>
+              <button
+                type="button"
+                disabled
+                class="cursor-not-allowed rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500"
+                title="Coming in Phase 6"
+              >
+                Verify identity
+              </button>
+            </div>
+          )
+        }
+
+        {
+          showFullyVerified && (
+            <p class="mt-6 text-sm text-green-700">
+              Your identity is verified. You can use high-stakes buyer actions when they become
+              available.
+            </p>
+          )
+        }
+      </section>
 
       <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
         <a

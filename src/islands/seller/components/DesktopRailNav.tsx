@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Check,
   Circle,
+  ExternalLink,
   Eye,
   FileText,
   FolderOpen,
@@ -19,6 +20,7 @@ import type { DetailsSection } from './details-nav-types';
 
 interface DesktopRailNavProps {
   vehicleId: string;
+  publicListingPath: string;
   sections: DetailsSection[];
   activeId: string;
   onSelect: (id: string) => void;
@@ -50,6 +52,7 @@ function CompleteIcon({ isActive }: { isActive: boolean }) {
 
 export default function DesktopRailNav({
   vehicleId,
+  publicListingPath,
   sections,
   activeId,
   onSelect,
@@ -70,16 +73,30 @@ export default function DesktopRailNav({
           isRailOpen ? 'justify-between gap-2 px-3 py-3' : 'flex-col justify-center gap-2 py-3'
         }`}
       >
-        <a
-          href={`/seller/vehicles/${vehicleId}/preview`}
-          className={`flex items-center rounded-lg text-slate-300 transition-colors hover:bg-slate-700/60 hover:text-white ${
-            isRailOpen ? 'gap-1.5 px-2 py-1.5 text-xs font-medium' : 'p-2'
-          }`}
-          title="Preview listing"
-        >
-          <Eye size={isRailOpen ? 16 : 20} aria-hidden="true" />
-          {isRailOpen ? <span>Preview</span> : <span className="sr-only">Preview listing</span>}
-        </a>
+        <div className="flex items-center gap-1">
+          <a
+            href={publicListingPath}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex items-center rounded-lg text-slate-300 transition-colors hover:bg-slate-700/60 hover:text-white ${
+              isRailOpen ? 'gap-1.5 px-2 py-1.5 text-xs font-medium' : 'p-2'
+            }`}
+            title="View public listing"
+          >
+            <ExternalLink size={isRailOpen ? 16 : 20} aria-hidden="true" />
+            {isRailOpen ? <span>View Live</span> : <span className="sr-only">View public listing</span>}
+          </a>
+          <a
+            href={`/seller/vehicles/${vehicleId}/preview`}
+            className={`flex items-center rounded-lg text-slate-300 transition-colors hover:bg-slate-700/60 hover:text-white ${
+              isRailOpen ? 'gap-1.5 px-2 py-1.5 text-xs font-medium' : 'p-2'
+            }`}
+            title="Preview listing"
+          >
+            <Eye size={isRailOpen ? 16 : 20} aria-hidden="true" />
+            {isRailOpen ? <span>Preview</span> : <span className="sr-only">Preview listing</span>}
+          </a>
+        </div>
         <button
           type="button"
           onClick={() => setIsRailOpen((open) => !open)}

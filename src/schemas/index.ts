@@ -27,9 +27,41 @@ export const UserStatsSchema = z.object({
   itemsSold: z.number().int().nonnegative(),
 });
 
+export const VerificationTierSchema = z.enum([
+  'anonymous',
+  'phone_verified',
+  'identity_verified',
+]);
+
+export const KycStatusSchema = z.object({
+  provider: z.enum(['stripe_identity', 'persona', 'keysavvy', 'caramel']),
+  status: z.enum(['pending', 'verified', 'failed']),
+  verifiedAt: z.string().datetime().optional(),
+  externalId: z.string().optional(),
+});
+
 export const UserSchema = z.object({
   displayName: z.string().min(1).max(100),
   stats: UserStatsSchema,
+  verificationTier: VerificationTierSchema.default('anonymous'),
+  phone: z.string().optional(),
+  phoneVerifiedAt: z.string().datetime().optional(),
+  kyc: KycStatusSchema.optional(),
+});
+
+export const PublicUserResponseSchema = z.object({
+  id: z.string(),
+  displayName: z.string().min(1).max(100),
+  stats: UserStatsSchema,
+  verificationTier: VerificationTierSchema.default('anonymous'),
+});
+
+export const UserProfileUpdateSchema = z.object({
+  displayName: z.string().min(1).max(100),
+});
+
+export const PhoneVerifyRequestSchema = z.object({
+  idToken: z.string().min(1),
 });
 
 export const VehicleLocationSchema = z.object({
@@ -333,6 +365,8 @@ export const InquirySchema = z.object({
   phone: z.string().min(1).max(30),
   email: z.string().email().max(200),
   message: z.string().max(2000).optional().or(z.literal('')),
+  buyerUid: z.string().min(1).optional(),
+  verificationTier: VerificationTierSchema.optional(),
 });
 
 export const InquiryRecordSchema = InquirySchema.extend({
@@ -527,6 +561,30 @@ export const UploadResponseSchema = z.object({
   url: documentUrl,
 });
 
+export const ListingEventTypeSchema = z.enum([
+  'page_view',
+  'photo_view',
+  'carousel_swipe',
+  'section_view',
+]);
+
+export const ListingEventMetadataSchema = z.object({
+  photoIndex: z.number().int().nonnegative().optional(),
+  sectionId: z.string().min(1).max(50).optional(),
+  surface: z.enum(['hero', 'carousel', 'gallery']).optional(),
+});
+
+export const ListingEventCreateSchema = z.object({
+  vehicleId: z.string().min(1),
+  eventType: ListingEventTypeSchema,
+  metadata: ListingEventMetadataSchema.optional(),
+});
+
+export const ListingEventSchema = ListingEventCreateSchema.extend({
+  sessionId: z.string().min(1),
+  timestamp: z.string().datetime(),
+});
+
 export const MessageSchema = z.object({
   id: z.string(),
   sessionId: z.string().min(1).max(100),
@@ -535,6 +593,8 @@ export const MessageSchema = z.object({
   content: z.string().min(1).max(2000),
   timestamp: z.string().datetime(),
   isRead: z.number().int().min(0).max(1).optional(),
+  buyerUid: z.string().min(1).optional(),
+  buyerPhoneLast4: z.string().length(4).optional(),
 });
 
 export const ConversationSchema = MessageSchema.extend({
@@ -595,6 +655,11 @@ export const UserResponseSchema = UserSchema.extend({ id: z.string() });
 export const VehicleResponseSchema = VehicleSchema.extend({ id: z.string() });
 
 export type User = z.infer<typeof UserSchema>;
+export type VerificationTier = z.infer<typeof VerificationTierSchema>;
+export type KycStatus = z.infer<typeof KycStatusSchema>;
+export type PublicUserResponse = z.infer<typeof PublicUserResponseSchema>;
+export type UserProfileUpdate = z.infer<typeof UserProfileUpdateSchema>;
+export type PhoneVerifyRequest = z.infer<typeof PhoneVerifyRequestSchema>;
 export type Vehicle = z.infer<typeof VehicleSchema>;
 export type VehicleSpecs = z.infer<typeof VehicleSpecsSchema>;
 export type ServiceRecord = z.infer<typeof ServiceRecordSchema>;
@@ -648,6 +713,10 @@ export type VehicleHighlight = z.infer<typeof VehicleHighlightSchema>;
 export type VehicleFormState = z.infer<typeof VehicleFormStateSchema>;
 export type VehicleDashboardUpdate = z.infer<typeof VehicleDashboardUpdateSchema>;
 export type UploadResponse = z.infer<typeof UploadResponseSchema>;
+export type ListingEventType = z.infer<typeof ListingEventTypeSchema>;
+export type ListingEventMetadata = z.infer<typeof ListingEventMetadataSchema>;
+export type ListingEventCreate = z.infer<typeof ListingEventCreateSchema>;
+export type ListingEvent = z.infer<typeof ListingEventSchema>;
 export type Message = z.infer<typeof MessageSchema>;
 export type Conversation = z.infer<typeof ConversationSchema>;
 export type MessageCreate = z.infer<typeof MessageCreateSchema>;

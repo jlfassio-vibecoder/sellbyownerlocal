@@ -2,6 +2,7 @@
 import type { VehicleResponse } from '../schemas';
 import { resolveHeroImageUrls } from '../lib/resolve-display-media';
 import { getAccent } from '../lib/accent-colors';
+import { getVehicleListingPath } from '../utils/url-helpers';
 
 interface Props {
   vehicle: VehicleResponse;
@@ -21,7 +22,7 @@ const mileageFormatter = new Intl.NumberFormat('en-US');
 ---
 
 <a
-  href={`/vehicles/${vehicle.id}`}
+  href={getVehicleListingPath(vehicle)}
   class="block overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-lg"
 >
   {
