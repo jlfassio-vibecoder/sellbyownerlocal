@@ -816,8 +816,8 @@ export const ClothingListingSchema = z.object({
   status: ClothingListingStatusSchema,
   sellerId: z.string().min(1),
   prePackRatio: z.string().optional(),
-  pdfLineSheetUrl: z.string().optional(),
-  colors: z.array(z.string()).optional(),
+  pdfLineSheetUrl: httpHttpsUrl.optional(),
+  colors: z.array(z.string().min(1)).optional(),
 });
 
 export const ClothingListingResponseSchema = ClothingListingSchema;
