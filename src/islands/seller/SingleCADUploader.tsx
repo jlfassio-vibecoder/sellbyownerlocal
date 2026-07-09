@@ -13,8 +13,10 @@ type ToastState = {
   message: string;
 };
 
+const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
+
 function isImageFile(file: File): boolean {
-  if (file.type.startsWith('image/')) return true;
+  if (ALLOWED_IMAGE_TYPES.has(file.type)) return true;
   const name = file.name.toLowerCase();
   return name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.webp');
 }
@@ -124,7 +126,7 @@ export default function SingleCADUploader({ onItemCreated }: SingleCADUploaderPr
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/png,image/jpeg,image/webp,image/*"
+          accept="image/png,image/jpeg,image/webp"
           className="hidden"
           disabled={isUploading}
           onChange={(e) => onFileSelected(e.target.files?.[0])}

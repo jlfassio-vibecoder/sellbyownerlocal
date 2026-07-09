@@ -40,12 +40,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     const uniqueIds = [...new Set(parsed.data.ids)];
+    const refs = uniqueIds.map((id) => db().collection('clothing_listings').doc(id));
+    const docs = await Promise.all(refs.map((ref) => ref.get()));
     const batch = db().batch();
     let deletedCount = 0;
 
-    for (const id of uniqueIds) {
-      const ref = db().collection('clothing_listings').doc(id);
-      const doc = await ref.get();
+    for (let i = 0; i < uniqueIds.length; i++) {
+      const doc = docs[i];
+      const ref = refs[i];
 
       if (!doc.exists) {
         return new Response(JSON.stringify({ error: 'Listing not found' }), {
