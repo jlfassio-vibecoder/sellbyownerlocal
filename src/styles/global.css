@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+html {
+  scroll-behavior: smooth;
+}
+
 @source inline(
   "text-red-600", "bg-red-600", "border-red-600", "bg-red-50", "border-red-100",
   "text-blue-600", "bg-blue-600", "border-blue-600", "bg-blue-50", "border-blue-100",

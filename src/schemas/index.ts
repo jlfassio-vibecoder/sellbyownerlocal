@@ -800,3 +800,52 @@ export type Conversation = z.infer<typeof ConversationSchema>;
 export type MessageCreate = z.infer<typeof MessageCreateSchema>;
 export type UserResponse = z.infer<typeof UserResponseSchema>;
 export type VehicleResponse = z.infer<typeof VehicleResponseSchema>;
+
+export const ClothingListingStatusSchema = z.enum(['active', 'archived']);
+
+export const ClothingListingSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1),
+  brand: z.string().min(1),
+  price: z.number().positive(),
+  description: z.string().min(1),
+  sizes: z.array(z.string().min(1)),
+  material: z.string().min(1),
+  galleryPhotos: z.array(httpHttpsUrl),
+  createdAt: z.coerce.date(),
+  status: ClothingListingStatusSchema,
+  sellerId: z.string().min(1),
+  prePackRatio: z.string().optional(),
+  pdfLineSheetUrl: z.string().optional(),
+  colors: z.array(z.string()).optional(),
+});
+
+export const ClothingListingResponseSchema = ClothingListingSchema;
+export type ClothingListing = z.infer<typeof ClothingListingSchema>;
+
+export const ClothingListingCreateSchema = ClothingListingSchema.omit({
+  id: true,
+  sellerId: true,
+  createdAt: true,
+  status: true,
+});
+
+export const ClothingListingUpdateSchema = ClothingListingSchema.omit({
+  id: true,
+  sellerId: true,
+  createdAt: true,
+}).partial();
+
+export type ClothingListingCreate = z.infer<typeof ClothingListingCreateSchema>;
+export type ClothingListingUpdate = z.infer<typeof ClothingListingUpdateSchema>;
+
+export const ClothingInquirySchema = z.object({
+  clothingListingId: z.string().min(1),
+  sellerId: z.string().min(1),
+  name: z.string().min(1).max(100),
+  phone: z.string().min(1).max(30),
+  email: z.string().email().max(200),
+  message: z.string().max(2000).optional().or(z.literal('')),
+});
+
+export type ClothingInquiry = z.infer<typeof ClothingInquirySchema>;

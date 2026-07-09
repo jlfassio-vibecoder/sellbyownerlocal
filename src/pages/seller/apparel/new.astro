@@ -1,0 +1,40 @@
+---
+import { requireSellerOrRedirect } from '../../../lib/auth';
+import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
+import ApparelEditorForm from '../../../islands/seller/ApparelEditorForm';
+import '../../../styles/global.css';
+
+const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
+if (seller instanceof Response) return seller;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>New Item · Apparel Dashboard · Sell By Owner Local</title>
+  </head>
+  <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
+    <ApparelSellerLayout client:load activeNav="catalog" sellerUid={seller.uid}>
+      <div class="flex-1 overflow-y-auto">
+        <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+          <div class="mb-8">
+            <a
+              href="/seller/apparel"
+              class="mb-4 inline-flex items-center text-sm font-semibold text-red-600 hover:text-red-700"
+            >
+              ← Back to catalog
+            </a>
+            <h2 class="text-2xl font-bold text-slate-900">Add Catalog Item</h2>
+            <p class="mt-1 text-sm text-slate-500">Create a new wholesale apparel listing</p>
+          </div>
+
+          <ApparelEditorForm client:load />
+        </div>
+      </div>
+    </ApparelSellerLayout>
+  </body>
+</html>

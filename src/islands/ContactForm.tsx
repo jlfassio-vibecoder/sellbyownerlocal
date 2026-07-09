@@ -10,6 +10,8 @@ interface ContactFormProps {
   userDisplayName?: string;
   userPhone?: string;
   loginHref?: string;
+  apiEndpoint?: string;
+  listingIdKey?: 'vehicleId' | 'clothingListingId';
 }
 
 export default function ContactForm({
@@ -21,6 +23,8 @@ export default function ContactForm({
   userDisplayName = '',
   userPhone = '',
   loginHref = '/login',
+  apiEndpoint = '/api/inquiries',
+  listingIdKey = 'vehicleId',
 }: ContactFormProps) {
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', message: '' });
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -48,11 +52,11 @@ export default function ContactForm({
     setIsSubmitting(true);
 
     try {
-      const res = await fetch('/api/inquiries', {
+      const res = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          vehicleId,
+          [listingIdKey]: vehicleId,
           sellerId,
           ...formData,
         }),
