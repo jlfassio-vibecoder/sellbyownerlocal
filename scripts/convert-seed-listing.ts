@@ -20,6 +20,7 @@
  *   - PUBLIC_SITE_URL                 base URL for the printed link (default: http://localhost:4321)
  */
 import 'dotenv/config';
+import { z } from 'zod';
 import { initializeApp, applicationDefault, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { VehicleSchema } from '../src/schemas/index.js';
@@ -90,7 +91,7 @@ async function main() {
   const parsed = VehicleSchema.safeParse(listingPayload);
   if (!parsed.success) {
     console.error('Seed data failed VehicleSchema validation:');
-    console.error(parsed.error.flatten());
+    console.error(z.flattenError(parsed.error));
     process.exit(1);
   }
 

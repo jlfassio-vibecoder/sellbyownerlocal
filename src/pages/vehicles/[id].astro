@@ -1,4 +1,5 @@
 ---
+import { z } from 'zod';
 import { db } from '../../lib/firebase-admin';
 import { VehicleResponseSchema } from '../../schemas';
 import { getOptionalSession } from '../../lib/auth';
@@ -38,7 +39,7 @@ const parsed = VehicleResponseSchema.safeParse({ id: doc.id, ...doc.data() });
 
 if (!parsed.success) {
   if (import.meta.env.DEV) {
-    console.error(`Vehicle ${slug} failed validation:`, parsed.error.flatten());
+    console.error(`Vehicle ${slug} failed validation:`, z.flattenError(parsed.error));
   }
   return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
 }

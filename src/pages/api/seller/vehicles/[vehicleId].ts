@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import {
   AuthError,
   ForbiddenError,
@@ -75,7 +76,7 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
       return new Response(
         JSON.stringify({
           error: 'Validation failed',
-          details: formParsed.error.flatten().fieldErrors,
+          details: z.flattenError(formParsed.error).fieldErrors,
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
@@ -98,7 +99,7 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
       return new Response(
         JSON.stringify({
           error: 'Validation failed',
-          details: patchParsed.error.flatten().fieldErrors,
+          details: z.flattenError(patchParsed.error).fieldErrors,
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );

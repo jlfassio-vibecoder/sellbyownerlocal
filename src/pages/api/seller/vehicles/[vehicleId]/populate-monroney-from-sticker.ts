@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import {
   AuthError,
   ForbiddenError,
@@ -30,7 +31,6 @@ import {
   VehicleResponseSchema,
   type Monroney,
 } from '../../../../../schemas';
-import type { z } from 'zod';
 import { AiMonroneyLenientSchema } from '../../../../../lib/ai/ai-listing-content-schema';
 
 const MONRONEY_STICKER_RATE_LIMIT = { windowMs: 60 * 60 * 1000, max: 10 };
@@ -89,7 +89,7 @@ function resolveMonroneyFromAi(
     }
     console.warn(
       'Enriched monroney from sticker failed validation; saving core fields only',
-      parsed.error.flatten()
+      z.flattenError(parsed.error)
     );
   }
 
@@ -127,7 +127,7 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
       return new Response(
         JSON.stringify({
           error: 'Validation failed',
-          details: parsed.error.flatten().fieldErrors,
+          details: z.flattenError(parsed.error).fieldErrors,
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );

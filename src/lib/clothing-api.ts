@@ -1,4 +1,5 @@
 import { db } from './firebase-admin';
+import { z } from 'zod';
 import { ClothingListingSchema, type ClothingListing } from '../schemas';
 
 function toCreatedAt(value: unknown): Date | undefined {
@@ -27,7 +28,7 @@ export async function getClothingInventory(): Promise<ClothingListing[]> {
   return snapshot.docs.flatMap((doc) => {
     const parsed = mapClothingDoc(doc.id, doc.data() as Record<string, unknown>);
     if (!parsed.success && import.meta.env.DEV) {
-      console.error(`Clothing ${doc.id} skipped (validation failed):`, parsed.error.flatten());
+      console.error(`Clothing ${doc.id} skipped (validation failed):`, z.flattenError(parsed.error));
     }
     return parsed.success ? [parsed.data] : [];
   });
@@ -44,7 +45,7 @@ export async function getClothingListingById(id: string): Promise<ClothingListin
 
   if (!parsed.success) {
     if (import.meta.env.DEV) {
-      console.error(`Clothing ${id} failed validation:`, parsed.error.flatten());
+      console.error(`Clothing ${id} failed validation:`, z.flattenError(parsed.error));
     }
     return null;
   }
@@ -90,7 +91,7 @@ export async function getApparelCatalogForSeller(sellerId: string): Promise<Clot
     if (!parsed.success) {
       console.error(
         `Clothing ${doc.id} skipped (validation failed, db=${databaseId}):`,
-        parsed.error.flatten()
+        z.flattenError(parsed.error)
       );
       return [];
     }
@@ -115,7 +116,7 @@ export async function getApparelListingForSellerById(
 
   if (!parsed.success) {
     if (import.meta.env.DEV) {
-      console.error(`Clothing ${id} failed validation:`, parsed.error.flatten());
+      console.error(`Clothing ${id} failed validation:`, z.flattenError(parsed.error));
     }
     return null;
   }
