@@ -57,8 +57,11 @@ function uploadFile(
 }
 
 async function fetchMatchResults(filenames: string[]): Promise<MatchResult[]> {
-  const params = new URLSearchParams({ filenames: filenames.join(',') });
-  const res = await fetch(`/api/seller/apparel/image-matches?${params.toString()}`);
+  const res = await fetch('/api/seller/apparel/image-matches', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filenames }),
+  });
   if (!res.ok) {
     throw new Error('Failed to load match results');
   }

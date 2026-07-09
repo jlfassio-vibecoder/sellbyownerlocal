@@ -140,7 +140,7 @@ export default function CatalogUploader({ sellerId }: CatalogUploaderProps) {
           if (uploading) return;
           onFileSelected(e.dataTransfer.files?.[0]);
         }}
-        className={`flex cursor-pointer flex-col items-center rounded-lg border-2 border-dashed border-slate-300 p-8 text-center transition-colors hover:bg-slate-50 ${
+        className={`group flex cursor-pointer flex-col items-center rounded-lg border-2 border-dashed border-slate-300 p-8 text-center transition-colors hover:bg-slate-50 ${
           uploading ? 'pointer-events-none opacity-70' : ''
         }`}
       >

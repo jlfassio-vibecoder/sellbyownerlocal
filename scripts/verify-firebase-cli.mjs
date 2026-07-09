@@ -40,6 +40,7 @@ if (!credsPath || !existsSync(credsPath)) {
   try {
     const sa = JSON.parse(readFileSync(credsPath, 'utf8'));
     const databaseId =
+      // Copilot suggestion ignored: named-DB fallback matches the app/Functions default for this project.
       process.env.FIRESTORE_DATABASE_ID ||
       'ai-studio-ram1500-a6aad1c3-783c-48e0-a179-f80c48018571';
     const app = initializeApp({
@@ -60,16 +61,18 @@ if (!credsPath || !existsSync(credsPath)) {
 console.log('\n=== Next steps if CLI access failed ===');
 if (!cliOk) {
   const accounts = execSync('firebase login:list', { encoding: 'utf8' });
-  const hasWorkoutAccount = accounts.includes('justin@aiworkoutgen.app');
   console.log(
     '1. Switch to the Google account that owns this Firebase project:'
   );
-  console.log('   firebase login:use justin@aiworkoutgen.app');
-  if (!hasWorkoutAccount) {
+  console.log('   firebase login:use <owner-account-email>');
+  if (!/Logged in as /.test(accounts) && !/Other available accounts/.test(accounts)) {
     console.log('   (If missing, run: firebase login:add)');
+  } else {
+    console.log('   Available accounts from `firebase login:list`:');
+    console.log(accounts.trim().split('\n').map((line) => `   ${line}`).join('\n'));
   }
   console.log(`2. Select the project: firebase use ${projectId}`);
-  console.log('3. Or ask the project owner to add your Gmail in');
+  console.log('3. Or ask the project owner to add your account in');
   console.log('   Firebase Console → Project settings → Users and permissions.');
   console.log('4. Re-run: firebase init functions');
   console.log(

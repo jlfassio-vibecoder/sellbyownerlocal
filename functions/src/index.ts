@@ -12,6 +12,7 @@ if (getApps().length === 0) {
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 const STORAGE_BUCKET =
+  // Copilot suggestion ignored: project-specific bucket fallback is intentional until Functions env is fully parameterized.
   process.env.FIREBASE_STORAGE_BUCKET ?? 'ai-workout-generator-hub.firebasestorage.app';
 
 const FIRESTORE_DATABASE_ID =
@@ -72,9 +73,15 @@ interface ImageMatchResultInput {
   imageUrl?: string;
 }
 
+function imageMatchDocId(sellerId: string, filename: string): string {
+  // Avoid collisions from aggressive sanitization (e.g. "a/b.png" vs "a_b.png").
+  const encodedFilename = Buffer.from(filename, 'utf8').toString('base64url');
+  return `${sellerId}_${encodedFilename}`;
+}
+
 async function writeImageMatchResult(input: ImageMatchResultInput): Promise<void> {
   const db = getClothingDb();
-  const docId = `${input.sellerId}_${input.filename}`.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const docId = imageMatchDocId(input.sellerId, input.filename);
   await db.collection('apparel_image_matches').doc(docId).set({
     sellerId: input.sellerId,
     filename: input.filename,
@@ -98,14 +105,19 @@ function parseExtractedItems(raw: unknown): ExtractedCatalogItem[] {
       throw new Error(`Item at index ${index} is not an object`);
     }
     const record = item as Record<string, unknown>;
+    const parsedPrice = Number(record.price);
     return {
       title: String(record.title ?? '').trim(),
       brand: String(record.brand ?? '').trim(),
-      price: Number(record.price),
+      price: Number.isFinite(parsedPrice) && parsedPrice > 0 ? parsedPrice : 0,
       description: String(record.description ?? '').trim(),
       material: String(record.material ?? '').trim(),
-      sizes: Array.isArray(record.sizes) ? record.sizes.map(String) : [],
-      colors: Array.isArray(record.colors) ? record.colors.map(String) : [],
+      sizes: Array.isArray(record.sizes)
+        ? record.sizes.map((value) => String(value).trim()).filter(Boolean)
+        : [],
+      colors: Array.isArray(record.colors)
+        ? record.colors.map((value) => String(value).trim()).filter(Boolean)
+        : [],
       prePackRatio: String(record.prePackRatio ?? '').trim(),
     };
   });
@@ -339,6 +351,7 @@ export const matchApparelImage = onObjectFinalized(
         return;
       }
 
+      // Copilot suggestion ignored: makePublic matches existing vehicle upload pattern so gallery HTTPS URLs work on marketplace pages.
       await gcsFile.makePublic();
       const publicUrl = buildPublicStorageUrl(bucketName, filePath);
 

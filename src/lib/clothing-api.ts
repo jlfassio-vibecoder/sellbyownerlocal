@@ -89,10 +89,12 @@ export async function getApparelCatalogForSeller(sellerId: string): Promise<Clot
   const listings = snapshot.docs.flatMap((doc) => {
     const parsed = mapClothingDoc(doc.id, doc.data() as Record<string, unknown>);
     if (!parsed.success) {
-      console.error(
-        `Clothing ${doc.id} skipped (validation failed, db=${databaseId}):`,
-        z.flattenError(parsed.error)
-      );
+      if (import.meta.env.DEV) {
+        console.error(
+          `Clothing ${doc.id} skipped (validation failed, db=${databaseId}):`,
+          z.flattenError(parsed.error)
+        );
+      }
       return [];
     }
     return [parsed.data];

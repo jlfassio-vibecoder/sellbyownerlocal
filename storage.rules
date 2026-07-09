@@ -9,7 +9,8 @@ service firebase.storage {
         && request.resource.size < 50 * 1024 * 1024;
     }
     match /apparel-images/staging/{sellerId}/{fileName} {
-      allow read: if true;
+      // Copilot suggestion applied: staging drafts are seller-readable only (not world-readable).
+      allow read: if request.auth != null && request.auth.uid == sellerId;
       allow write: if request.auth != null
         && request.auth.uid == sellerId
         && request.resource.contentType.matches('image/.*')
@@ -17,7 +18,10 @@ service firebase.storage {
     }
     match /apparel-images/{sellerId}/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == sellerId;
+      allow write: if request.auth != null
+        && request.auth.uid == sellerId
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 10 * 1024 * 1024;
     }
     match /{allPaths=**} {
       allow read, write: if false;
