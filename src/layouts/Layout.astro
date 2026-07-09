@@ -7,6 +7,7 @@ interface Props {
   description?: string;
   ogImage?: string;
   ogUrl?: string;
+  ogType?: string;
   bodyClass?: string;
 }
 
@@ -15,6 +16,7 @@ const {
   description = 'Browse vehicles for sale by owner in your area. No dealer markup.',
   ogImage,
   ogUrl = `${Astro.url.pathname}${Astro.url.search}`,
+  ogType = 'website',
   bodyClass = 'min-h-screen bg-gray-50 text-gray-900',
 } = Astro.props;
 
@@ -43,7 +45,7 @@ const resolvedOgUrl = resolveAbsoluteUrl(ogUrl, origin);
     <meta property="og:description" content={description} />
     <meta property="og:image" content={resolvedOgImage} />
     <meta property="og:url" content={resolvedOgUrl} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content="Sell By Owner Local" />
 
     <meta name="twitter:card" content="summary_large_image" />

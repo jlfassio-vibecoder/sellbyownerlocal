@@ -4,8 +4,8 @@ import { getApparelCatalogForSeller } from '../../../lib/clothing-api';
 import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
 import CatalogUploader from '../../../islands/seller/CatalogUploader';
 import BulkImageUploader from '../../../islands/seller/BulkImageUploader';
-import FilterableApparelGrid from '../../../islands/shared/FilterableApparelGrid';
-import type { ApparelFilterItem } from '../../../islands/shared/apparel-filter-types';
+import ApparelCatalogSection from '../../../islands/seller/ApparelCatalogSection';
+import type { ApparelFilterItem } from '../../../lib/apparel';
 import '../../../styles/global.css';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
@@ -21,6 +21,11 @@ const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
   description: item.description,
   status: item.status,
   galleryPhotos: item.galleryPhotos,
+  material: item.material,
+  sizes: item.sizes,
+  colors: item.colors,
+  isFeatured: item.isFeatured,
+  isSale: item.isSale,
 }));
 ---
 
@@ -54,7 +59,7 @@ const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
 
           <BulkImageUploader client:load sellerId={seller.uid} />
 
-          <FilterableApparelGrid client:load initialItems={initialItems} isSellerView={true} />
+          <ApparelCatalogSection client:load initialItems={initialItems} />
         </div>
       </div>
     </ApparelSellerLayout>

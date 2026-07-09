@@ -1,4 +1,4 @@
-import type { ApparelFilterStatus } from './apparel-filter-types';
+import type { ApparelFilterStatus } from '../../lib/apparel';
 
 const INPUT_CLASS =
   'w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition-colors focus:border-red-600 focus:ring-2 focus:ring-red-600';

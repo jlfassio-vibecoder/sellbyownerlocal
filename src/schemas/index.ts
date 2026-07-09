@@ -830,6 +830,8 @@ export const ClothingListingSchema = z.object({
   prePackRatio: z.string().optional(),
   pdfLineSheetUrl: lineSheetUrl.optional(),
   colors: z.array(z.string().min(1)).optional(),
+  isFeatured: z.boolean().optional().default(false),
+  isSale: z.boolean().optional().default(false),
 });
 
 export const ClothingListingResponseSchema = ClothingListingSchema;

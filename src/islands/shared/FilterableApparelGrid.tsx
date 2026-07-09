@@ -1,16 +1,32 @@
+import { Copy, Pencil } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import SearchAndFilterBar from './SearchAndFilterBar';
 import {
-  APPAREL_STATUS_LABELS,
+  APPAREL_SELLER_STATUS_LABELS,
   APPAREL_STATUS_STYLES,
+  type ApparelBulkUpdate,
   type ApparelFilterItem,
-} from './apparel-filter-types';
+  type ApparelItemUpdate,
+  buildTitleWithItemCode,
+  joinCommaList,
+  parseItemCodeFromTitle,
+  splitCommaList,
+} from '../../lib/apparel';
 
 const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
   minimumFractionDigits: 2,
 });
+
+const BULK_ACTION_OPTIONS: { value: string; label: string; updates: ApparelBulkUpdate; successLabel: string }[] = [
+  { value: 'make-public', label: 'Make Public', updates: { status: 'active' }, successLabel: 'made public' },
+  { value: 'hide-draft', label: 'Hide to Draft', updates: { status: 'draft' }, successLabel: 'moved to draft' },
+  { value: 'mark-featured', label: 'Mark as Featured', updates: { isFeatured: true }, successLabel: 'marked as featured' },
+  { value: 'remove-featured', label: 'Remove Featured', updates: { isFeatured: false }, successLabel: 'removed from featured' },
+  { value: 'mark-sale', label: 'Mark as Sale', updates: { isSale: true }, successLabel: 'marked as sale' },
+  { value: 'remove-sale', label: 'Remove Sale', updates: { isSale: false }, successLabel: 'removed from sale' },
+];
 
 interface FilterableApparelGridProps {
   initialItems: ApparelFilterItem[];
@@ -22,6 +38,32 @@ type ToastState = {
   message: string;
 };
 
+type EditFormState = {
+  title: string;
+  brand: string;
+  price: string;
+  description: string;
+  itemCode: string;
+  sizesCsv: string;
+  colorsCsv: string;
+  published: boolean;
+  isFeatured: boolean;
+  isSale: boolean;
+};
+
+const EMPTY_EDIT_FORM: EditFormState = {
+  title: '',
+  brand: '',
+  price: '',
+  description: '',
+  itemCode: '',
+  sizesCsv: '',
+  colorsCsv: '',
+  published: false,
+  isFeatured: false,
+  isSale: false,
+};
+
 function matchesSearch(item: ApparelFilterItem, query: string): boolean {
   if (!query) return true;
   const haystack = `${item.title} ${item.brand} ${item.description}`.toLowerCase();
@@ -29,21 +71,40 @@ function matchesSearch(item: ApparelFilterItem, query: string): boolean {
 }
 
 function ApparelCardContent({ item, isSellerView }: { item: ApparelFilterItem; isSellerView: boolean }) {
+  const showFeatured = Boolean(item.isFeatured);
+  const showSale = Boolean(item.isSale);
+
   return (
     <>
-      {item.galleryPhotos[0] ? (
-        <img
-          src={item.galleryPhotos[0]}
-          alt={item.title}
-          loading="lazy"
-          decoding="async"
-          className="aspect-[4/3] w-full object-cover"
-        />
-      ) : (
-        <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-200 text-sm text-slate-500">
-          No photo
-        </div>
-      )}
+      <div className="relative">
+        {item.galleryPhotos[0] ? (
+          <img
+            src={item.galleryPhotos[0]}
+            alt={item.title}
+            loading="lazy"
+            decoding="async"
+            className="aspect-[4/3] w-full object-cover"
+          />
+        ) : (
+          <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-200 text-sm text-slate-500">
+            No photo
+          </div>
+        )}
+        {(showFeatured || showSale) && (
+          <div className="absolute right-3 top-3 z-10 flex flex-col gap-1">
+            {showFeatured && (
+              <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white shadow-sm">
+                Featured
+              </span>
+            )}
+            {showSale && (
+              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white shadow-sm">
+                Sale
+              </span>
+            )}
+          </div>
+        )}
+      </div>
       <div className="space-y-2 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -54,7 +115,7 @@ function ApparelCardContent({ item, isSellerView }: { item: ApparelFilterItem; i
             <span
               className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${APPAREL_STATUS_STYLES[item.status]}`}
             >
-              {APPAREL_STATUS_LABELS[item.status]}
+              {APPAREL_SELLER_STATUS_LABELS[item.status]}
             </span>
           )}
         </div>
@@ -71,6 +132,10 @@ export default function FilterableApparelGrid({
   isSellerView,
 }: FilterableApparelGridProps) {
   const [items, setItems] = useState(initialItems);
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
@@ -78,7 +143,12 @@ export default function FilterableApparelGrid({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [bulkAction, setBulkAction] = useState(BULK_ACTION_OPTIONS[0].value);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [editingItem, setEditingItem] = useState<ApparelFilterItem | null>(null);
+  const [editForm, setEditForm] = useState<EditFormState>(EMPTY_EDIT_FORM);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -91,6 +161,27 @@ export default function FilterableApparelGrid({
       setIsModalOpen(false);
     }
   }, [selectedIds.size, isModalOpen]);
+
+  useEffect(() => {
+    if (!editingItem) {
+      setEditForm(EMPTY_EDIT_FORM);
+      return;
+    }
+
+    const { itemCode, titleWithoutCode } = parseItemCodeFromTitle(editingItem.title);
+    setEditForm({
+      title: titleWithoutCode,
+      brand: editingItem.brand,
+      price: String(editingItem.price),
+      description: editingItem.description,
+      itemCode,
+      sizesCsv: joinCommaList(editingItem.sizes),
+      colorsCsv: joinCommaList(editingItem.colors),
+      published: editingItem.status === 'active',
+      isFeatured: Boolean(editingItem.isFeatured),
+      isSale: Boolean(editingItem.isSale),
+    });
+  }, [editingItem]);
 
   const brands = useMemo(
     () =>
@@ -114,6 +205,8 @@ export default function FilterableApparelGrid({
     () => items.filter((item) => selectedIds.has(item.id)),
     [items, selectedIds]
   );
+
+  const selectedBulkAction = BULK_ACTION_OPTIONS.find((option) => option.value === bulkAction) ?? BULK_ACTION_OPTIONS[0];
 
   const toggleSelectionMode = () => {
     setIsSelectionMode((prev) => {
@@ -143,6 +236,144 @@ export default function FilterableApparelGrid({
       next.delete(id);
       return next;
     });
+  };
+
+  const handleBulkUpdate = async (updates: ApparelBulkUpdate, successLabel: string) => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+
+    setIsBulkUpdating(true);
+
+    try {
+      const response = await fetch('/api/seller/apparel/bulk-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, updates }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        updatedCount?: number;
+      };
+
+      if (!response.ok) {
+        setToast({
+          type: 'error',
+          message: payload.error ?? 'Failed to update items. Please try again.',
+        });
+        return;
+      }
+
+      const updatedSet = new Set(ids);
+      setItems((prev) =>
+        prev.map((item) => (updatedSet.has(item.id) ? { ...item, ...updates } : item))
+      );
+      setSelectedIds(new Set());
+      setToast({
+        type: 'success',
+        message: `${payload.updatedCount ?? ids.length} item${(payload.updatedCount ?? ids.length) === 1 ? '' : 's'} ${successLabel}.`,
+      });
+    } catch {
+      setToast({
+        type: 'error',
+        message: 'Failed to update items. Please try again.',
+      });
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
+  const handleApplyBulkAction = () => {
+    handleBulkUpdate(selectedBulkAction.updates, selectedBulkAction.successLabel);
+  };
+
+  const handleCopyLink = async (id: string) => {
+    const url = `${window.location.origin}/marketplace/clothing/${id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setToast({
+        type: 'success',
+        message: 'Public link copied to clipboard!',
+      });
+    } catch {
+      setToast({
+        type: 'error',
+        message: 'Failed to copy link. Please try again.',
+      });
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+
+    const trimmedTitle = editForm.title.trim();
+    const trimmedBrand = editForm.brand.trim();
+    const trimmedDescription = editForm.description.trim();
+
+    if (!trimmedTitle || !trimmedBrand || !trimmedDescription) {
+      setToast({
+        type: 'error',
+        message: 'Title, brand, and description are required.',
+      });
+      return;
+    }
+
+    const price = Number(editForm.price);
+    if (!Number.isFinite(price) || price < 0) {
+      setToast({
+        type: 'error',
+        message: 'Enter a valid price.',
+      });
+      return;
+    }
+
+    const updates: ApparelItemUpdate = {
+      title: buildTitleWithItemCode(trimmedTitle, editForm.itemCode),
+      brand: trimmedBrand,
+      price,
+      description: trimmedDescription,
+      sizes: splitCommaList(editForm.sizesCsv),
+      colors: splitCommaList(editForm.colorsCsv),
+      status: editForm.published ? 'active' : 'draft',
+      isFeatured: editForm.isFeatured,
+      isSale: editForm.isSale,
+    };
+
+    setIsSaving(true);
+
+    try {
+      const response = await fetch('/api/seller/apparel/update-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingItem.id, updates }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+
+      if (!response.ok) {
+        setToast({
+          type: 'error',
+          message: payload.error ?? 'Failed to update item. Please try again.',
+        });
+        return;
+      }
+
+      setItems((prev) =>
+        prev.map((item) => (item.id === editingItem.id ? { ...item, ...updates } : item))
+      );
+      setEditingItem(null);
+      setToast({
+        type: 'success',
+        message: 'Listing updated.',
+      });
+    } catch {
+      setToast({
+        type: 'error',
+        message: 'Failed to update item. Please try again.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePermanentDelete = async () => {
@@ -236,13 +467,40 @@ export default function FilterableApparelGrid({
             Select Items
           </label>
           {isSelectionMode && selectedIds.size > 0 && (
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
-            >
-              Delete {selectedIds.size} Item{selectedIds.size === 1 ? '' : 's'}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="sr-only" htmlFor="bulk-actions">
+                Bulk Actions
+              </label>
+              <select
+                id="bulk-actions"
+                value={bulkAction}
+                onChange={(e) => setBulkAction(e.target.value)}
+                disabled={isBulkUpdating || isDeleting}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+              >
+                {BULK_ACTION_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleApplyBulkAction}
+                disabled={isBulkUpdating || isDeleting}
+                className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
+              >
+                {isBulkUpdating ? 'Applying…' : 'Apply'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                disabled={isBulkUpdating || isDeleting}
+                className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                Delete {selectedIds.size} Item{selectedIds.size === 1 ? '' : 's'}
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -302,6 +560,41 @@ export default function FilterableApparelGrid({
               );
             }
 
+            if (isSellerView) {
+              return (
+                <div
+                  key={item.id}
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 hover:shadow-md"
+                >
+                  <div className="relative">
+                    <a href={href} className="block">
+                      <ApparelCardContent item={item} isSellerView={isSellerView} />
+                    </a>
+                    <div className="absolute left-3 top-3 z-20 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingItem(item)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                      >
+                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                        Edit
+                      </button>
+                      {item.status === 'active' && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopyLink(item.id)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+                        >
+                          <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                          Copy Link
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <a
                 key={item.id}
@@ -312,6 +605,161 @@ export default function FilterableApparelGrid({
               </a>
             );
           })}
+        </div>
+      )}
+
+      {editingItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-item-title"
+        >
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
+            <div className="border-b border-slate-200 px-6 py-4">
+              <h2 id="edit-item-title" className="text-lg font-bold text-slate-900">
+                Edit Listing
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Update catalog details without leaving the dashboard.
+              </p>
+            </div>
+
+            <div className="space-y-4 px-6 py-4">
+              <label className="block">
+                <span className="text-sm font-medium text-slate-700">Title</span>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
+                  disabled={isSaving}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-slate-700">Brand</span>
+                <input
+                  type="text"
+                  value={editForm.brand}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, brand: e.target.value }))}
+                  disabled={isSaving}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-slate-700">Price</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.price}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, price: e.target.value }))}
+                  disabled={isSaving}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-slate-700">Description</span>
+                <textarea
+                  rows={4}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                  disabled={isSaving}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-slate-700">Item Code</span>
+                <input
+                  type="text"
+                  value={editForm.itemCode}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, itemCode: e.target.value }))}
+                  disabled={isSaving}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-slate-700">Sizes</span>
+                <input
+                  type="text"
+                  value={editForm.sizesCsv}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, sizesCsv: e.target.value }))}
+                  disabled={isSaving}
+                  placeholder="S, M, L, XL"
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-medium text-slate-700">Colors</span>
+                <input
+                  type="text"
+                  value={editForm.colorsCsv}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, colorsCsv: e.target.value }))}
+                  disabled={isSaving}
+                  placeholder="Black, Navy, White"
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+                />
+              </label>
+
+              <div className="space-y-3 border-t border-slate-200 pt-4">
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={editForm.published}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, published: e.target.checked }))}
+                    disabled={isSaving}
+                    className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
+                  />
+                  Published
+                </label>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={editForm.isFeatured}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, isFeatured: e.target.checked }))}
+                    disabled={isSaving}
+                    className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
+                  />
+                  Mark as Featured
+                </label>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={editForm.isSale}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, isSale: e.target.checked }))}
+                    disabled={isSaving}
+                    className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
+                  />
+                  Mark as on Sale
+                </label>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                disabled={isSaving}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={isSaving}
+                className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                {isSaving ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
