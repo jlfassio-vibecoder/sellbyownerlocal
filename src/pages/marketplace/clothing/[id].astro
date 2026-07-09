@@ -1,0 +1,165 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { getOptionalSession } from '../../../lib/auth';
+import { getUserProfile } from '../../../lib/buyer-profile';
+import { getClothingListingById } from '../../../lib/clothing-api';
+import ImageCarousel from '../../../islands/ImageCarousel';
+import ContactForm from '../../../islands/ContactForm';
+
+const { id } = Astro.params;
+
+if (!id) {
+  return new Response('Listing not found', { status: 404, statusText: 'Not Found' });
+}
+
+const listing = await getClothingListingById(id);
+
+if (!listing) {
+  return new Response('Listing not found', { status: 404, statusText: 'Not Found' });
+}
+
+const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+});
+
+const canonicalUrl = `/marketplace/clothing/${listing.id}`;
+const session = await getOptionalSession(Astro.request, Astro.cookies);
+const profile = session ? await getUserProfile(session.uid) : null;
+
+const buyerContext = {
+  isLoggedIn: !!session,
+  verificationTier: session?.verificationTier ?? 'anonymous',
+  userEmail: session?.email ?? '',
+  userDisplayName: profile?.displayName ?? '',
+  userPhone: profile?.phone ?? '',
+  loginHref: `/login?next=${encodeURIComponent(`${canonicalUrl}#contact`)}`,
+};
+---
+
+<Layout
+  title={`${listing.title} · ${listing.brand} · Sell By Owner Local`}
+  description={listing.description}
+  ogImage={listing.galleryPhotos[0]}
+  ogUrl={canonicalUrl}
+  bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
+>
+  <header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <a
+        href="/marketplace/clothing"
+        class="mb-4 inline-flex items-center text-sm font-semibold text-red-600 hover:text-red-700"
+      >
+        ← Back to Clothing
+      </a>
+    </div>
+  </header>
+
+  <main class="relative mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <section class="mb-16 pt-8">
+      <div class="grid grid-cols-1 items-start gap-12 lg:grid-cols-2">
+        <div>
+          <ImageCarousel
+            client:load
+            images={listing.galleryPhotos}
+            altPrefix={listing.title}
+          />
+
+          <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="mb-4 text-xl font-bold text-slate-900">Wholesale Details</h2>
+            <dl class="space-y-4 text-sm">
+              <div>
+                <dt class="mb-1 font-semibold text-slate-500 uppercase">Sizes</dt>
+                <dd>
+                  <ul class="flex flex-wrap gap-1.5">
+                    {
+                      listing.sizes.map((size) => (
+                        <li class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600">
+                          {size}
+                        </li>
+                      ))
+                    }
+                  </ul>
+                </dd>
+              </div>
+              {
+                listing.colors && listing.colors.length > 0 && (
+                  <div>
+                    <dt class="mb-1 font-semibold text-slate-500 uppercase">Colors</dt>
+                    <dd>
+                      <ul class="flex flex-wrap gap-1.5">
+                        {listing.colors.map((color) => (
+                          <li class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600">
+                            {color}
+                          </li>
+                        ))}
+                      </ul>
+                    </dd>
+                  </div>
+                )
+              }
+              <div>
+                <dt class="mb-1 font-semibold text-slate-500 uppercase">Material</dt>
+                <dd class="text-slate-900">{listing.material}</dd>
+              </div>
+              {
+                listing.prePackRatio && (
+                  <div>
+                    <dt class="mb-1 font-semibold text-slate-500 uppercase">Pre-pack Ratio</dt>
+                    <dd class="text-slate-900">{listing.prePackRatio}</dd>
+                  </div>
+                )
+              }
+            </dl>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-6">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{listing.brand}</p>
+          <h1 class="text-4xl leading-tight font-bold text-slate-900 md:text-5xl">
+            {listing.title}
+          </h1>
+
+          <div class="inline-block w-max rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
+            <p class="mb-1 text-sm font-semibold tracking-wider text-slate-400 uppercase">
+              Wholesale Price
+            </p>
+            <p class="text-4xl font-bold text-white md:text-5xl">
+              {wholesalePriceFormatter.format(listing.price)}
+            </p>
+          </div>
+
+          <p class="text-lg leading-relaxed text-slate-600">{listing.description}</p>
+
+          {
+            listing.pdfLineSheetUrl && (
+              <a
+                href={listing.pdfLineSheetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex w-max items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-slate-800"
+              >
+                View Line Sheet
+              </a>
+            )
+          }
+        </div>
+      </div>
+    </section>
+
+    <ContactForm
+      client:load
+      vehicleId={listing.id}
+      listingIdKey="clothingListingId"
+      apiEndpoint="/api/clothing-inquiries"
+      sellerId={listing.sellerId}
+      isLoggedIn={buyerContext.isLoggedIn}
+      verificationTier={buyerContext.verificationTier}
+      userEmail={buyerContext.userEmail}
+      userDisplayName={buyerContext.userDisplayName}
+      userPhone={buyerContext.userPhone}
+      loginHref={buyerContext.loginHref}
+    />
+  </main>
+</Layout>
