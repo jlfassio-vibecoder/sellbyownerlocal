@@ -1,8 +1,11 @@
-import type { VehicleResponse } from '../schemas';
+import type { ClothingListing, VehicleResponse } from '../schemas';
 import { resolveHeroImageUrls } from './resolve-display-media';
 import { priceFormatter } from '../utils/formatters';
 
 export const DEFAULT_OG_IMAGE = '/og-default.jpg';
+
+export const CLOTHING_DEFAULT_OG_DESCRIPTION =
+  'Check out this premium apparel item from our catalog.';
 
 export function resolveAbsoluteUrl(pathOrUrl: string, origin: string): string {
   if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
@@ -73,4 +76,18 @@ export function resolveVehicleOgImage(vehicle: VehicleResponse): string | undefi
   if (galleryUrl) return galleryUrl;
 
   return resolveHeroImageUrls(vehicle)[0];
+}
+
+export function buildClothingSeoTitle(listing: ClothingListing): string {
+  return `${listing.title} · ${listing.brand}`;
+}
+
+export function buildClothingSeoDescription(listing: ClothingListing): string {
+  const description = listing.description?.trim();
+  if (description) return truncateDescription(description);
+  return CLOTHING_DEFAULT_OG_DESCRIPTION;
+}
+
+export function resolveClothingOgImage(listing: ClothingListing): string | undefined {
+  return listing.galleryPhotos?.[0] || undefined;
 }

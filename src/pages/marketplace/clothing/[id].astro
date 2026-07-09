@@ -3,6 +3,11 @@ import Layout from '../../../layouts/Layout.astro';
 import { getOptionalSession } from '../../../lib/auth';
 import { getUserProfile } from '../../../lib/buyer-profile';
 import { getClothingListingById } from '../../../lib/clothing-api';
+import {
+  buildClothingSeoDescription,
+  buildClothingSeoTitle,
+  resolveClothingOgImage,
+} from '../../../lib/seo';
 import ImageCarousel from '../../../islands/ImageCarousel';
 import ContactForm from '../../../islands/ContactForm';
 
@@ -24,6 +29,9 @@ const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 2,
 });
 
+const seoTitle = buildClothingSeoTitle(listing);
+const seoDescription = buildClothingSeoDescription(listing);
+const seoImage = resolveClothingOgImage(listing);
 const canonicalUrl = `/marketplace/clothing/${listing.id}`;
 const session = await getOptionalSession(Astro.request, Astro.cookies);
 const profile = session ? await getUserProfile(session.uid) : null;
@@ -39,10 +47,11 @@ const buyerContext = {
 ---
 
 <Layout
-  title={`${listing.title} · ${listing.brand} · Sell By Owner Local`}
-  description={listing.description}
-  ogImage={listing.galleryPhotos[0]}
+  title={`${seoTitle} · Sell By Owner Local`}
+  description={seoDescription}
+  ogImage={seoImage}
   ogUrl={canonicalUrl}
+  ogType="product"
   bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
 >
   <header class="border-b border-slate-200 bg-white">
@@ -131,6 +140,13 @@ const buyerContext = {
           </div>
 
           <p class="text-lg leading-relaxed text-slate-600">{listing.description}</p>
+
+          <a
+            href="#contact"
+            class="inline-flex w-max items-center justify-center rounded-lg bg-red-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-red-700"
+          >
+            Contact Seller
+          </a>
 
           {
             listing.pdfLineSheetUrl && (
