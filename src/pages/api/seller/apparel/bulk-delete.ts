@@ -39,15 +39,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
+    const uniqueIds = [...new Set(parsed.data.ids)];
     const batch = db().batch();
     let deletedCount = 0;
 
-    for (const id of parsed.data.ids) {
+    for (const id of uniqueIds) {
       const ref = db().collection('clothing_listings').doc(id);
       const doc = await ref.get();
 
       if (!doc.exists) {
-        continue;
+        return new Response(JSON.stringify({ error: 'Listing not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
 
       const existingSellerId = doc.data()?.sellerId;
@@ -59,9 +63,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       deletedCount += 1;
     }
 
-    if (deletedCount > 0) {
-      await batch.commit();
-    }
+    await batch.commit();
 
     return new Response(JSON.stringify({ success: true, deletedCount }), {
       status: 200,

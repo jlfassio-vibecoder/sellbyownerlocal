@@ -277,6 +277,8 @@ export default function FilterableApparelGrid({
                   key={item.id}
                   type="button"
                   onClick={() => toggleItemSelection(item.id)}
+                  aria-pressed={isSelected}
+                  aria-label={isSelected ? `Deselect ${item.title}` : `Select ${item.title}`}
                   className={`block w-full overflow-hidden rounded-xl border bg-white text-left shadow-sm transition-colors ${
                     isSelected
                       ? 'border-red-600 ring-2 ring-red-600'
@@ -285,13 +287,14 @@ export default function FilterableApparelGrid({
                 >
                   <div className="relative">
                     <div className="absolute left-3 top-3 z-10">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        readOnly
-                        aria-label={`Select ${item.title}`}
-                        className="h-5 w-5 rounded border-slate-300 text-red-600 focus:ring-red-600"
-                      />
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-5 w-5 items-center justify-center rounded border bg-white text-xs font-bold ${
+                          isSelected ? 'border-red-600 text-red-600' : 'border-slate-300 text-transparent'
+                        }`}
+                      >
+                        ✓
+                      </span>
                     </div>
                     <ApparelCardContent item={item} isSellerView={isSellerView} />
                   </div>
@@ -313,12 +316,14 @@ export default function FilterableApparelGrid({
       )}
 
       {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="bulk-delete-title"
-        >
+        <>
+          {/* Copilot suggestion ignored: aria-describedby is not used elsewhere in this codebase and the dialog title already conveys the action. */}
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-delete-title"
+          >
           <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white shadow-xl">
             <div className="border-b border-slate-200 px-6 py-4">
               <h2 id="bulk-delete-title" className="text-lg font-bold text-slate-900">
@@ -367,6 +372,7 @@ export default function FilterableApparelGrid({
             </div>
           </div>
         </div>
+        </>
       )}
 
       {toast && (
