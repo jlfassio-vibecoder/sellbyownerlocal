@@ -801,22 +801,34 @@ export type MessageCreate = z.infer<typeof MessageCreateSchema>;
 export type UserResponse = z.infer<typeof UserResponseSchema>;
 export type VehicleResponse = z.infer<typeof VehicleResponseSchema>;
 
-export const ClothingListingStatusSchema = z.enum(['active', 'archived']);
+export const ClothingListingStatusSchema = z.enum(['draft', 'active', 'archived']);
+
+const lineSheetUrl = z.string().refine((value) => {
+  if (value.startsWith('gs://')) return true;
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}, { message: 'Line sheet URL must use http, https, or gs://' });
 
 export const ClothingListingSchema = z.object({
   id: z.string(),
   title: z.string().min(1),
   brand: z.string().min(1),
-  price: z.number().positive(),
+  // Gemini catalog extraction often omits wholesale price (0) until the seller edits.
+  price: z.number().nonnegative(),
   description: z.string().min(1),
   sizes: z.array(z.string().min(1)),
-  material: z.string().min(1),
+  // Material may be blank on AI-extracted drafts.
+  material: z.string(),
   galleryPhotos: z.array(httpHttpsUrl),
   createdAt: z.coerce.date(),
   status: ClothingListingStatusSchema,
   sellerId: z.string().min(1),
   prePackRatio: z.string().optional(),
-  pdfLineSheetUrl: httpHttpsUrl.optional(),
+  pdfLineSheetUrl: lineSheetUrl.optional(),
   colors: z.array(z.string().min(1)).optional(),
 });
 
@@ -828,6 +840,9 @@ export const ClothingListingCreateSchema = ClothingListingSchema.omit({
   sellerId: true,
   createdAt: true,
   status: true,
+}).extend({
+  price: z.number().positive(),
+  material: z.string().min(1),
 });
 
 export const ClothingListingUpdateSchema = ClothingListingSchema.omit({

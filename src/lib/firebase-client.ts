@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { getStorage } from 'firebase/storage';
 
 function getRequiredEnv(name: string): string {
   const value = import.meta.env[name];
@@ -17,8 +18,10 @@ const firebaseConfig = {
   projectId: getRequiredEnv('PUBLIC_FIREBASE_PROJECT_ID'),
   appId: getRequiredEnv('PUBLIC_FIREBASE_APP_ID'),
   messagingSenderId: getRequiredEnv('PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
+  storageBucket: getRequiredEnv('PUBLIC_FIREBASE_STORAGE_BUCKET'),
 };
 
 const app = getApps().length > 0 ? getApps()[0]! : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
+export const storage = getStorage(app);

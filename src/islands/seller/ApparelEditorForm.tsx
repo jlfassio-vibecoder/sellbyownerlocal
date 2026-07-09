@@ -18,7 +18,7 @@ export interface ApparelEditorInitialData {
   prePackRatio?: string;
   pdfLineSheetUrl?: string;
   galleryPhotos: string[];
-  status: 'active' | 'archived';
+  status: 'draft' | 'active' | 'archived';
 }
 
 interface ApparelEditorFormProps {
