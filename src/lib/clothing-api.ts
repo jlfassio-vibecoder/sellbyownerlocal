@@ -1,4 +1,5 @@
 import { db } from './firebase-admin';
+import { z } from 'zod';
 import { ClothingListingSchema, type ClothingListing } from '../schemas';
 
 function toCreatedAt(value: unknown): Date | undefined {
@@ -27,7 +28,7 @@ export async function getClothingInventory(): Promise<ClothingListing[]> {
   return snapshot.docs.flatMap((doc) => {
     const parsed = mapClothingDoc(doc.id, doc.data() as Record<string, unknown>);
     if (!parsed.success && import.meta.env.DEV) {
-      console.error(`Clothing ${doc.id} skipped (validation failed):`, parsed.error.flatten());
+      console.error(`Clothing ${doc.id} skipped (validation failed):`, z.flattenError(parsed.error));
     }
     return parsed.success ? [parsed.data] : [];
   });
@@ -44,7 +45,7 @@ export async function getClothingListingById(id: string): Promise<ClothingListin
 
   if (!parsed.success) {
     if (import.meta.env.DEV) {
-      console.error(`Clothing ${id} failed validation:`, parsed.error.flatten());
+      console.error(`Clothing ${id} failed validation:`, z.flattenError(parsed.error));
     }
     return null;
   }
@@ -57,19 +58,50 @@ export async function getClothingListingById(id: string): Promise<ClothingListin
 }
 
 export async function getApparelCatalogForSeller(sellerId: string): Promise<ClothingListing[]> {
-  const snapshot = await db()
-    .collection('clothing_listings')
-    .where('sellerId', '==', sellerId)
-    .orderBy('createdAt', 'desc')
-    .get();
+  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? '(default)';
+  let snapshot;
 
-  return snapshot.docs.flatMap((doc) => {
-    const parsed = mapClothingDoc(doc.id, doc.data() as Record<string, unknown>);
-    if (!parsed.success && import.meta.env.DEV) {
-      console.error(`Clothing ${doc.id} skipped (validation failed):`, parsed.error.flatten());
+  try {
+    snapshot = await db()
+      .collection('clothing_listings')
+      .where('sellerId', '==', sellerId)
+      .orderBy('createdAt', 'desc')
+      .get();
+  } catch (error) {
+    console.error(
+      `getApparelCatalogForSeller compound query failed (db=${databaseId}, sellerId=${sellerId}):`,
+      error
+    );
+    try {
+      snapshot = await db().collection('clothing_listings').where('sellerId', '==', sellerId).get();
+      console.warn(
+        'getApparelCatalogForSeller fell back to sellerId-only query (sort in memory). Check Firestore indexes if this persists.'
+      );
+    } catch (fallbackError) {
+      console.error(
+        `getApparelCatalogForSeller fallback query failed (db=${databaseId}, sellerId=${sellerId}):`,
+        fallbackError
+      );
+      throw fallbackError;
     }
-    return parsed.success ? [parsed.data] : [];
+  }
+
+  const listings = snapshot.docs.flatMap((doc) => {
+    const parsed = mapClothingDoc(doc.id, doc.data() as Record<string, unknown>);
+    if (!parsed.success) {
+      if (import.meta.env.DEV) {
+        console.error(
+          `Clothing ${doc.id} skipped (validation failed, db=${databaseId}):`,
+          z.flattenError(parsed.error)
+        );
+      }
+      return [];
+    }
+    return [parsed.data];
   });
+
+  listings.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  return listings;
 }
 
 export async function getApparelListingForSellerById(
@@ -86,7 +118,7 @@ export async function getApparelListingForSellerById(
 
   if (!parsed.success) {
     if (import.meta.env.DEV) {
-      console.error(`Clothing ${id} failed validation:`, parsed.error.flatten());
+      console.error(`Clothing ${id} failed validation:`, z.flattenError(parsed.error));
     }
     return null;
   }

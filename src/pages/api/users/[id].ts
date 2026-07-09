@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import {
   AuthError,
   ForbiddenError,
@@ -38,7 +39,7 @@ export const GET: APIRoute = async ({ params }) => {
     });
 
     if (!parsed.success) {
-      console.error('User document failed validation', id, parsed.error.flatten());
+      console.error('User document failed validation', id, z.flattenError(parsed.error));
       return new Response(JSON.stringify({ error: 'Invalid user data' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
@@ -88,7 +89,7 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
       return new Response(
         JSON.stringify({
           error: 'Validation failed',
-          details: parsed.error.flatten().fieldErrors,
+          details: z.flattenError(parsed.error).fieldErrors,
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );

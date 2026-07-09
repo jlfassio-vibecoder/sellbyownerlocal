@@ -10,6 +10,7 @@
     "build": "astro build",
     "check": "astro check",
     "preview": "astro preview",
+    "verify:firebase": "node --env-file=.env scripts/verify-firebase-cli.mjs",
     "astro": "astro"
   },
   "dependencies": {

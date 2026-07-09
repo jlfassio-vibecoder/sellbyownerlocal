@@ -1,4 +1,5 @@
 import { db } from './firebase-admin';
+import { z } from 'zod';
 import { resolveHeroImageUrls } from './resolve-display-media';
 import { VehicleResponseSchema, type VehicleResponse } from '../schemas';
 import type { InventoryVehicle } from '../types/inventory-vehicle';
@@ -35,7 +36,7 @@ export async function getPublishedInventory(): Promise<InventoryVehicle[]> {
   return snapshot.docs.flatMap((doc) => {
     const parsed = mapVehicleDoc(doc.id, doc.data() as Record<string, unknown>);
     if (!parsed.success && import.meta.env.DEV) {
-      console.error(`Vehicle ${doc.id} skipped (validation failed):`, parsed.error.flatten());
+      console.error(`Vehicle ${doc.id} skipped (validation failed):`, z.flattenError(parsed.error));
     }
     return parsed.success ? [toInventoryVehicle(parsed.data)] : [];
   });

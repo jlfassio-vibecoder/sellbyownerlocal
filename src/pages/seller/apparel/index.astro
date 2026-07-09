@@ -3,6 +3,8 @@ import type { ClothingListing } from '../../../schemas';
 import { requireSellerOrRedirect } from '../../../lib/auth';
 import { getApparelCatalogForSeller } from '../../../lib/clothing-api';
 import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
+import CatalogUploader from '../../../islands/seller/CatalogUploader';
+import BulkImageUploader from '../../../islands/seller/BulkImageUploader';
 import '../../../styles/global.css';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
@@ -17,11 +19,13 @@ const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
 });
 
 const statusStyles: Record<ClothingListing['status'], string> = {
+  draft: 'bg-amber-100 text-amber-800',
   active: 'bg-green-100 text-green-800',
   archived: 'bg-slate-100 text-slate-700',
 };
 
 const statusLabels: Record<ClothingListing['status'], string> = {
+  draft: 'Draft',
   active: 'Active',
   archived: 'Archived',
 };
@@ -52,6 +56,10 @@ const statusLabels: Record<ClothingListing['status'], string> = {
               Add Catalog Item
             </a>
           </div>
+
+          <CatalogUploader client:load sellerId={seller.uid} />
+
+          <BulkImageUploader client:load sellerId={seller.uid} />
 
           {
             catalog.length === 0 ? (

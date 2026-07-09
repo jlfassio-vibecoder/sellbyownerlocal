@@ -36,7 +36,7 @@ export const VerificationTierSchema = z.enum([
 export const KycStatusSchema = z.object({
   provider: z.enum(['stripe_identity', 'persona', 'keysavvy', 'caramel']),
   status: z.enum(['pending', 'verified', 'failed']),
-  verifiedAt: z.string().datetime().optional(),
+  verifiedAt: z.iso.datetime().optional(),
   externalId: z.string().optional(),
 });
 
@@ -45,7 +45,7 @@ export const UserSchema = z.object({
   stats: UserStatsSchema,
   verificationTier: VerificationTierSchema.default('anonymous'),
   phone: z.string().optional(),
-  phoneVerifiedAt: z.string().datetime().optional(),
+  phoneVerifiedAt: z.iso.datetime().optional(),
   kyc: KycStatusSchema.optional(),
 });
 
@@ -233,7 +233,7 @@ export const AiGenerationSchema = z.object({
   status: z.enum(['text_complete', 'complete', 'failed', 'partial']),
   source: z.enum(['vin', 'sticker']),
   model: z.string().min(1),
-  generatedAt: z.string().datetime(),
+  generatedAt: z.iso.datetime(),
 });
 
 export const DealerProspectSchema = z.object({
@@ -363,7 +363,7 @@ export const InquirySchema = z.object({
   sellerId: z.string().min(1),
   name: z.string().min(1).max(100),
   phone: z.string().min(1).max(30),
-  email: z.string().email().max(200),
+  email: z.email().max(200),
   message: z.string().max(2000).optional().or(z.literal('')),
   buyerUid: z.string().min(1).optional(),
   verificationTier: VerificationTierSchema.optional(),
@@ -371,7 +371,7 @@ export const InquirySchema = z.object({
 
 export const InquiryRecordSchema = InquirySchema.extend({
   id: z.string(),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
 });
 
 export const PitchBlockSchema = z.object({
@@ -588,13 +588,13 @@ export const ListingEventCreateSchema = z.object({
 
 export const ListingEventSchema = ListingEventCreateSchema.extend({
   sessionId: z.string().min(1),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
 });
 
 export const SavedVehicleSchema = z.object({
   vehicleId: z.string().min(1),
   buyerUid: z.string().min(1),
-  savedAt: z.string().datetime(),
+  savedAt: z.iso.datetime(),
 });
 
 export const SavedVehicleToggleResponseSchema = z.object({
@@ -646,8 +646,8 @@ export const ListingAnalyticsPhotosSchema = z.object({
 export const ListingAnalyticsResponseSchema = z.object({
   vehicleId: z.string().min(1),
   range: ListingAnalyticsRangeSchema,
-  since: z.string().datetime(),
-  until: z.string().datetime(),
+  since: z.iso.datetime(),
+  until: z.iso.datetime(),
   summary: ListingAnalyticsSummarySchema,
   sections: z.array(ListingAnalyticsSectionSchema),
   daily: z.array(ListingAnalyticsDailySchema),
@@ -660,7 +660,7 @@ export const MessageSchema = z.object({
   vehicleId: z.string().min(1),
   sender: z.enum(['buyer', 'seller']),
   content: z.string().min(1).max(2000),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
   isRead: z.number().int().min(0).max(1).optional(),
   buyerUid: z.string().min(1).optional(),
   buyerPhoneLast4: z.string().length(4).optional(),
@@ -696,7 +696,7 @@ export const VehicleSchema = z.object({
   location: VehicleLocationSchema,
   tags: z.array(z.string()),
   vin: vinString.optional(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   specs: VehicleSpecsSchema,
   features: z.array(z.string().min(1)).min(1),
   highlights: z.array(VehicleHighlightSchema).max(4).optional(),
@@ -801,22 +801,34 @@ export type MessageCreate = z.infer<typeof MessageCreateSchema>;
 export type UserResponse = z.infer<typeof UserResponseSchema>;
 export type VehicleResponse = z.infer<typeof VehicleResponseSchema>;
 
-export const ClothingListingStatusSchema = z.enum(['active', 'archived']);
+export const ClothingListingStatusSchema = z.enum(['draft', 'active', 'archived']);
+
+const lineSheetUrl = z.string().refine((value) => {
+  if (value.startsWith('gs://')) return true;
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}, { message: 'Line sheet URL must use http, https, or gs://' });
 
 export const ClothingListingSchema = z.object({
   id: z.string(),
   title: z.string().min(1),
   brand: z.string().min(1),
-  price: z.number().positive(),
+  // Gemini catalog extraction often omits wholesale price (0) until the seller edits.
+  price: z.number().nonnegative(),
   description: z.string().min(1),
   sizes: z.array(z.string().min(1)),
-  material: z.string().min(1),
+  // Material may be blank on AI-extracted drafts.
+  material: z.string(),
   galleryPhotos: z.array(httpHttpsUrl),
   createdAt: z.coerce.date(),
   status: ClothingListingStatusSchema,
   sellerId: z.string().min(1),
   prePackRatio: z.string().optional(),
-  pdfLineSheetUrl: httpHttpsUrl.optional(),
+  pdfLineSheetUrl: lineSheetUrl.optional(),
   colors: z.array(z.string().min(1)).optional(),
 });
 
@@ -828,6 +840,9 @@ export const ClothingListingCreateSchema = ClothingListingSchema.omit({
   sellerId: true,
   createdAt: true,
   status: true,
+}).extend({
+  price: z.number().positive(),
+  material: z.string().min(1),
 });
 
 export const ClothingListingUpdateSchema = ClothingListingSchema.omit({
@@ -844,7 +859,7 @@ export const ClothingInquirySchema = z.object({
   sellerId: z.string().min(1),
   name: z.string().min(1).max(100),
   phone: z.string().min(1).max(30),
-  email: z.string().email().max(200),
+  email: z.email().max(200),
   message: z.string().max(2000).optional().or(z.literal('')),
 });
 

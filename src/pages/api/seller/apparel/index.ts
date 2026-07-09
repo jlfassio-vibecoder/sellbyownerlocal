@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { AuthError, requireSeller, unauthorizedResponse } from '../../../../lib/auth';
 import { db } from '../../../../lib/firebase-admin';
 import { ClothingListingCreateSchema } from '../../../../schemas';
@@ -23,7 +24,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response(
         JSON.stringify({
           error: 'Validation failed',
-          details: parsed.error.flatten().fieldErrors,
+          details: z.flattenError(parsed.error).fieldErrors,
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );

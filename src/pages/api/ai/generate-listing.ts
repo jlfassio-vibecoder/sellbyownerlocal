@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import {
   AuthError,
   ForbiddenError,
@@ -84,7 +85,7 @@ function resolveEnrichedMonroney(
     return parsed.data;
   }
 
-  console.warn('Enriched monroney failed validation; saving core fields only', parsed.error.flatten());
+  console.warn('Enriched monroney failed validation; saving core fields only', z.flattenError(parsed.error));
 
   const minimal = MonroneySchema.safeParse({
     baseMsrp: raw.baseMsrp,
@@ -120,7 +121,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response(
         JSON.stringify({
           error: 'Validation failed',
-          details: parsed.error.flatten().fieldErrors,
+          details: z.flattenError(parsed.error).fieldErrors,
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
@@ -212,7 +213,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
       const vehicleParsed = VehicleSchema.safeParse(vehicleData);
       if (!vehicleParsed.success) {
-        console.error('Generated vehicle failed validation', vehicleParsed.error.flatten());
+        console.error('Generated vehicle failed validation', z.flattenError(vehicleParsed.error));
         return jsonError('AI output failed validation', 502);
       }
 

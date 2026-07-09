@@ -4,5 +4,21 @@
       "database": "ai-studio-ram1500-a6aad1c3-783c-48e0-a179-f80c48018571",
       "indexes": "firestore.indexes.json"
     }
+  ],
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
   ]
 }
