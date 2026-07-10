@@ -4,11 +4,13 @@ import type { BuyerSaveContext } from '../../components/buyer/VehicleCard';
 
 interface ClothingInventoryGridProps {
   initialListings: ClothingListing[];
+  storefrontSegmentsBySellerId: Record<string, string>;
   buyerContext?: BuyerSaveContext;
 }
 
 export default function ClothingInventoryGrid({
   initialListings,
+  storefrontSegmentsBySellerId,
   buyerContext,
 }: ClothingInventoryGridProps) {
   return (
@@ -18,7 +20,14 @@ export default function ClothingInventoryGrid({
       </p>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {initialListings.map((listing) => (
-          <ClothingCard key={listing.id} listing={listing} buyerContext={buyerContext} />
+          <ClothingCard
+            key={listing.id}
+            listing={listing}
+            storefrontSegment={
+              storefrontSegmentsBySellerId[listing.sellerId] ?? listing.sellerId
+            }
+            buyerContext={buyerContext}
+          />
         ))}
       </div>
     </main>

@@ -138,6 +138,38 @@ export async function getStorefrontSegmentForSeller(sellerId: string): Promise<s
   });
 }
 
+/** Batch-resolve canonical storefront path segments for many seller IDs. */
+export async function resolveStorefrontSegmentsForSellerIds(
+  sellerIds: string[]
+): Promise<Record<string, string>> {
+  const uniqueIds = [...new Set(sellerIds.filter(Boolean))];
+  const result: Record<string, string> = {};
+
+  if (uniqueIds.length === 0) return result;
+
+  const refs = uniqueIds.map((id) => db().collection('users').doc(id));
+  const snaps = await db().getAll(...refs);
+
+  for (const snap of snaps) {
+    if (!snap.exists) {
+      result[snap.id] = snap.id;
+      continue;
+    }
+    const data = snap.data();
+    const storefrontSlug =
+      typeof data?.storefrontSlug === 'string' ? data.storefrontSlug : undefined;
+    result[snap.id] = resolveStorefrontSegment({ id: snap.id, storefrontSlug });
+  }
+
+  for (const id of uniqueIds) {
+    if (!(id in result)) {
+      result[id] = id;
+    }
+  }
+
+  return result;
+}
+
 export async function isStorefrontSlugAvailable(
   slug: string,
   callerUid?: string

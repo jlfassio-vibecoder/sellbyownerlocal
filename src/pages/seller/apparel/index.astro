@@ -7,12 +7,17 @@ import CatalogUploader from '../../../islands/seller/CatalogUploader';
 import BulkImageUploader from '../../../islands/seller/BulkImageUploader';
 import ApparelCatalogSection from '../../../islands/seller/ApparelCatalogSection';
 import type { ApparelFilterItem } from '../../../lib/apparel';
+import { resolveStorefrontSegment } from '../../../utils/url-helpers';
 import '../../../styles/global.css';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
 
 const profile = await getUserProfile(seller.uid);
+const storefrontSegment = resolveStorefrontSegment({
+  id: seller.uid,
+  storefrontSlug: profile?.storefrontSlug,
+});
 const catalog = await getApparelCatalogForSeller(seller.uid);
 
 const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
@@ -66,7 +71,11 @@ const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
 
           <BulkImageUploader client:load sellerId={seller.uid} />
 
-          <ApparelCatalogSection client:load initialItems={initialItems} />
+          <ApparelCatalogSection
+            client:load
+            initialItems={initialItems}
+            storefrontSegment={storefrontSegment}
+          />
         </div>
       </div>
     </ApparelSellerLayout>
