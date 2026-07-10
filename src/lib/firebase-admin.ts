@@ -48,7 +48,10 @@ function initAdmin(): App {
     );
   }
 
-  const formattedPrivateKey = rawPrivateKey.replace(/\\n/g, '\n');
+  // Strip wrapping quotes (if they exist) and replace literal \n strings with actual line breaks
+  const formattedPrivateKey = rawPrivateKey
+    .replace(/^"|"$/g, '')
+    .replace(/\\n/g, '\n');
   const storageBucket = resolveStorageBucket(projectId);
 
   return initializeApp({
