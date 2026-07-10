@@ -32,8 +32,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const ref = db().collection('clothing_listings').doc();
 
+    const listingData = Object.fromEntries(
+      Object.entries(parsed.data).filter(([, value]) => value !== undefined)
+    );
+
     await ref.set({
-      ...parsed.data,
+      ...listingData,
       sellerId: session.uid,
       status: 'active',
       createdAt: new Date().toISOString(),

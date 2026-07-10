@@ -10,6 +10,7 @@ interface LineSheetPdfUploaderProps {
   itemId?: string;
   value: string;
   onChange: (url: string) => void;
+  pdfDefaultPage?: number;
   disabled?: boolean;
 }
 
@@ -52,12 +53,21 @@ async function uploadLineSheetPdf(
   return getDownloadURL(task.snapshot.ref);
 }
 
-/** Persist pdfLineSheetUrl on the listing so the buyer DocumentViewer can render it. */
-async function persistPdfLineSheetUrl(itemId: string, pdfLineSheetUrl: string): Promise<void> {
+/** Persist catalog PDF URL (and optional default page) so the buyer DocumentViewer can render it. */
+async function persistPdfLineSheetUrl(
+  itemId: string,
+  pdfLineSheetUrl: string,
+  pdfDefaultPage?: number
+): Promise<void> {
+  const body: { pdfLineSheetUrl: string; pdfDefaultPage?: number } = { pdfLineSheetUrl };
+  if (pdfDefaultPage != null && pdfDefaultPage >= 1) {
+    body.pdfDefaultPage = pdfDefaultPage;
+  }
+
   const res = await fetch(`/api/seller/apparel/${encodeURIComponent(itemId)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pdfLineSheetUrl }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -73,6 +83,7 @@ export default function LineSheetPdfUploader({
   itemId,
   value,
   onChange,
+  pdfDefaultPage,
   disabled = false,
 }: LineSheetPdfUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -115,7 +126,7 @@ export default function LineSheetPdfUploader({
 
       // Buyer page reads listing.pdfLineSheetUrl from Firestore — persist immediately when editing.
       if (trimmedItemId) {
-        await persistPdfLineSheetUrl(trimmedItemId, url);
+        await persistPdfLineSheetUrl(trimmedItemId, url, pdfDefaultPage);
         setSavedHint('Saved to listing — visible on the public item page.');
       } else {
         setSavedHint('PDF attached — click Create Catalog Item to save it with the listing.');

@@ -140,7 +140,8 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="mx-auto max-w-2xl space-y-6">
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
@@ -285,6 +286,7 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
         itemId={initialData?.id}
         value={pdfLineSheetUrl}
         onChange={setPdfLineSheetUrl}
+        pdfDefaultPage={resolvedDefaultPage}
         disabled={isSubmitting}
       />
 
@@ -306,9 +308,10 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
           Buyers open the catalog at this page. Change it and check the preview below.
         </p>
       </div>
+      </div>
 
       {pdfLineSheetUrl.trim() && initialData?.id ? (
-        <div className="space-y-2">
+        <div className="w-full space-y-2">
           <p className="text-sm font-medium text-slate-700">Catalog Preview</p>
           <DocumentViewer
             title="Brand Catalog Preview"
@@ -320,6 +323,7 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
         </div>
       ) : null}
 
+      <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <p className="mb-1 block text-sm font-medium text-slate-700">Gallery Photos</p>
         <BasicMultiUploader
@@ -341,6 +345,7 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
             ? 'Save Changes'
             : 'Create Catalog Item'}
       </button>
+      </div>
     </form>
   );
 }
