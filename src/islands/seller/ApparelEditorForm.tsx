@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import BasicMultiUploader from './BasicMultiUploader';
+import LineSheetPdfUploader from './LineSheetPdfUploader';
 
 const INPUT_CLASS =
   'w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none transition-all text-slate-900';
@@ -266,20 +267,13 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
         />
       </div>
 
-      <div>
-        <label htmlFor="pdfLineSheetUrl" className="mb-1 block text-sm font-medium text-slate-700">
-          PDF Line Sheet URL
-        </label>
-        <input
-          id="pdfLineSheetUrl"
-          type="url"
-          placeholder="https://..."
-          value={pdfLineSheetUrl}
-          onChange={(e) => setPdfLineSheetUrl(e.target.value)}
-          className={INPUT_CLASS}
-          disabled={isSubmitting}
-        />
-      </div>
+      <LineSheetPdfUploader
+        sellerId={sellerId}
+        itemId={initialData?.id}
+        value={pdfLineSheetUrl}
+        onChange={setPdfLineSheetUrl}
+        disabled={isSubmitting}
+      />
 
       <div>
         <p className="mb-1 block text-sm font-medium text-slate-700">Gallery Photos</p>
