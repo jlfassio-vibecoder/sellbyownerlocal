@@ -25,10 +25,39 @@ function resolveStorageBucket(projectId?: string, serviceAccountBucket?: string)
   return storageBucket;
 }
 
+function formatPrivateKey(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  return raw.replace(/\\n/g, '\n');
+}
+
+function getCertFromEnvVars():
+  | { projectId: string; clientEmail: string; privateKey: string }
+  | null {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = formatPrivateKey(process.env.FIREBASE_PRIVATE_KEY);
+
+  if (!projectId || !clientEmail || !privateKey) {
+    return null;
+  }
+
+  return { projectId, clientEmail, privateKey };
+}
+
 function initAdmin(): App {
   if (getApps().length > 0) return getApps()[0]!;
 
   const projectId = process.env.FIREBASE_PROJECT_ID;
+
+  const envCert = getCertFromEnvVars();
+  if (envCert) {
+    const storageBucket = resolveStorageBucket(envCert.projectId);
+    return initializeApp({
+      credential: cert(envCert),
+      projectId: envCert.projectId,
+      storageBucket,
+    });
+  }
 
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
@@ -40,7 +69,7 @@ function initAdmin(): App {
     });
   }
 
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.K_SERVICE) {
+  if (process.env.K_SERVICE) {
     const storageBucket = resolveStorageBucket(projectId);
     return initializeApp({
       credential: applicationDefault(),
@@ -50,7 +79,7 @@ function initAdmin(): App {
   }
 
   throw new Error(
-    'Missing Firebase Admin credentials. Set GOOGLE_APPLICATION_CREDENTIALS, FIREBASE_SERVICE_ACCOUNT_JSON, or deploy to Cloud Run with a service account that has Firebase access.'
+    'Missing Firebase Admin credentials. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY, FIREBASE_SERVICE_ACCOUNT_JSON, or deploy to Cloud Run with a service account that has Firebase access.'
   );
 }
 
