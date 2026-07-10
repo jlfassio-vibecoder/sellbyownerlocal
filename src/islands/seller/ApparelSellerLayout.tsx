@@ -12,6 +12,7 @@ import {
   Users,
 } from 'lucide-react';
 import { auth } from '../../lib/firebase-client';
+import { getStorefrontPath } from '../../utils/url-helpers';
 import MobileDrawer from '../MobileDrawer';
 
 export type ApparelNav = 'catalog' | 'inquiries';
@@ -19,6 +20,7 @@ export type ApparelNav = 'catalog' | 'inquiries';
 interface ApparelSellerLayoutProps {
   activeNav: ApparelNav;
   sellerUid: string;
+  storefrontSlug?: string;
   inquiryCount?: number;
   children: ReactNode;
 }
@@ -61,9 +63,33 @@ function SellerUidBadge({
   );
 }
 
+function StorefrontUrlBadge({ storefrontSlug }: { storefrontSlug?: string }) {
+  if (storefrontSlug) {
+    const path = getStorefrontPath(storefrontSlug);
+    return (
+      <div className="min-w-0" aria-label="Storefront URL">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-red-400">Storefront</p>
+        <p className="mt-0.5 truncate font-mono text-xs text-slate-200" title={path}>
+          {path}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <a
+      href="/account"
+      className="text-xs font-medium text-slate-400 underline-offset-2 transition-colors hover:text-white hover:underline"
+    >
+      Claim storefront URL
+    </a>
+  );
+}
+
 export default function ApparelSellerLayout({
   activeNav,
   sellerUid,
+  storefrontSlug,
   inquiryCount = 0,
   children,
 }: ApparelSellerLayoutProps) {
@@ -133,11 +159,10 @@ export default function ApparelSellerLayout({
           <nav className="flex items-center gap-2">{navLinks}</nav>
 
           <div className="flex shrink-0 items-center gap-4 text-sm text-slate-300">
-            <SellerUidBadge
-              uid={sellerUid}
-              onCopy={copyUid}
-              className="hidden max-w-[160px] md:block lg:max-w-[200px]"
-            />
+            <div className="hidden min-w-0 flex-col gap-2 md:flex lg:max-w-[220px]">
+              <SellerUidBadge uid={sellerUid} onCopy={copyUid} className="max-w-full" />
+              <StorefrontUrlBadge storefrontSlug={storefrontSlug} />
+            </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 size={16} className="text-green-500" />
               System Online
@@ -223,7 +248,10 @@ export default function ApparelSellerLayout({
         </a>
 
         <div className="mt-6 border-t border-slate-700 pt-6">
-          <SellerUidBadge uid={sellerUid} onCopy={copyUid} className="mb-4 px-1" />
+          <SellerUidBadge uid={sellerUid} onCopy={copyUid} className="mb-3 px-1" />
+          <div className="mb-4 px-1">
+            <StorefrontUrlBadge storefrontSlug={storefrontSlug} />
+          </div>
           <a
             href="/account"
             className="mb-2 flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"

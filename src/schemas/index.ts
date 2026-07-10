@@ -40,6 +40,12 @@ export const KycStatusSchema = z.object({
   externalId: z.string().optional(),
 });
 
+export const StorefrontSlugSchema = z
+  .string()
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  .min(3)
+  .max(48);
+
 export const UserSchema = z.object({
   displayName: z.string().min(1).max(100),
   stats: UserStatsSchema,
@@ -47,6 +53,9 @@ export const UserSchema = z.object({
   phone: z.string().optional(),
   phoneVerifiedAt: z.iso.datetime().optional(),
   kyc: KycStatusSchema.optional(),
+  storefrontSlug: StorefrontSlugSchema.optional(),
+  storefrontSlugUpdatedAt: z.coerce.date().optional(),
+  previousStorefrontSlugs: z.array(z.string()).optional(),
 });
 
 export const PublicUserResponseSchema = z.object({
@@ -54,10 +63,12 @@ export const PublicUserResponseSchema = z.object({
   displayName: z.string().min(1).max(100),
   stats: UserStatsSchema,
   verificationTier: VerificationTierSchema.default('anonymous'),
+  storefrontSlug: StorefrontSlugSchema.optional(),
 });
 
 export const UserProfileUpdateSchema = z.object({
   displayName: z.string().min(1).max(100),
+  storefrontSlug: StorefrontSlugSchema.optional(),
 });
 
 export const PhoneVerifyRequestSchema = z.object({
