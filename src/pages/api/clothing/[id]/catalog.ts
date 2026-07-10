@@ -20,7 +20,7 @@ export const GET: APIRoute = async ({ params }) => {
       return new Response('Brand catalog not found', { status: 404 });
     }
 
-    return await streamClothingCatalogFile(catalogUrl);
+    return await streamClothingCatalogFile(catalogUrl, listing.sellerId);
   } catch (error) {
     console.error(`GET /api/clothing/${id}/catalog failed`, error);
     return new Response('Failed to load brand catalog', { status: 500 });
