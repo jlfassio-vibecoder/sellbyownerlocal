@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Copy,
   Globe,
+  LayoutGrid,
   LogOut,
   Menu,
   Shirt,
@@ -108,6 +109,10 @@ export default function ApparelSellerLayout({
 
   const navLinks = (
     <>
+      <a href="/seller" className={navLinkClass(false)}>
+        <LayoutGrid size={16} />
+        Dashboards
+      </a>
       <a href="/seller/apparel" className={navLinkClass(activeNav === 'catalog')}>
         My Catalog
       </a>
@@ -181,6 +186,14 @@ export default function ApparelSellerLayout({
         ariaLabel="Apparel dashboard menu"
       >
         <div className="flex flex-col space-y-2 text-sm font-medium">
+          <a
+            href="/seller"
+            className="w-full text-left flex items-center gap-2 rounded-lg px-4 py-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+            onClick={() => setIsDrawerOpen(false)}
+          >
+            <LayoutGrid size={16} />
+            Dashboards
+          </a>
           <a
             href="/seller/apparel"
             className={`w-full text-left ${navLinkClass(activeNav === 'catalog')}`}

@@ -68,6 +68,14 @@ function PasswordField({
   );
 }
 
+function resolvePostLoginPath(): string {
+  const next = new URLSearchParams(window.location.search).get('next');
+  if (next && /^\/[a-zA-Z0-9\-\/]/.test(next)) {
+    return next;
+  }
+  return '/seller';
+}
+
 async function exchangeSessionAndRedirect(): Promise<void> {
   const idToken = await auth.currentUser?.getIdToken();
   if (!idToken) {
@@ -85,7 +93,7 @@ async function exchangeSessionAndRedirect(): Promise<void> {
     throw new Error(data.error || 'Failed to establish session');
   }
 
-  window.location.href = '/account';
+  window.location.href = resolvePostLoginPath();
 }
 
 function getFirebaseErrorMessage(error: unknown, mode: AuthMode): string {

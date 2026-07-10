@@ -163,7 +163,7 @@ export async function requireDealer(
 export async function requireDealerOrRedirect(
   request: Request,
   cookies: AstroCookies,
-  loginPath = '/login'
+  loginPath?: string
 ): Promise<UserSession | Response> {
   try {
     return await requireDealer(request, cookies);
@@ -171,19 +171,25 @@ export async function requireDealerOrRedirect(
     if (error instanceof ForbiddenError) {
       return forbiddenResponse('Dealer access required');
     }
-    return Response.redirect(new URL(loginPath, request.url), 302);
+    const url = new URL(request.url);
+    const destination =
+      loginPath ?? `/login?next=${encodeURIComponent(url.pathname + url.search)}`;
+    return Response.redirect(new URL(destination, request.url), 302);
   }
 }
 
 export async function requireSellerOrRedirect(
   request: Request,
   cookies: AstroCookies,
-  loginPath = '/login'
+  loginPath?: string
 ): Promise<UserSession | Response> {
   try {
     return await requireSeller(request, cookies);
   } catch {
-    return Response.redirect(new URL(loginPath, request.url), 302);
+    const url = new URL(request.url);
+    const destination =
+      loginPath ?? `/login?next=${encodeURIComponent(url.pathname + url.search)}`;
+    return Response.redirect(new URL(destination, request.url), 302);
   }
 }
 
