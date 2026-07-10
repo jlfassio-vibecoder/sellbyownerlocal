@@ -10,6 +10,7 @@
     "build": "astro build",
     "check": "astro check",
     "preview": "astro preview",
+    "test": "tsx --test src/lib/favorites-client.test.ts",
     "verify:firebase": "node --env-file=.env scripts/verify-firebase-cli.mjs",
     "astro": "astro"
   },
@@ -32,6 +33,7 @@
     "lucide-react": "^1.23.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-easy-crop": "^6.2.2",
     "react-hook-form": "^7.81.0",
     "react-is": "^19.2.7",
     "recharts": "^3.9.1",
@@ -42,6 +44,7 @@
   "devDependencies": {
     "@astrojs/check": "0.9.9",
     "ajv": "^8.20.0",
+    "tsx": "^4.23.0",
     "typescript": "^6.0.3"
   },
   "overrides": {

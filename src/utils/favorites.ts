@@ -1,25 +1,24 @@
+import type { FavoriteItem } from '../schemas';
+import { FavoriteCategorySchema, FavoriteItemSchema } from '../schemas';
+
 export type FavoriteCategory = 'vehicle' | 'clothing';
 
-export interface GuestFavorite {
-  id: string;
-  title: string;
-  price: number;
-  category: FavoriteCategory;
-  sellerId: string;
-}
+/** @deprecated Use FavoriteItem from schemas — kept for backward-compatible imports */
+export type GuestFavorite = FavoriteItem;
 
-export interface FavoriteItem {
-  id: string;
-  title: string;
-  price: number;
-  category: FavoriteCategory;
-  sellerId: string;
-}
+export type { FavoriteItem };
 
+/** Device storage key — kept as guest_favorites for backward compatibility. */
 const STORAGE_KEY = 'guest_favorites';
-const CHANGE_EVENT = 'guest-favorites-changed';
+const LEGACY_CHANGE_EVENT = 'guest-favorites-changed';
+export const FAVORITES_CHANGE_EVENT = 'favorites-changed';
 
-function readStorage(): GuestFavorite[] {
+function isFavoriteItem(value: unknown): value is FavoriteItem {
+  const parsed = FavoriteItemSchema.safeParse(value);
+  return parsed.success;
+}
+
+function readStorage(): FavoriteItem[] {
   if (typeof window === 'undefined') return [];
 
   try {
@@ -29,40 +28,63 @@ function readStorage(): GuestFavorite[] {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
 
-    return parsed.filter(
-      (item): item is GuestFavorite =>
-        typeof item === 'object' &&
-        item !== null &&
-        typeof (item as GuestFavorite).id === 'string' &&
-        typeof (item as GuestFavorite).title === 'string' &&
-        typeof (item as GuestFavorite).price === 'number' &&
-        typeof (item as GuestFavorite).sellerId === 'string' &&
-        ((item as GuestFavorite).category === 'vehicle' ||
-          (item as GuestFavorite).category === 'clothing')
-    );
+    return parsed.filter(isFavoriteItem);
   } catch {
     return [];
   }
 }
 
-function writeStorage(items: GuestFavorite[]): void {
+function writeStorage(items: FavoriteItem[]): void {
   if (typeof window === 'undefined') return;
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+  notifyFavoritesChanged();
 }
 
-export function getGuestFavorites(): GuestFavorite[] {
+/** Notify all islands/subscribers that favorites changed (local or server). */
+export function notifyFavoritesChanged(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(FAVORITES_CHANGE_EVENT));
+  // Keep legacy event for any remaining listeners during rollout.
+  window.dispatchEvent(new CustomEvent(LEGACY_CHANGE_EVENT));
+}
+
+export function getDeviceFavorites(): FavoriteItem[] {
   return readStorage();
 }
 
-export function isGuestFavorite(id: string): boolean {
+/** @deprecated Use getDeviceFavorites */
+export function getGuestFavorites(): FavoriteItem[] {
+  return getDeviceFavorites();
+}
+
+export function isDeviceFavorite(id: string): boolean {
   return readStorage().some((item) => item.id === id);
 }
 
-export function toggleGuestFavorite(item: GuestFavorite): boolean {
+/** @deprecated Use isDeviceFavorite */
+export function isGuestFavorite(id: string): boolean {
+  return isDeviceFavorite(id);
+}
+
+export function setDeviceFavorites(items: FavoriteItem[]): void {
+  writeStorage(items.filter(isFavoriteItem));
+}
+
+export function clearDeviceFavorites(): void {
+  writeStorage([]);
+}
+
+/**
+ * Toggle a favorite in device storage.
+ * @returns true if the item is now saved, false if removed
+ */
+export function toggleDeviceFavorite(item: FavoriteItem): boolean {
+  const parsed = FavoriteItemSchema.safeParse(item);
+  if (!parsed.success) return isDeviceFavorite(item.id);
+
   const items = readStorage();
-  const index = items.findIndex((entry) => entry.id === item.id);
+  const index = items.findIndex((entry) => entry.id === parsed.data.id);
 
   if (index >= 0) {
     items.splice(index, 1);
@@ -70,21 +92,33 @@ export function toggleGuestFavorite(item: GuestFavorite): boolean {
     return false;
   }
 
-  writeStorage([...items, item]);
+  writeStorage([...items, parsed.data]);
   return true;
 }
 
-export function subscribeGuestFavorites(listener: () => void): () => void {
+/** @deprecated Use toggleDeviceFavorite */
+export function toggleGuestFavorite(item: FavoriteItem): boolean {
+  return toggleDeviceFavorite(item);
+}
+
+export function subscribeFavorites(listener: () => void): () => void {
   if (typeof window === 'undefined') return () => {};
 
   const handler = () => listener();
-  window.addEventListener(CHANGE_EVENT, handler);
+  window.addEventListener(FAVORITES_CHANGE_EVENT, handler);
+  window.addEventListener(LEGACY_CHANGE_EVENT, handler);
   window.addEventListener('storage', handler);
 
   return () => {
-    window.removeEventListener(CHANGE_EVENT, handler);
+    window.removeEventListener(FAVORITES_CHANGE_EVENT, handler);
+    window.removeEventListener(LEGACY_CHANGE_EVENT, handler);
     window.removeEventListener('storage', handler);
   };
+}
+
+/** @deprecated Use subscribeFavorites */
+export function subscribeGuestFavorites(listener: () => void): () => void {
+  return subscribeFavorites(listener);
 }
 
 export function groupFavoritesBySeller(items: FavoriteItem[]): Map<string, FavoriteItem[]> {
@@ -98,4 +132,8 @@ export function groupFavoritesBySeller(items: FavoriteItem[]): Map<string, Favor
   }
 
   return groups;
+}
+
+export function isValidFavoriteCategory(value: unknown): value is FavoriteCategory {
+  return FavoriteCategorySchema.safeParse(value).success;
 }

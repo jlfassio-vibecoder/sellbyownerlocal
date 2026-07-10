@@ -1,41 +1,53 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useContext, useState, type ReactNode } from 'react';
 import { MessageCircle } from 'lucide-react';
+import type { VerificationTier } from '../../schemas';
+import {
+  FavoritesContext,
+  FavoritesProvider,
+  useFavorites,
+} from '../../context/FavoritesContext';
 import ContactSellerModal from './ContactSellerModal';
-import { getGuestFavorites, subscribeGuestFavorites } from '../../utils/favorites';
 
 interface ContactSellerFabProps {
   isLoggedIn: boolean;
+  verificationTier?: VerificationTier;
+  initialSavedIds?: string[];
 }
 
-async function fetchFavoriteCount(isLoggedIn: boolean): Promise<number> {
-  if (!isLoggedIn) {
-    return getGuestFavorites().length;
-  }
+function OptionalFavoritesBoundary({
+  isLoggedIn,
+  verificationTier,
+  initialSavedIds,
+  children,
+}: {
+  isLoggedIn: boolean;
+  verificationTier: VerificationTier;
+  initialSavedIds: string[];
+  children: ReactNode;
+}) {
+  const existing = useContext(FavoritesContext);
+  if (existing) return children;
 
-  const res = await fetch('/api/favorites', { credentials: 'same-origin' });
-  if (!res.ok) return 0;
-
-  const data = await res.json();
-  return Array.isArray(data.items) ? data.items.length : 0;
+  return (
+    <FavoritesProvider
+      isLoggedIn={isLoggedIn}
+      verificationTier={verificationTier}
+      initialSavedIds={initialSavedIds}
+    >
+      {children}
+    </FavoritesProvider>
+  );
 }
 
-export default function ContactSellerFab({ isLoggedIn }: ContactSellerFabProps) {
+function ContactSellerFabInner({
+  isLoggedIn,
+  verificationTier,
+}: {
+  isLoggedIn: boolean;
+  verificationTier: VerificationTier;
+}) {
   const [isOpen, setIsOpen] = useState(false);
-  const [favoriteCount, setFavoriteCount] = useState(0);
-
-  const refreshCount = useCallback(async () => {
-    setFavoriteCount(await fetchFavoriteCount(isLoggedIn));
-  }, [isLoggedIn]);
-
-  useEffect(() => {
-    void refreshCount();
-
-    if (!isLoggedIn) {
-      return subscribeGuestFavorites(() => {
-        setFavoriteCount(getGuestFavorites().length);
-      });
-    }
-  }, [isLoggedIn, refreshCount]);
+  const { count, items, isLoading, refresh } = useFavorites();
 
   return (
     <>
@@ -47,9 +59,9 @@ export default function ContactSellerFab({ isLoggedIn }: ContactSellerFabProps) 
       >
         <MessageCircle size={20} />
         Request Quote
-        {favoriteCount > 0 && (
+        {count > 0 && (
           <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-1.5 text-xs font-bold text-red-600">
-            {favoriteCount}
+            {count}
           </span>
         )}
       </button>
@@ -57,11 +69,30 @@ export default function ContactSellerFab({ isLoggedIn }: ContactSellerFabProps) 
       <ContactSellerModal
         isOpen={isOpen}
         isLoggedIn={isLoggedIn}
+        verificationTier={verificationTier}
+        favoriteItems={items}
+        isLoadingFavorites={isLoading}
         onClose={() => {
           setIsOpen(false);
-          void refreshCount();
+          void refresh();
         }}
       />
     </>
+  );
+}
+
+export default function ContactSellerFab({
+  isLoggedIn,
+  verificationTier = 'anonymous',
+  initialSavedIds = [],
+}: ContactSellerFabProps) {
+  return (
+    <OptionalFavoritesBoundary
+      isLoggedIn={isLoggedIn}
+      verificationTier={verificationTier}
+      initialSavedIds={initialSavedIds}
+    >
+      <ContactSellerFabInner isLoggedIn={isLoggedIn} verificationTier={verificationTier} />
+    </OptionalFavoritesBoundary>
   );
 }

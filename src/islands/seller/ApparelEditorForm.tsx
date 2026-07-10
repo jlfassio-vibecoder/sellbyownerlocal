@@ -70,6 +70,41 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
 
   const resolvedDefaultPage = normalizeDefaultPage(pdfDefaultPage);
 
+  const persistGalleryPhotos = async (urls: string[]) => {
+    if (!initialData?.id) return;
+
+    const res = await fetch(`/api/seller/apparel/${initialData.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ galleryPhotos: urls }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to save gallery photos');
+    }
+  };
+
+  const handleGalleryPhotosChange = (urls: string[]) => {
+    setGalleryPhotos(urls);
+
+    if (!initialData?.id) return;
+
+    void (async () => {
+      try {
+        await persistGalleryPhotos(urls);
+        setError(null);
+        setSuccess('Gallery photos saved.');
+      } catch (err) {
+        console.error('Gallery photo persist failed', err);
+        setSuccess(null);
+        setError(
+          err instanceof Error ? err.message : 'Failed to save gallery photos. Please try again.'
+        );
+      }
+    })();
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -77,8 +112,14 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
     setIsSubmitting(true);
 
     const parsedPrice = Number(price);
-    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      setError('Wholesale price must be a positive number.');
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      setError('Wholesale price must be zero or a positive number.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!isEditing && parsedPrice <= 0) {
+      setError('Wholesale price must be a positive number for new listings.');
       setIsSubmitting(false);
       return;
     }
@@ -329,7 +370,7 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
         <BasicMultiUploader
           sellerId={sellerId}
           value={galleryPhotos}
-          onChange={setGalleryPhotos}
+          onChange={handleGalleryPhotosChange}
           disabled={isSubmitting}
         />
       </div>

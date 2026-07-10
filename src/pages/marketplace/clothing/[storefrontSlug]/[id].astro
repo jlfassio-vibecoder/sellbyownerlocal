@@ -22,6 +22,8 @@ import ApparelListingImage from '../../../../components/apparel/ApparelListingIm
 import ContactForm from '../../../../islands/ContactForm';
 import DocumentViewer from '../../../../islands/DocumentViewer';
 import FavoriteButton from '../../../../islands/buyer/FavoriteButton';
+import ContactSellerFab from '../../../../islands/buyer/ContactSellerFab';
+import { db } from '../../../../lib/firebase-admin';
 
 const { storefrontSlug: param, id } = Astro.params;
 
@@ -69,6 +71,15 @@ const hasGalleryImages = galleryImages.length > 0;
 const session = await getOptionalSession(Astro.request, Astro.cookies);
 const profile = session ? await getUserProfile(session.uid) : null;
 const storefrontPath = getStorefrontPath(canonicalSegment);
+
+let initialSaved = false;
+if (session) {
+  const saveDoc = await db()
+    .collection('saved_clothing')
+    .doc(`${session.uid}_${listing.id}`)
+    .get();
+  initialSaved = saveDoc.exists;
+}
 
 const buyerContext = {
   isLoggedIn: !!session,
@@ -188,6 +199,7 @@ const buyerContext = {
               sellerId={listing.sellerId}
               isLoggedIn={buyerContext.isLoggedIn}
               verificationTier={buyerContext.verificationTier}
+              initialSaved={initialSaved}
             />
           </div>
           <h1 class="text-4xl leading-tight font-bold text-slate-900 md:text-5xl">
@@ -244,4 +256,11 @@ const buyerContext = {
       loginHref={buyerContext.loginHref}
     />
   </main>
+
+  <ContactSellerFab
+    client:load
+    isLoggedIn={buyerContext.isLoggedIn}
+    verificationTier={buyerContext.verificationTier}
+    initialSavedIds={initialSaved ? [listing.id] : []}
+  />
 </Layout>

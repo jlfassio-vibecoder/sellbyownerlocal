@@ -10,6 +10,7 @@ import {
   getClothingListingById,
 } from '../../../../lib/clothing-api';
 import ClothingInventoryGrid from '../../../../islands/buyer/ClothingInventoryGrid';
+import ContactSellerFab from '../../../../islands/buyer/ContactSellerFab';
 import {
   buildStorefrontSeoDescription,
   buildStorefrontSeoTitle,
@@ -108,6 +109,16 @@ const ogImage = resolveStorefrontOgImage(listings);
           </a>
         </div>
       </main>
+    )
+  }
+
+  {
+    listings.length === 0 && (
+      <ContactSellerFab
+        client:load
+        isLoggedIn={buyerContext.isLoggedIn}
+        verificationTier={buyerContext.verificationTier}
+      />
     )
   }
 </Layout>

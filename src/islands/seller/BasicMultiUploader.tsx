@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import { ImageIcon, Loader2, Upload, X } from 'lucide-react';
+import { Crop, ImageIcon, Loader2, Upload, X } from 'lucide-react';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { auth, storage } from '../../lib/firebase-client';
+import ApparelImageCropModal from './ApparelImageCropModal';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
@@ -20,11 +21,16 @@ function sanitizeFilename(filename: string): string {
   return filename.replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
-async function uploadImage(sellerId: string, file: File): Promise<string> {
-  const filename = `${Date.now()}-${sanitizeFilename(file.name)}`;
+async function uploadImage(
+  sellerId: string,
+  file: Blob,
+  filenameHint = 'image.jpg',
+  contentType = 'image/jpeg'
+): Promise<string> {
+  const filename = `${Date.now()}-${sanitizeFilename(filenameHint)}`;
   const objectRef = ref(storage, `apparel-images/${sellerId}/${filename}`);
   const task = uploadBytesResumable(objectRef, file, {
-    contentType: file.type || 'image/jpeg',
+    contentType: contentType || 'image/jpeg',
   });
 
   await new Promise<void>((resolve, reject) => {
@@ -42,7 +48,22 @@ export default function BasicMultiUploader({
 }: BasicMultiUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [cropping, setCropping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cropTarget, setCropTarget] = useState<{ url: string; index: number } | null>(null);
+
+  const assertSellerAuth = (): boolean => {
+    const user = auth.currentUser;
+    if (!user) {
+      setError('You must be signed in to upload. Please sign in again from the login page.');
+      return false;
+    }
+    if (user.uid !== sellerId) {
+      setError('Account mismatch. Please sign in with the correct seller account.');
+      return false;
+    }
+    return true;
+  };
 
   const handleFilesSelected = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -62,23 +83,14 @@ export default function BasicMultiUploader({
       return;
     }
 
-    const user = auth.currentUser;
-    if (!user) {
-      setError('You must be signed in to upload. Please sign in again from the login page.');
-      return;
-    }
-
-    if (user.uid !== sellerId) {
-      setError('Account mismatch. Please sign in with the correct seller account.');
-      return;
-    }
+    if (!assertSellerAuth()) return;
 
     setUploading(true);
 
     try {
       const newUrls: string[] = [];
       for (const file of fileArray) {
-        const url = await uploadImage(sellerId, file);
+        const url = await uploadImage(sellerId, file, file.name, file.type || 'image/jpeg');
         newUrls.push(url);
       }
       onChange([...value, ...newUrls]);
@@ -97,7 +109,28 @@ export default function BasicMultiUploader({
     onChange(value.filter((_, i) => i !== index));
   };
 
-  const isDisabled = disabled || uploading;
+  const handleCropped = async (blob: Blob) => {
+    if (!cropTarget) return;
+    if (!assertSellerAuth()) return;
+
+    setError(null);
+    setCropping(true);
+
+    try {
+      const url = await uploadImage(sellerId, blob, 'cropped.jpg', 'image/jpeg');
+      const next = [...value];
+      next[cropTarget.index] = url;
+      onChange(next);
+      setCropTarget(null);
+    } catch (err) {
+      console.error('BasicMultiUploader crop upload failed', err);
+      setError(err instanceof Error ? err.message : 'Failed to save cropped image. Please try again.');
+    } finally {
+      setCropping(false);
+    }
+  };
+
+  const isDisabled = disabled || uploading || cropping;
 
   return (
     <div className="space-y-3">
@@ -145,15 +178,31 @@ export default function BasicMultiUploader({
                 alt={`Gallery photo ${index + 1}`}
                 className="h-full w-full object-cover"
               />
-              <button
-                type="button"
-                disabled={isDisabled}
-                onClick={() => removeImage(index)}
-                className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-40"
-                aria-label={`Remove photo ${index + 1}`}
-              >
-                <X size={14} />
-              </button>
+              <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => {
+                    setError(null);
+                    setCropTarget({ url, index });
+                  }}
+                  className="rounded-full bg-black/60 p-1 text-white disabled:opacity-40"
+                  aria-label={`Crop photo ${index + 1}`}
+                  title="Crop"
+                >
+                  <Crop size={14} />
+                </button>
+                <button
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => removeImage(index)}
+                  className="rounded-full bg-black/60 p-1 text-white disabled:opacity-40"
+                  aria-label={`Remove photo ${index + 1}`}
+                  title="Remove"
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -163,6 +212,18 @@ export default function BasicMultiUploader({
           No photos yet — upload images from your device.
         </div>
       )}
+
+      {cropTarget ? (
+        <ApparelImageCropModal
+          imageSrc={cropTarget.url}
+          open
+          saving={cropping}
+          onClose={() => {
+            if (!cropping) setCropTarget(null);
+          }}
+          onCropped={handleCropped}
+        />
+      ) : null}
     </div>
   );
 }

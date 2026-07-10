@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import {
   AuthError,
-  requireSeller,
+  requireAuthenticated,
   requireVerificationTier,
   unauthorizedResponse,
   verificationRequiredResponse,
@@ -190,7 +190,7 @@ export const GET: APIRoute = async ({ params, request, cookies }) => {
       : SavedClothingStatusResponseSchema;
 
   try {
-    const session = await requireSeller(request, cookies);
+    const session = await requireAuthenticated(request, cookies);
     const doc = await db()
       .collection(savedCollection)
       .doc(savedDocId(session.uid, firestoreId))
@@ -227,7 +227,7 @@ export const POST: APIRoute = async ({ params, request, cookies }) => {
   }
 
   try {
-    const session = await requireSeller(request, cookies);
+    const session = await requireAuthenticated(request, cookies);
     requireVerificationTier(session, 'phone_verified');
 
     const loadResult = await loadActiveListing(category, rawId);

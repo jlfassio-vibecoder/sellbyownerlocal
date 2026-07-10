@@ -12,6 +12,7 @@ import {
 } from '../../lib/seo';
 import Layout from '../../layouts/Layout.astro';
 import VehicleListingContent from '../../components/VehicleListingContent.astro';
+import ContactSellerFab from '../../islands/buyer/ContactSellerFab';
 import { generateVehicleSlug, resolveFirestoreIdCandidates } from '../../utils/url-helpers';
 
 const { id } = Astro.params;
@@ -90,4 +91,10 @@ const buyerContext = {
   bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
 >
   <VehicleListingContent vehicle={listingVehicle} buyerContext={buyerContext} initialSaved={initialSaved} />
+  <ContactSellerFab
+    client:load
+    isLoggedIn={buyerContext.isLoggedIn}
+    verificationTier={buyerContext.verificationTier}
+    initialSavedIds={initialSaved ? [vehicle.id] : []}
+  />
 </Layout>

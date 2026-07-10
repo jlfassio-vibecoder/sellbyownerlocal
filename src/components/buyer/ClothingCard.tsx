@@ -22,14 +22,16 @@ export default function ClothingCard({
       <div className="relative">
         <a href={listingPath} className="block">
           {listing.galleryPhotos[0] ? (
-            <img
-              src={listing.galleryPhotos[0]}
-              alt={listing.title}
-              className="aspect-[4/5] w-full object-cover"
-              loading="lazy"
-            />
+            <div className="aspect-[4/3] w-full bg-slate-100">
+              <img
+                src={listing.galleryPhotos[0]}
+                alt={listing.title}
+                className="h-full w-full object-contain"
+                loading="lazy"
+              />
+            </div>
           ) : (
-            <div className="flex aspect-[4/5] w-full items-center justify-center bg-slate-100 text-sm text-slate-500">
+            <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-100 text-sm text-slate-500">
               No photo
             </div>
           )}

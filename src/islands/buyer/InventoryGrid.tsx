@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { BuyerSaveContext } from '../../components/buyer/VehicleCard';
 import VehicleCard from '../../components/buyer/VehicleCard';
 import type { InventoryVehicle } from '../../types/inventory-vehicle';
+import BuyerMarketplaceShell from './BuyerMarketplaceShell';
 
 interface InventoryGridProps {
   initialVehicles: InventoryVehicle[];
   buyerContext?: BuyerSaveContext;
+  showFab?: boolean;
 }
 
 interface InventoryFilters {
@@ -93,7 +95,11 @@ function applyFilters(vehicles: InventoryVehicle[], filters: InventoryFilters): 
 const inputClassName =
   'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400';
 
-export default function InventoryGrid({ initialVehicles, buyerContext }: InventoryGridProps) {
+export default function InventoryGrid({
+  initialVehicles,
+  buyerContext,
+  showFab = true,
+}: InventoryGridProps) {
   const [filters, setFilters] = useState<InventoryFilters>({
     make: '',
     model: '',
@@ -143,140 +149,146 @@ export default function InventoryGrid({ initialVehicles, buyerContext }: Invento
   }, []);
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:flex-row lg:px-8">
-      <aside className="w-full shrink-0 lg:w-64">
-        <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-900">Filters</h2>
+    <BuyerMarketplaceShell
+      isLoggedIn={buyerContext?.isLoggedIn ?? false}
+      verificationTier={buyerContext?.verificationTier ?? 'anonymous'}
+      showFab={showFab}
+    >
+      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:flex-row lg:px-8">
+        <aside className="w-full shrink-0 lg:w-64">
+          <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-900">Filters</h2>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <label className="block space-y-1">
-              <span className="text-sm text-slate-600">Make</span>
-              <select
-                value={filters.make}
-                onChange={(e) =>
-                  updateFilters({ ...filters, make: e.target.value, model: '' })
-                }
-                className={inputClassName}
-              >
-                <option value="">All makes</option>
-                {makes.map((make) => (
-                  <option key={make} value={make}>
-                    {make}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <label className="block space-y-1">
+                <span className="text-sm text-slate-600">Make</span>
+                <select
+                  value={filters.make}
+                  onChange={(e) =>
+                    updateFilters({ ...filters, make: e.target.value, model: '' })
+                  }
+                  className={inputClassName}
+                >
+                  <option value="">All makes</option>
+                  {makes.map((make) => (
+                    <option key={make} value={make}>
+                      {make}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-            <label className="block space-y-1">
-              <span className="text-sm text-slate-600">Model</span>
-              <select
-                value={filters.model}
-                disabled={!filters.make}
-                onChange={(e) => updateFilters({ ...filters, model: e.target.value })}
-                className={inputClassName}
-              >
-                <option value="">All models</option>
-                {availableModels.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+              <label className="block space-y-1">
+                <span className="text-sm text-slate-600">Model</span>
+                <select
+                  value={filters.model}
+                  disabled={!filters.make}
+                  onChange={(e) => updateFilters({ ...filters, model: e.target.value })}
+                  className={inputClassName}
+                >
+                  <option value="">All models</option>
+                  {availableModels.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
-          <div className="space-y-1">
-            <span className="text-sm text-slate-600">Year range</span>
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="number"
-                min={1900}
-                placeholder="Min year"
-                value={filters.minYear}
-                onChange={(e) => updateFilters({ ...filters, minYear: e.target.value })}
-                className={inputClassName}
-              />
-              <input
-                type="number"
-                min={1900}
-                placeholder="Max year"
-                value={filters.maxYear}
-                onChange={(e) => updateFilters({ ...filters, maxYear: e.target.value })}
-                className={inputClassName}
-              />
+            <div className="space-y-1">
+              <span className="text-sm text-slate-600">Year range</span>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  min={1900}
+                  placeholder="Min year"
+                  value={filters.minYear}
+                  onChange={(e) => updateFilters({ ...filters, minYear: e.target.value })}
+                  className={inputClassName}
+                />
+                <input
+                  type="number"
+                  min={1900}
+                  placeholder="Max year"
+                  value={filters.maxYear}
+                  onChange={(e) => updateFilters({ ...filters, maxYear: e.target.value })}
+                  className={inputClassName}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-sm text-slate-600">Price range</span>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Min $"
+                  value={filters.minPrice}
+                  onChange={(e) => updateFilters({ ...filters, minPrice: e.target.value })}
+                  className={inputClassName}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Max $"
+                  value={filters.maxPrice}
+                  onChange={(e) => updateFilters({ ...filters, maxPrice: e.target.value })}
+                  className={inputClassName}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-sm text-slate-600">Mileage range</span>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Min mi"
+                  value={filters.minMileage}
+                  onChange={(e) => updateFilters({ ...filters, minMileage: e.target.value })}
+                  className={inputClassName}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Max mi"
+                  value={filters.maxMileage}
+                  onChange={(e) => updateFilters({ ...filters, maxMileage: e.target.value })}
+                  className={inputClassName}
+                />
+              </div>
             </div>
           </div>
+        </aside>
 
-          <div className="space-y-1">
-            <span className="text-sm text-slate-600">Price range</span>
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="number"
-                min={0}
-                placeholder="Min $"
-                value={filters.minPrice}
-                onChange={(e) => updateFilters({ ...filters, minPrice: e.target.value })}
-                className={inputClassName}
-              />
-              <input
-                type="number"
-                min={0}
-                placeholder="Max $"
-                value={filters.maxPrice}
-                onChange={(e) => updateFilters({ ...filters, maxPrice: e.target.value })}
-                className={inputClassName}
-              />
-            </div>
-          </div>
+        <div className="min-w-0 flex-1">
+          <p className="mb-4 text-sm text-slate-500">
+            {filteredVehicles.length} vehicle{filteredVehicles.length === 1 ? '' : 's'}
+          </p>
 
-          <div className="space-y-1">
-            <span className="text-sm text-slate-600">Mileage range</span>
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="number"
-                min={0}
-                placeholder="Min mi"
-                value={filters.minMileage}
-                onChange={(e) => updateFilters({ ...filters, minMileage: e.target.value })}
-                className={inputClassName}
-              />
-              <input
-                type="number"
-                min={0}
-                placeholder="Max mi"
-                value={filters.maxMileage}
-                onChange={(e) => updateFilters({ ...filters, maxMileage: e.target.value })}
-                className={inputClassName}
-              />
+          {filteredVehicles.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {filteredVehicles.map((vehicle, index) => (
+                <VehicleCard
+                  key={vehicle.id}
+                  vehicle={vehicle}
+                  rank={index}
+                  position={index + 1}
+                  buyerContext={buyerContext}
+                />
+              ))}
             </div>
-          </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+              <p className="text-lg font-medium text-slate-700">No vehicles match your filters</p>
+              <p className="mt-2 text-sm text-slate-500">Try adjusting your search criteria.</p>
+            </div>
+          )}
         </div>
-      </aside>
-
-      <div className="min-w-0 flex-1">
-        <p className="mb-4 text-sm text-slate-500">
-          {filteredVehicles.length} vehicle{filteredVehicles.length === 1 ? '' : 's'}
-        </p>
-
-        {filteredVehicles.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {filteredVehicles.map((vehicle, index) => (
-              <VehicleCard
-                key={vehicle.id}
-                vehicle={vehicle}
-                rank={index}
-                position={index + 1}
-                buyerContext={buyerContext}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
-            <p className="text-lg font-medium text-slate-700">No vehicles match your filters</p>
-            <p className="mt-2 text-sm text-slate-500">Try adjusting your search criteria.</p>
-          </div>
-        )}
       </div>
-    </div>
+    </BuyerMarketplaceShell>
   );
 }

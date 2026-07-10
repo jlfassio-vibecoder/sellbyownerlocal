@@ -1,71 +1,46 @@
 import { Heart } from 'lucide-react';
 import type { VerificationTier } from '../schemas';
-import { useSaveVehicle } from '../lib/use-save-vehicle';
+import { FavoritesProvider, useFavorites } from '../context/FavoritesContext';
 
 interface SaveVehicleButtonProps {
   vehicleId: string;
+  title: string;
+  price: number;
+  sellerId: string;
   isLoggedIn: boolean;
   verificationTier: VerificationTier;
   loginHref: string;
   initialSaved?: boolean;
 }
 
-export default function SaveVehicleButton({
+function SaveVehicleButtonInner({
   vehicleId,
-  isLoggedIn,
-  verificationTier,
-  loginHref,
-  initialSaved = false,
-}: SaveVehicleButtonProps) {
-  const canSave = isLoggedIn && verificationTier !== 'anonymous';
-
-  const { saved, isSaving, error, toggleSave } = useSaveVehicle({
-    vehicleId,
-    initialSaved,
-    canSave,
-  });
-
-  if (!isLoggedIn) {
-    return (
-      <a
-        href={loginHref}
-        className="flex items-center gap-1.5 text-slate-400 transition-colors hover:text-white"
-        aria-label="Log in to save this vehicle"
-        title="Log in to save this vehicle"
-      >
-        <Heart size={20} />
-        <span className="hidden text-sm font-medium lg:inline">Save</span>
-      </a>
-    );
-  }
-
-  if (!canSave) {
-    return (
-      <button
-        type="button"
-        disabled
-        className="flex cursor-not-allowed items-center gap-1.5 text-slate-500"
-        aria-label="Verify phone to save this vehicle"
-        title="Verify phone to save"
-      >
-        <Heart size={20} />
-        <span className="hidden text-sm font-medium lg:inline">Save</span>
-      </button>
-    );
-  }
+  title,
+  price,
+  sellerId,
+}: Pick<SaveVehicleButtonProps, 'vehicleId' | 'title' | 'price' | 'sellerId'>) {
+  const { isFavorite, toggle, error } = useFavorites();
+  const saved = isFavorite(vehicleId);
 
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => void toggleSave()}
-        disabled={isSaving}
+        onClick={() =>
+          void toggle({
+            id: vehicleId,
+            title,
+            price,
+            category: 'vehicle',
+            sellerId,
+          })
+        }
         className={`flex items-center gap-1.5 transition-colors ${
           saved ? 'text-rose-400 hover:text-rose-300' : 'text-slate-400 hover:text-white'
         }`}
         aria-label={saved ? 'Unsave this vehicle' : 'Save this vehicle'}
         aria-pressed={saved}
-        title={saved ? 'Saved' : 'Save listing'}
+        title={error ? error : saved ? 'Saved' : 'Save listing'}
       >
         <Heart size={20} className={saved ? 'fill-current' : undefined} />
         <span className="hidden text-sm font-medium lg:inline">{saved ? 'Saved' : 'Save'}</span>
@@ -76,5 +51,55 @@ export default function SaveVehicleButton({
         </span>
       )}
     </div>
+  );
+}
+
+export default function SaveVehicleButton({
+  vehicleId,
+  title,
+  price,
+  sellerId,
+  isLoggedIn,
+  verificationTier,
+  loginHref,
+  initialSaved = false,
+}: SaveVehicleButtonProps) {
+  // Guests can still save via FavoritesProvider (device store). Keep login link
+  // only as a secondary affordance when explicitly browsing without a session
+  // and we want to nudge account creation — but favorites work either way.
+  if (!isLoggedIn) {
+    return (
+      <FavoritesProvider isLoggedIn={false} verificationTier="anonymous">
+        <div className="flex items-center gap-3">
+          <SaveVehicleButtonInner
+            vehicleId={vehicleId}
+            title={title}
+            price={price}
+            sellerId={sellerId}
+          />
+          <a
+            href={loginHref}
+            className="hidden text-xs text-slate-500 transition-colors hover:text-white lg:inline"
+          >
+            Log in
+          </a>
+        </div>
+      </FavoritesProvider>
+    );
+  }
+
+  return (
+    <FavoritesProvider
+      isLoggedIn={isLoggedIn}
+      verificationTier={verificationTier}
+      initialSavedIds={initialSaved ? [vehicleId] : []}
+    >
+      <SaveVehicleButtonInner
+        vehicleId={vehicleId}
+        title={title}
+        price={price}
+        sellerId={sellerId}
+      />
+    </FavoritesProvider>
   );
 }

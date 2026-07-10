@@ -63,5 +63,13 @@ const buyerContext = {
     )
   }
 
-  <ContactSellerFab client:load isLoggedIn={buyerContext.isLoggedIn} />
+  {
+    listings.length === 0 && (
+      <ContactSellerFab
+        client:load
+        isLoggedIn={buyerContext.isLoggedIn}
+        verificationTier={buyerContext.verificationTier}
+      />
+    )
+  }
 </Layout>

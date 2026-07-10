@@ -193,5 +193,13 @@ const buyerContext = {
     </div>
   </section>
 
-  <ContactSellerFab client:load isLoggedIn={buyerContext.isLoggedIn} />
+  {
+    vehicles.length === 0 && (
+      <ContactSellerFab
+        client:load
+        isLoggedIn={buyerContext.isLoggedIn}
+        verificationTier={buyerContext.verificationTier}
+      />
+    )
+  }
 </Layout>

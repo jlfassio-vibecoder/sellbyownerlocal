@@ -1,6 +1,7 @@
 import type { AstroCookies } from 'astro';
 import { auth } from './firebase-admin';
-import { meetsVerificationTier, resolveVerificationTier } from './buyer-profile';
+import { meetsVerificationTier } from './verification';
+import { resolveVerificationTier } from './buyer-profile';
 import type { VerificationTier } from '../schemas';
 
 export interface UserSession {
@@ -127,6 +128,14 @@ export async function getOptionalSession(
 }
 
 export async function requireSeller(
+  request: Request,
+  cookies: AstroCookies
+): Promise<UserSession> {
+  return getSession(request, cookies);
+}
+
+/** Alias for requireSeller — any authenticated user (buyer or seller). */
+export async function requireAuthenticated(
   request: Request,
   cookies: AstroCookies
 ): Promise<UserSession> {
