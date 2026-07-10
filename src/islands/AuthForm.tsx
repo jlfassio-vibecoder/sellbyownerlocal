@@ -70,10 +70,19 @@ function PasswordField({
 
 function resolvePostLoginPath(): string {
   const next = new URLSearchParams(window.location.search).get('next');
-  if (next && /^\/[a-zA-Z0-9\-\/]/.test(next)) {
-    return next;
+  if (!next || !next.startsWith('/') || next.startsWith('//') || next.includes('\\')) {
+    return '/seller';
   }
-  return '/seller';
+
+  try {
+    const resolved = new URL(next, window.location.origin);
+    if (resolved.origin !== window.location.origin) {
+      return '/seller';
+    }
+    return resolved.pathname + resolved.search + resolved.hash;
+  } catch {
+    return '/seller';
+  }
 }
 
 async function exchangeSessionAndRedirect(): Promise<void> {

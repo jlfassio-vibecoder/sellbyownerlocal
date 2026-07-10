@@ -8,13 +8,14 @@ import '../../styles/global.css';
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
 
-const [vehicleSnapshot, apparelCatalog] = await Promise.all([
+const [vehicleSnapshot, apparelCount] = await Promise.all([
   db().collection('vehicles').where('sellerId', '==', seller.uid).get(),
-  getApparelCatalogForSeller(seller.uid),
+  getApparelCatalogForSeller(seller.uid)
+    .then((catalog) => catalog.length)
+    .catch(() => 0),
 ]);
 
 const vehicleCount = vehicleSnapshot.size;
-const apparelCount = apparelCatalog.length;
 const displayEmail = seller.email ?? 'Seller';
 ---
 
