@@ -1,12 +1,16 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
 import { getOptionalSellerSession } from '../../../lib/auth';
+import { resolveStorefrontSegmentsForSellerIds } from '../../../lib/buyer-profile';
 import { getClothingInventory } from '../../../lib/clothing-api';
 import ClothingInventoryGrid from '../../../islands/buyer/ClothingInventoryGrid';
 import ContactSellerFab from '../../../islands/buyer/ContactSellerFab';
 
 const session = await getOptionalSellerSession(Astro.request, Astro.cookies);
 const listings = await getClothingInventory();
+const storefrontSegmentsBySellerId = await resolveStorefrontSegmentsForSellerIds(
+  listings.map((listing) => listing.sellerId)
+);
 const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
@@ -41,7 +45,12 @@ const buyerContext = {
 
   {
     listings.length > 0 ? (
-      <ClothingInventoryGrid client:load initialListings={listings} buyerContext={buyerContext} />
+      <ClothingInventoryGrid
+        client:load
+        initialListings={listings}
+        storefrontSegmentsBySellerId={storefrontSegmentsBySellerId}
+        buyerContext={buyerContext}
+      />
     ) : (
       <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div class="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
@@ -54,5 +63,13 @@ const buyerContext = {
     )
   }
 
-  <ContactSellerFab client:load isLoggedIn={buyerContext.isLoggedIn} />
+  {
+    listings.length === 0 && (
+      <ContactSellerFab
+        client:load
+        isLoggedIn={buyerContext.isLoggedIn}
+        verificationTier={buyerContext.verificationTier}
+      />
+    )
+  }
 </Layout>

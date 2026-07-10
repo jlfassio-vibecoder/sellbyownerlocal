@@ -1,29 +1,57 @@
 ---
-import Layout from '../../../layouts/Layout.astro';
-import { getOptionalSession } from '../../../lib/auth';
-import { getUserProfile } from '../../../lib/buyer-profile';
-import { getClothingListingById } from '../../../lib/clothing-api';
+import Layout from '../../../../layouts/Layout.astro';
+import { getOptionalSession } from '../../../../lib/auth';
+import {
+  resolveSellerByStorefrontParam,
+  getUserProfile,
+} from '../../../../lib/buyer-profile';
+import { getClothingListingById } from '../../../../lib/clothing-api';
 import {
   buildClothingSeoDescription,
   buildClothingSeoTitle,
+  resolveAbsoluteUrl,
   resolveClothingOgImage,
-} from '../../../lib/seo';
-import ApparelImageGallery from '../../../islands/ApparelImageGallery';
-import ApparelListingImage from '../../../components/apparel/ApparelListingImage';
-import ContactForm from '../../../islands/ContactForm';
-import DocumentViewer from '../../../islands/DocumentViewer';
-import FavoriteButton from '../../../islands/buyer/FavoriteButton';
+} from '../../../../lib/seo';
+import {
+  getClothingListingPath,
+  getStorefrontPath,
+  resolveStorefrontSegment,
+} from '../../../../utils/url-helpers';
+import ApparelImageGallery from '../../../../islands/ApparelImageGallery';
+import ApparelListingImage from '../../../../components/apparel/ApparelListingImage';
+import ContactForm from '../../../../islands/ContactForm';
+import DocumentViewer from '../../../../islands/DocumentViewer';
+import FavoriteButton from '../../../../islands/buyer/FavoriteButton';
+import ContactSellerFab from '../../../../islands/buyer/ContactSellerFab';
+import { db } from '../../../../lib/firebase-admin';
 
-const { id } = Astro.params;
+const { storefrontSlug: param, id } = Astro.params;
 
-if (!id) {
-  return new Response('Listing not found', { status: 404, statusText: 'Not Found' });
+if (!param || !id) {
+  return Astro.rewrite('/404');
+}
+
+const resolvedSeller = await resolveSellerByStorefrontParam(param);
+if (!resolvedSeller) {
+  return Astro.rewrite('/404');
 }
 
 const listing = await getClothingListingById(id);
-
 if (!listing) {
-  return new Response('Listing not found', { status: 404, statusText: 'Not Found' });
+  return Astro.rewrite('/404');
+}
+
+// Strict ownership: do not serve a listing under another seller's storefront.
+if (listing.sellerId !== resolvedSeller.id) {
+  return Astro.rewrite('/404');
+}
+
+const canonicalSegment = resolveStorefrontSegment(resolvedSeller);
+const canonicalPath = getClothingListingPath(listing.id, canonicalSegment);
+
+// Previous slug / UID fallback → 301 to current canonical nested URL.
+if (param !== canonicalSegment) {
+  return Astro.redirect(canonicalPath, 301);
 }
 
 const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
@@ -32,15 +60,26 @@ const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 2,
 });
 
+const origin = Astro.site?.href ?? Astro.url.origin;
 const seoTitle = buildClothingSeoTitle(listing);
 const seoDescription = buildClothingSeoDescription(listing);
 const seoImage = resolveClothingOgImage(listing);
-const canonicalUrl = `/marketplace/clothing/${listing.id}`;
+const canonicalUrl = resolveAbsoluteUrl(canonicalPath, origin);
 const galleryImages = listing.galleryPhotos?.length ? listing.galleryPhotos : [];
 const heroImage = listing.galleryPhotos?.[0];
 const hasGalleryImages = galleryImages.length > 0;
 const session = await getOptionalSession(Astro.request, Astro.cookies);
 const profile = session ? await getUserProfile(session.uid) : null;
+const storefrontPath = getStorefrontPath(canonicalSegment);
+
+let initialSaved = false;
+if (session) {
+  const saveDoc = await db()
+    .collection('saved_clothing')
+    .doc(`${session.uid}_${listing.id}`)
+    .get();
+  initialSaved = saveDoc.exists;
+}
 
 const buyerContext = {
   isLoggedIn: !!session,
@@ -48,7 +87,7 @@ const buyerContext = {
   userEmail: session?.email ?? '',
   userDisplayName: profile?.displayName ?? '',
   userPhone: profile?.phone ?? '',
-  loginHref: `/login?next=${encodeURIComponent(`${canonicalUrl}#contact`)}`,
+  loginHref: `/login?next=${encodeURIComponent(`${canonicalPath}#contact`)}`,
 };
 ---
 
@@ -62,12 +101,20 @@ const buyerContext = {
 >
   <header class="border-b border-slate-200 bg-white">
     <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      <a
-        href="/marketplace/clothing"
-        class="mb-4 inline-flex items-center text-sm font-semibold text-red-600 hover:text-red-700"
-      >
-        ← Back to Clothing
-      </a>
+      <div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <a
+          href="/marketplace/clothing"
+          class="inline-flex items-center text-sm font-semibold text-red-600 hover:text-red-700"
+        >
+          ← Back to Clothing
+        </a>
+        <a
+          href={storefrontPath}
+          class="inline-flex items-center text-sm font-semibold text-slate-600 hover:text-slate-900"
+        >
+          View all from {resolvedSeller.displayName}
+        </a>
+      </div>
     </div>
   </header>
 
@@ -152,6 +199,7 @@ const buyerContext = {
               sellerId={listing.sellerId}
               isLoggedIn={buyerContext.isLoggedIn}
               verificationTier={buyerContext.verificationTier}
+              initialSaved={initialSaved}
             />
           </div>
           <h1 class="text-4xl leading-tight font-bold text-slate-900 md:text-5xl">
@@ -208,4 +256,11 @@ const buyerContext = {
       loginHref={buyerContext.loginHref}
     />
   </main>
+
+  <ContactSellerFab
+    client:load
+    isLoggedIn={buyerContext.isLoggedIn}
+    verificationTier={buyerContext.verificationTier}
+    initialSavedIds={initialSaved ? [listing.id] : []}
+  />
 </Layout>

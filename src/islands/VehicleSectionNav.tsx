@@ -13,6 +13,9 @@ export interface NavSection {
 
 interface SaveVehicleProps {
   vehicleId: string;
+  title: string;
+  price: number;
+  sellerId: string;
   isLoggedIn: boolean;
   verificationTier: VerificationTier;
   loginHref: string;
@@ -134,6 +137,9 @@ export default function VehicleSectionNav({
             {saveVehicle && (
               <SaveVehicleButton
                 vehicleId={saveVehicle.vehicleId}
+                title={saveVehicle.title}
+                price={saveVehicle.price}
+                sellerId={saveVehicle.sellerId}
                 isLoggedIn={saveVehicle.isLoggedIn}
                 verificationTier={saveVehicle.verificationTier}
                 loginHref={saveVehicle.loginHref}
@@ -153,6 +159,9 @@ export default function VehicleSectionNav({
             {saveVehicle && (
               <SaveVehicleButton
                 vehicleId={saveVehicle.vehicleId}
+                title={saveVehicle.title}
+                price={saveVehicle.price}
+                sellerId={saveVehicle.sellerId}
                 isLoggedIn={saveVehicle.isLoggedIn}
                 verificationTier={saveVehicle.verificationTier}
                 loginHref={saveVehicle.loginHref}

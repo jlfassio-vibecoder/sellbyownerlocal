@@ -13,6 +13,7 @@ import {
   parseItemCodeFromTitle,
   splitCommaList,
 } from '../../lib/apparel';
+import { getClothingListingPath } from '../../utils/url-helpers';
 
 const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -32,6 +33,8 @@ const BULK_ACTION_OPTIONS: { value: string; label: string; updates: ApparelBulkU
 interface FilterableApparelGridProps {
   initialItems: ApparelFilterItem[];
   isSellerView: boolean;
+  /** Canonical storefront segment for public listing URLs (slug or seller UID). */
+  storefrontSegment: string;
 }
 
 type ToastState = {
@@ -119,6 +122,7 @@ function ApparelCardContent({ item, isSellerView }: { item: ApparelFilterItem; i
 export default function FilterableApparelGrid({
   initialItems,
   isSellerView,
+  storefrontSegment,
 }: FilterableApparelGridProps) {
   const [items, setItems] = useState(initialItems);
   useEffect(() => {
@@ -277,7 +281,7 @@ export default function FilterableApparelGrid({
   };
 
   const handleCopyLink = async (id: string) => {
-    const url = `${window.location.origin}/marketplace/clothing/${id}`;
+    const url = `${window.location.origin}${getClothingListingPath(id, storefrontSegment)}`;
     try {
       await navigator.clipboard.writeText(url);
       setToast({
@@ -515,7 +519,7 @@ export default function FilterableApparelGrid({
           {filteredItems.map((item) => {
             const href = isSellerView
               ? `/seller/apparel/${item.id}`
-              : `/marketplace/clothing/${item.id}`;
+              : getClothingListingPath(item.id, storefrontSegment);
             const isSelected = selectedIds.has(item.id);
 
             if (isSellerView && isSelectionMode) {

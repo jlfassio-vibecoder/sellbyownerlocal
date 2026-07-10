@@ -91,3 +91,17 @@ export function buildClothingSeoDescription(listing: ClothingListing): string {
 export function resolveClothingOgImage(listing: ClothingListing): string | undefined {
   return listing.galleryPhotos?.[0] || undefined;
 }
+
+export function buildStorefrontSeoTitle(displayName: string): string {
+  return `${displayName} · Apparel Storefront · Sell By Owner Local`;
+}
+
+export function buildStorefrontSeoDescription(displayName: string): string {
+  return `Shop active wholesale apparel from ${displayName} on Sell By Owner Local.`;
+}
+
+export function resolveStorefrontOgImage(
+  listings: ClothingListing[]
+): string | undefined {
+  return listings[0]?.galleryPhotos?.[0] || undefined;
+}

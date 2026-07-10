@@ -1,4 +1,4 @@
-import type { FavoriteItem } from '../utils/favorites';
+import type { FavoriteItem } from '../schemas';
 
 const SIGNATURE_PREFIX = '\n\nKind regards,\n';
 

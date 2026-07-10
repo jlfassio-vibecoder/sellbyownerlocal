@@ -1,5 +1,6 @@
 ---
 import { requireSellerOrRedirect } from '../../../lib/auth';
+import { getUserProfile } from '../../../lib/buyer-profile';
 import { getSellerLeads } from '../../../lib/leads';
 import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
 import LeadsPanel from '../../../islands/seller/LeadsPanel';
@@ -8,6 +9,7 @@ import '../../../styles/global.css';
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
 
+const profile = await getUserProfile(seller.uid);
 const leads = await getSellerLeads(seller.uid);
 ---
 
@@ -25,6 +27,7 @@ const leads = await getSellerLeads(seller.uid);
       client:load
       activeNav="inquiries"
       sellerUid={seller.uid}
+      storefrontSlug={profile?.storefrontSlug}
       inquiryCount={leads.length}
     >
       <LeadsPanel client:load leads={leads} />

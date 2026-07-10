@@ -5,23 +5,31 @@ import {
   type VerificationTier,
   VerificationTierSchema,
 } from '../schemas';
+import {
+  isValidStorefrontSlug,
+  resolveStorefrontSegment,
+} from '../utils/url-helpers';
+import { meetsVerificationTier, TIER_RANK } from './verification';
 
-export const TIER_RANK: Record<VerificationTier, number> = {
-  anonymous: 0,
-  phone_verified: 1,
-  identity_verified: 2,
-};
-
-export function meetsVerificationTier(
-  current: VerificationTier,
-  required: VerificationTier
-): boolean {
-  return TIER_RANK[current] >= TIER_RANK[required];
-}
+export { meetsVerificationTier, TIER_RANK };
 
 export interface ProvisionUserProfileHints {
   displayName?: string;
   email?: string;
+}
+
+export class StorefrontSlugConflictError extends Error {
+  constructor(message = 'Storefront URL is already taken') {
+    super(message);
+    this.name = 'StorefrontSlugConflictError';
+  }
+}
+
+export class StorefrontSlugValidationError extends Error {
+  constructor(message = 'Invalid storefront URL') {
+    super(message);
+    this.name = 'StorefrontSlugValidationError';
+  }
 }
 
 function displayNameFromEmail(email?: string): string | undefined {
@@ -110,6 +118,139 @@ export async function provisionUserProfile(
 export async function updateUserDisplayName(uid: string, displayName: string): Promise<void> {
   const trimmed = displayName.trim();
   await db().collection('users').doc(uid).set({ displayName: trimmed }, { merge: true });
+}
+
+export async function getStorefrontSegmentForSeller(sellerId: string): Promise<string> {
+  const profile = await getUserProfile(sellerId);
+  return resolveStorefrontSegment({
+    id: sellerId,
+    storefrontSlug: profile?.storefrontSlug,
+  });
+}
+
+/** Resolve a storefront URL param via slug lookup, then UID fallback. */
+export async function resolveSellerByStorefrontParam(
+  param: string
+): Promise<(User & { id: string }) | null> {
+  const trimmed = param.trim();
+  if (!trimmed) return null;
+
+  // Copilot suggestion ignored: already lowercases the slug before storefront_slugs lookup.
+  const slugDoc = await db().collection('storefront_slugs').doc(trimmed.toLowerCase()).get();
+  if (slugDoc.exists) {
+    const sellerId = slugDoc.data()?.sellerId;
+    if (typeof sellerId === 'string' && sellerId.length > 0) {
+      return getUserProfile(sellerId);
+    }
+  }
+
+  return getUserProfile(trimmed);
+}
+
+/** Batch-resolve canonical storefront path segments for many seller IDs. */
+export async function resolveStorefrontSegmentsForSellerIds(
+  sellerIds: string[]
+): Promise<Record<string, string>> {
+  const uniqueIds = [...new Set(sellerIds.filter(Boolean))];
+  const result: Record<string, string> = {};
+
+  if (uniqueIds.length === 0) return result;
+
+  const refs = uniqueIds.map((id) => db().collection('users').doc(id));
+  const snaps = await db().getAll(...refs);
+
+  for (const snap of snaps) {
+    if (!snap.exists) {
+      result[snap.id] = snap.id;
+      continue;
+    }
+    const data = snap.data();
+    const storefrontSlug =
+      typeof data?.storefrontSlug === 'string' ? data.storefrontSlug : undefined;
+    result[snap.id] = resolveStorefrontSegment({ id: snap.id, storefrontSlug });
+  }
+
+  for (const id of uniqueIds) {
+    if (!(id in result)) {
+      result[id] = id;
+    }
+  }
+
+  return result;
+}
+
+export async function isStorefrontSlugAvailable(
+  slug: string,
+  callerUid?: string
+): Promise<boolean> {
+  if (!isValidStorefrontSlug(slug)) return false;
+
+  const doc = await db().collection('storefront_slugs').doc(slug).get();
+  if (!doc.exists) return true;
+
+  const ownerId = doc.data()?.sellerId;
+  return typeof ownerId === 'string' && callerUid !== undefined && ownerId === callerUid;
+}
+
+export async function claimOrUpdateStorefrontSlug(uid: string, slug: string): Promise<void> {
+  const normalized = slug.trim().toLowerCase();
+
+  if (!isValidStorefrontSlug(normalized)) {
+    throw new StorefrontSlugValidationError(
+      'Storefront URL must be 3–48 characters, lowercase letters, numbers, and hyphens only'
+    );
+  }
+
+  const userRef = db().collection('users').doc(uid);
+  const slugRef = db().collection('storefront_slugs').doc(normalized);
+
+  await db().runTransaction(async (tx) => {
+    // Firestore requires all transaction reads before writes; await sequentially.
+    const slugSnap = await tx.get(slugRef);
+    const userSnap = await tx.get(userRef);
+
+    if (slugSnap.exists) {
+      const ownerId = slugSnap.data()?.sellerId;
+      if (typeof ownerId === 'string' && ownerId !== uid) {
+        throw new StorefrontSlugConflictError();
+      }
+    }
+
+    const currentSlug =
+      typeof userSnap.data()?.storefrontSlug === 'string'
+        ? (userSnap.data()!.storefrontSlug as string)
+        : undefined;
+
+    if (currentSlug === normalized) {
+      return;
+    }
+
+    const now = new Date();
+    const previous: string[] = Array.isArray(userSnap.data()?.previousStorefrontSlugs)
+      ? [...(userSnap.data()!.previousStorefrontSlugs as string[])]
+      : [];
+
+    if (currentSlug && currentSlug !== normalized && !previous.includes(currentSlug)) {
+      previous.push(currentSlug);
+    }
+
+    tx.set(
+      userRef,
+      {
+        storefrontSlug: normalized,
+        storefrontSlugUpdatedAt: now.toISOString(),
+        previousStorefrontSlugs: previous,
+      },
+      { merge: true }
+    );
+
+    const existingCreatedAt = slugSnap.exists ? slugSnap.data()?.createdAt : undefined;
+    tx.set(slugRef, {
+      sellerId: uid,
+      createdAt: existingCreatedAt ?? now,
+      updatedAt: now,
+    });
+  });
 }
 
 export async function upgradeToPhoneVerified(

@@ -1,0 +1,124 @@
+---
+import Layout from '../../../../layouts/Layout.astro';
+import { getOptionalSellerSession } from '../../../../lib/auth';
+import {
+  getStorefrontSegmentForSeller,
+  resolveSellerByStorefrontParam,
+} from '../../../../lib/buyer-profile';
+import {
+  getActiveApparelForSeller,
+  getClothingListingById,
+} from '../../../../lib/clothing-api';
+import ClothingInventoryGrid from '../../../../islands/buyer/ClothingInventoryGrid';
+import ContactSellerFab from '../../../../islands/buyer/ContactSellerFab';
+import {
+  buildStorefrontSeoDescription,
+  buildStorefrontSeoTitle,
+  resolveAbsoluteUrl,
+  resolveStorefrontOgImage,
+} from '../../../../lib/seo';
+import {
+  getClothingListingPath,
+  getStorefrontPath,
+  resolveStorefrontSegment,
+} from '../../../../utils/url-helpers';
+
+const { storefrontSlug: param } = Astro.params;
+
+if (!param) {
+  return Astro.rewrite('/404');
+}
+
+const seller = await resolveSellerByStorefrontParam(param);
+if (!seller) {
+  // Legacy flat URL fallback: /marketplace/clothing/{listingId} → nested path.
+  const listing = await getClothingListingById(param);
+  if (listing) {
+    const resolvedSegment = await getStorefrontSegmentForSeller(listing.sellerId);
+    return Astro.redirect(getClothingListingPath(listing.id, resolvedSegment), 301);
+  }
+  return Astro.rewrite('/404');
+}
+
+const canonicalSegment = resolveStorefrontSegment(seller);
+// Previous slug / UID fallback → 301 to current canonical storefront URL.
+if (param !== canonicalSegment) {
+  return Astro.redirect(getStorefrontPath(canonicalSegment), 301);
+}
+
+const listings = await getActiveApparelForSeller(seller.id);
+const storefrontSegmentsBySellerId = { [seller.id]: canonicalSegment };
+
+const session = await getOptionalSellerSession(Astro.request, Astro.cookies);
+const buyerContext = {
+  isLoggedIn: !!session,
+  verificationTier: session?.verificationTier ?? 'anonymous',
+};
+
+const origin = Astro.site?.href ?? Astro.url.origin;
+const storefrontPath = getStorefrontPath(canonicalSegment);
+const canonicalUrl = resolveAbsoluteUrl(storefrontPath, origin);
+const pageTitle = buildStorefrontSeoTitle(seller.displayName);
+const pageDescription = buildStorefrontSeoDescription(seller.displayName);
+const ogImage = resolveStorefrontOgImage(listings);
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  ogImage={ogImage}
+  ogUrl={canonicalUrl}
+  ogType="website"
+  bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
+>
+  <header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+      <a
+        href="/marketplace/clothing"
+        class="mb-4 inline-flex items-center text-sm font-semibold text-red-600 hover:text-red-700"
+      >
+        ← Browse all apparel
+      </a>
+      <h1 class="font-brand text-4xl leading-none text-slate-900 uppercase sm:text-5xl">
+        {seller.displayName}
+      </h1>
+      <p class="mt-2 text-base text-slate-500 sm:text-lg">Apparel storefront</p>
+    </div>
+  </header>
+
+  {
+    listings.length > 0 ? (
+      <ClothingInventoryGrid
+        client:load
+        initialListings={listings}
+        storefrontSegmentsBySellerId={storefrontSegmentsBySellerId}
+        buyerContext={buyerContext}
+      />
+    ) : (
+      <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div class="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+          <p class="text-lg font-medium text-slate-700">This storefront has no active listings</p>
+          <p class="mt-2 text-sm text-slate-500">
+            Check back soon, or browse other apparel on the marketplace.
+          </p>
+          <a
+            href="/marketplace/clothing"
+            class="mt-6 inline-flex items-center rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
+          >
+            Browse all apparel
+          </a>
+        </div>
+      </main>
+    )
+  }
+
+  {
+    listings.length === 0 && (
+      <ContactSellerFab
+        client:load
+        isLoggedIn={buyerContext.isLoggedIn}
+        verificationTier={buyerContext.verificationTier}
+      />
+    )
+  }
+</Layout>

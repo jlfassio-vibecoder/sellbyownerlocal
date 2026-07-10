@@ -1,16 +1,23 @@
 ---
 import { requireSellerOrRedirect } from '../../../lib/auth';
+import { getUserProfile } from '../../../lib/buyer-profile';
 import { getApparelCatalogForSeller } from '../../../lib/clothing-api';
 import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
 import CatalogUploader from '../../../islands/seller/CatalogUploader';
 import BulkImageUploader from '../../../islands/seller/BulkImageUploader';
 import ApparelCatalogSection from '../../../islands/seller/ApparelCatalogSection';
 import type { ApparelFilterItem } from '../../../lib/apparel';
+import { resolveStorefrontSegment } from '../../../utils/url-helpers';
 import '../../../styles/global.css';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
 
+const profile = await getUserProfile(seller.uid);
+const storefrontSegment = resolveStorefrontSegment({
+  id: seller.uid,
+  storefrontSlug: profile?.storefrontSlug,
+});
 const catalog = await getApparelCatalogForSeller(seller.uid);
 
 const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
@@ -39,7 +46,12 @@ const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
     <title>My Catalog · Apparel Dashboard · Sell By Owner Local</title>
   </head>
   <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
-    <ApparelSellerLayout client:load activeNav="catalog" sellerUid={seller.uid}>
+    <ApparelSellerLayout
+      client:load
+      activeNav="catalog"
+      sellerUid={seller.uid}
+      storefrontSlug={profile?.storefrontSlug}
+    >
       <div class="flex-1 overflow-y-auto">
         <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
           <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -59,7 +71,11 @@ const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
 
           <BulkImageUploader client:load sellerId={seller.uid} />
 
-          <ApparelCatalogSection client:load initialItems={initialItems} />
+          <ApparelCatalogSection
+            client:load
+            initialItems={initialItems}
+            storefrontSegment={storefrontSegment}
+          />
         </div>
       </div>
     </ApparelSellerLayout>

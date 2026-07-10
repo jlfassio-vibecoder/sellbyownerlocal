@@ -7,7 +7,13 @@ import {
   requireSeller,
   unauthorizedResponse,
 } from '../../../lib/auth';
-import { getUserProfile, updateUserDisplayName } from '../../../lib/buyer-profile';
+import {
+  claimOrUpdateStorefrontSlug,
+  getUserProfile,
+  StorefrontSlugConflictError,
+  StorefrontSlugValidationError,
+  updateUserDisplayName,
+} from '../../../lib/buyer-profile';
 import { auth, db } from '../../../lib/firebase-admin';
 import { PublicUserResponseSchema, UserProfileUpdateSchema } from '../../../schemas';
 
@@ -36,6 +42,7 @@ export const GET: APIRoute = async ({ params }) => {
       displayName: data.displayName,
       stats: data.stats,
       verificationTier: data.verificationTier,
+      storefrontSlug: data.storefrontSlug,
     });
 
     if (!parsed.success) {
@@ -95,6 +102,12 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
       );
     }
 
+    // Copilot suggestion ignored: claim already runs before displayName to avoid partial updates.
+    // Claim slug before displayName so a 409/400 does not leave a partial profile update.
+    if (parsed.data.storefrontSlug) {
+      await claimOrUpdateStorefrontSlug(id, parsed.data.storefrontSlug);
+    }
+
     await updateUserDisplayName(id, parsed.data.displayName);
 
     try {
@@ -116,6 +129,7 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
       displayName: profile.displayName,
       stats: profile.stats,
       verificationTier: profile.verificationTier,
+      storefrontSlug: profile.storefrontSlug,
     });
 
     if (!response.success) {
@@ -135,6 +149,18 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
     }
     if (error instanceof ForbiddenError) {
       return forbiddenResponse(error.message);
+    }
+    if (error instanceof StorefrontSlugConflictError) {
+      return new Response(JSON.stringify({ error: 'Storefront URL is already taken' }), {
+        status: 409,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (error instanceof StorefrontSlugValidationError) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
     console.error(`PATCH /api/users/${id} failed`, error);
     return new Response(JSON.stringify({ error: 'Failed to update user' }), {

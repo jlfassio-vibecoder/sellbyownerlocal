@@ -1,41 +1,41 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
+import type { FavoriteItem, VerificationTier } from '../../schemas';
 import {
   buildContactHelperText,
   buildContactMessage,
   buildContactSubheadline,
   syncContactMessageName,
 } from '../../lib/contact-message';
-import { getGuestFavorites, groupFavoritesBySeller, type FavoriteItem } from '../../utils/favorites';
+import { groupFavoritesBySeller } from '../../utils/favorites';
 
 interface ContactSellerModalProps {
   isOpen: boolean;
   isLoggedIn: boolean;
+  verificationTier?: VerificationTier;
+  favoriteItems: FavoriteItem[];
+  isLoadingFavorites?: boolean;
   onClose: () => void;
-}
-
-async function fetchLoggedInFavorites(): Promise<FavoriteItem[]> {
-  const res = await fetch('/api/favorites', { credentials: 'same-origin' });
-  if (!res.ok) return [];
-
-  const data = await res.json();
-  return Array.isArray(data.items) ? data.items : [];
 }
 
 export default function ContactSellerModal({
   isOpen,
-  isLoggedIn,
+  favoriteItems,
+  isLoadingFavorites = false,
   onClose,
 }: ContactSellerModalProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
-  const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
-  const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const prefilledForOpenRef = useRef(false);
+
+  const availableItems = favoriteItems.filter(
+    (item) => item.sellerId && item.sellerId !== 'unknown'
+  );
+  const unavailableCount = favoriteItems.length - availableItems.length;
 
   useEffect(() => {
     if (!isOpen) {
@@ -43,6 +43,7 @@ export default function ContactSellerModal({
       return;
     }
 
+    if (isLoadingFavorites) return;
     if (prefilledForOpenRef.current) return;
     prefilledForOpenRef.current = true;
 
@@ -50,18 +51,8 @@ export default function ContactSellerModal({
     setName('');
     setEmail('');
     setPhone('');
-    setIsLoadingFavorites(true);
-
-    void (async () => {
-      try {
-        const items = isLoggedIn ? await fetchLoggedInFavorites() : getGuestFavorites();
-        setFavoriteItems(items);
-        setMessage(buildContactMessage(items, ''));
-      } finally {
-        setIsLoadingFavorites(false);
-      }
-    })();
-  }, [isOpen, isLoggedIn]);
+    setMessage(buildContactMessage(availableItems, ''));
+  }, [isOpen, favoriteItems, availableItems, isLoadingFavorites]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -85,9 +76,9 @@ export default function ContactSellerModal({
     setIsSubmitting(true);
 
     try {
-      const groups = groupFavoritesBySeller(favoriteItems);
+      const groups = groupFavoritesBySeller(availableItems);
       if (groups.size === 0) {
-        throw new Error('Save at least one item before requesting a quote.');
+        throw new Error('Save at least one available item before requesting a quote.');
       }
 
       await Promise.all(
@@ -158,6 +149,13 @@ export default function ContactSellerModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
+          {unavailableCount > 0 && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              {unavailableCount} saved listing{unavailableCount === 1 ? ' is' : 's are'} no longer
+              available and will be skipped.
+            </p>
+          )}
+
           <div>
             <label htmlFor="contact-name" className="mb-1 block text-sm font-medium text-slate-700">
               Name
@@ -226,7 +224,7 @@ export default function ContactSellerModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || isLoadingFavorites}
+              disabled={isSubmitting || isLoadingFavorites || availableItems.length === 0}
               className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
             >
               {isSubmitting ? 'Sending…' : 'Send Request'}

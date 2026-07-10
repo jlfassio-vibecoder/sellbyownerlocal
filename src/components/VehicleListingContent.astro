@@ -105,6 +105,9 @@ const favoriteTitle =
     buyerContext
       ? {
           vehicleId: vehicle.id,
+          title: favoriteTitle,
+          price: vehicle.price,
+          sellerId: vehicle.sellerId,
           isLoggedIn: buyerContext.isLoggedIn,
           verificationTier: buyerContext.verificationTier,
           loginHref: buyerContext.saveLoginHref ?? buyerContext.loginHref,
@@ -198,6 +201,7 @@ const favoriteTitle =
             sellerId={vehicle.sellerId}
             isLoggedIn={buyerContext?.isLoggedIn ?? false}
             verificationTier={buyerContext?.verificationTier ?? 'anonymous'}
+            initialSaved={initialSaved}
           />
         </div>
         {
