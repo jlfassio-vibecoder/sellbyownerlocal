@@ -19,7 +19,7 @@ import ContactForm from '../islands/ContactForm';
 import VehicleSectionNav from '../islands/VehicleSectionNav';
 import FavoriteButton from '../islands/buyer/FavoriteButton';
 import WindowSticker from '../islands/WindowSticker';
-import SingleDocumentViewer from '../islands/SingleDocumentViewer.tsx';
+import DocumentViewer from '../islands/DocumentViewer.tsx';
 import HistoryReportViewer from '../islands/HistoryReportViewer.tsx';
 import ServiceTimeline from '../islands/ServiceTimeline';
 import AccentText from './AccentText';
@@ -658,13 +658,12 @@ const favoriteTitle =
             {
               originalStickerUrl ? (
                 <div class="mb-8 rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
-                  <SingleDocumentViewer
+                  <DocumentViewer
                     client:load
-                    vehicleId={vehicle.id}
-                    url={originalStickerUrl}
                     title="Original Window Sticker"
                     description="Factory installed options and original MSRP."
-                    proxyApiRoute={`/api/vehicles/${vehicle.id}/original-sticker`}
+                    proxyUrl={`/api/vehicles/${vehicle.id}/original-sticker`}
+                    originalUrl={originalStickerUrl}
                   />
                 </div>
               ) : showGeneratedSticker && monroney ? (
@@ -734,13 +733,12 @@ const favoriteTitle =
               </h3>
               <p class="text-sm text-slate-500">Private Party Market Value Estimate</p>
             </div>
-            <SingleDocumentViewer
+            <DocumentViewer
               client:load
-              vehicleId={vehicle.id}
-              url={kbbReportUrl}
               title="Kelley Blue Book Valuation"
               description="Private Party Market Value Estimate"
-              proxyApiRoute={`/api/vehicles/${vehicle.id}/kbb-report`}
+              proxyUrl={`/api/vehicles/${vehicle.id}/kbb-report`}
+              originalUrl={kbbReportUrl}
             />
           </section>
         )}

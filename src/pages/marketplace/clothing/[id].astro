@@ -11,6 +11,7 @@ import {
 import ApparelImageGallery from '../../../islands/ApparelImageGallery';
 import ApparelListingImage from '../../../components/apparel/ApparelListingImage';
 import ContactForm from '../../../islands/ContactForm';
+import DocumentViewer from '../../../islands/DocumentViewer';
 import FavoriteButton from '../../../islands/buyer/FavoriteButton';
 
 const { id } = Astro.params;
@@ -177,14 +178,13 @@ const buyerContext = {
 
           {
             listing.pdfLineSheetUrl && (
-              <a
-                href={listing.pdfLineSheetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex w-max items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-slate-800"
-              >
-                View Line Sheet
-              </a>
+              <DocumentViewer
+                client:load
+                title="Brand Catalog"
+                proxyUrl={`/api/clothing/${listing.id}/catalog`}
+                originalUrl={listing.pdfLineSheetUrl}
+                openButtonLabel="Open Full Catalog"
+              />
             )
           }
         </div>
