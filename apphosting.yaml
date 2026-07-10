@@ -1,0 +1,4 @@
+# Firebase App Hosting — Astro SSR (Node standalone)
+# @apphosting/astro-adapter@0.0.1 is incompatible with Astro 7; use official @astrojs/node + runCommand.
+scripts:
+  runCommand: node ./dist/server/entry.mjs
