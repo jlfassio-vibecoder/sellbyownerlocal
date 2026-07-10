@@ -71,20 +71,21 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   try {
     const { sellerId, name, email, phone, message, items } = parsed.data;
     const leadItems = items ?? [];
-    const firstItem = leadItems[0];
 
-    if (!firstItem?.id) {
+    if (leadItems.length === 0) {
       return jsonResponse({ error: 'At least one saved item is required to submit a lead.' }, 400);
     }
 
-    const listingSellerId = await resolveListingSellerId(firstItem.id);
+    for (const item of leadItems) {
+      const listingSellerId = await resolveListingSellerId(item.id);
 
-    if (!listingSellerId) {
-      return jsonResponse({ error: 'Referenced listing not found.' }, 400);
-    }
+      if (!listingSellerId) {
+        return jsonResponse({ error: 'Referenced listing not found.' }, 400);
+      }
 
-    if (listingSellerId !== sellerId) {
-      return jsonResponse({ error: 'Seller does not match the referenced listing.' }, 403);
+      if (listingSellerId !== sellerId) {
+        return jsonResponse({ error: 'Seller does not match the referenced listing.' }, 403);
+      }
     }
 
     const createdAt = new Date().toISOString();
