@@ -145,7 +145,8 @@ export async function resolveSellerByStorefrontParam(
   const trimmed = param.trim();
   if (!trimmed) return null;
 
-  const slugDoc = await db().collection('storefront_slugs').doc(trimmed).get();
+  // Slugs are stored lowercase; normalize so mixed-case URLs still resolve for 301.
+  const slugDoc = await db().collection('storefront_slugs').doc(trimmed.toLowerCase()).get();
   if (slugDoc.exists) {
     const sellerId = slugDoc.data()?.sellerId;
     if (typeof sellerId === 'string' && sellerId.length > 0) {

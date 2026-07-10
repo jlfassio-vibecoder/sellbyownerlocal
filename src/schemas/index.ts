@@ -54,7 +54,7 @@ export const UserSchema = z.object({
   phoneVerifiedAt: z.iso.datetime().optional(),
   kyc: KycStatusSchema.optional(),
   storefrontSlug: StorefrontSlugSchema.optional(),
-  storefrontSlugUpdatedAt: z.coerce.date().optional(),
+  storefrontSlugUpdatedAt: z.iso.datetime().optional(),
   previousStorefrontSlugs: z.array(z.string()).optional(),
 });
 
