@@ -21,9 +21,8 @@ export default defineConfig({
 
   env: {
     schema: {
-      FIREBASE_PROJECT_ID: envField.string({ context: 'server', access: 'secret' }),
-      FIREBASE_CLIENT_EMAIL: envField.string({ context: 'server', access: 'secret' }),
-      FIREBASE_PRIVATE_KEY: envField.string({ context: 'server', access: 'secret' }),
+      FIREBASE_SERVICE_ACCOUNT_JSON: envField.string({ context: 'server', access: 'secret' }),
+      FIREBASE_PROJECT_ID: envField.string({ context: 'server', access: 'secret', optional: true }),
       FIRESTORE_DATABASE_ID: envField.string({ context: 'server', access: 'secret', optional: true }),
       FIREBASE_STORAGE_BUCKET: envField.string({ context: 'server', access: 'secret', optional: true }),
     },

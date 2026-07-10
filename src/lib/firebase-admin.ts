@@ -34,32 +34,27 @@ function resolveStorageBucket(projectId?: string, serviceAccountBucket?: string)
 function initAdmin(): App {
   if (getApps().length > 0) return getApps()[0]!;
 
-  const projectId = import.meta.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = import.meta.env.FIREBASE_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL;
-  const rawPrivateKey = import.meta.env.FIREBASE_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY;
+  const serviceAccountString =
+    import.meta.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-  console.log(
-    `[DEBUG] ProjectID exists: ${!!projectId}, Email exists: ${!!clientEmail}, Key exists: ${!!rawPrivateKey}`
-  );
+  if (!serviceAccountString) {
+    throw new Error('CRITICAL: Missing FIREBASE_SERVICE_ACCOUNT_JSON environment variable.');
+  }
 
-  if (!projectId || !clientEmail || !rawPrivateKey) {
+  let serviceAccount;
+  try {
+    serviceAccount = JSON.parse(serviceAccountString);
+  } catch {
     throw new Error(
-      `CRITICAL: Vercel Env Vars missing! ProjectID: ${!!projectId}, Email: ${!!clientEmail}, Key: ${!!rawPrivateKey}`
+      'CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON. Ensure it is a valid JSON string.'
     );
   }
 
-  // Strip wrapping quotes (if they exist) and replace literal \n strings with actual line breaks
-  const formattedPrivateKey = rawPrivateKey
-    .replace(/^"|"$/g, '')
-    .replace(/\\n/g, '\n');
-  const storageBucket = resolveStorageBucket(projectId);
+  const projectId = readEnv('FIREBASE_PROJECT_ID') ?? serviceAccount.project_id;
+  const storageBucket = resolveStorageBucket(projectId, serviceAccount.storage_bucket);
 
   return initializeApp({
-    credential: cert({
-      projectId,
-      clientEmail,
-      privateKey: formattedPrivateKey,
-    }),
+    credential: cert(serviceAccount),
     projectId,
     storageBucket,
   });
