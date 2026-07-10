@@ -138,6 +138,24 @@ export async function getStorefrontSegmentForSeller(sellerId: string): Promise<s
   });
 }
 
+/** Resolve a storefront URL param via slug lookup, then UID fallback. */
+export async function resolveSellerByStorefrontParam(
+  param: string
+): Promise<(User & { id: string }) | null> {
+  const trimmed = param.trim();
+  if (!trimmed) return null;
+
+  const slugDoc = await db().collection('storefront_slugs').doc(trimmed).get();
+  if (slugDoc.exists) {
+    const sellerId = slugDoc.data()?.sellerId;
+    if (typeof sellerId === 'string' && sellerId.length > 0) {
+      return getUserProfile(sellerId);
+    }
+  }
+
+  return getUserProfile(trimmed);
+}
+
 /** Batch-resolve canonical storefront path segments for many seller IDs. */
 export async function resolveStorefrontSegmentsForSellerIds(
   sellerIds: string[]
