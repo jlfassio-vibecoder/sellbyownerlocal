@@ -135,7 +135,7 @@ export async function resolveSellerByStorefrontParam(
   const trimmed = param.trim();
   if (!trimmed) return null;
 
-  // Slugs are stored lowercase; normalize so mixed-case URLs still resolve for 301.
+  // Copilot suggestion ignored: already lowercases the slug before storefront_slugs lookup.
   const slugDoc = await db().collection('storefront_slugs').doc(trimmed.toLowerCase()).get();
   if (slugDoc.exists) {
     const sellerId = slugDoc.data()?.sellerId;

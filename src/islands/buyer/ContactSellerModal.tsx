@@ -51,8 +51,8 @@ export default function ContactSellerModal({
     setName('');
     setEmail('');
     setPhone('');
-    setMessage(buildContactMessage(favoriteItems, ''));
-  }, [isOpen, favoriteItems, isLoadingFavorites]);
+    setMessage(buildContactMessage(availableItems, ''));
+  }, [isOpen, favoriteItems, availableItems, isLoadingFavorites]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -76,7 +76,7 @@ export default function ContactSellerModal({
     setIsSubmitting(true);
 
     try {
-      const groups = groupFavoritesBySeller(favoriteItems);
+      const groups = groupFavoritesBySeller(availableItems);
       if (groups.size === 0) {
         throw new Error('Save at least one available item before requesting a quote.');
       }

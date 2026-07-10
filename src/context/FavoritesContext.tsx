@@ -205,7 +205,9 @@ export function FavoritesProvider({
   const value = useMemo<FavoritesContextValue>(
     () => ({
       items,
-      count: items.length,
+      count: isLoading
+        ? new Set([...items.map((item) => item.id), ...initialSavedIds]).size
+        : items.length,
       isLoading,
       isSyncing,
       error,
@@ -214,7 +216,17 @@ export function FavoritesProvider({
       toggle,
       refresh,
     }),
-    [items, isLoading, isSyncing, error, persistToServer, isFavorite, toggle, refresh]
+    [
+      items,
+      isLoading,
+      isSyncing,
+      error,
+      persistToServer,
+      isFavorite,
+      toggle,
+      refresh,
+      initialSavedIds,
+    ]
   );
 
   return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
@@ -364,7 +376,9 @@ function useStandaloneFavorites(options: {
   return useMemo(
     () => ({
       items,
-      count: items.length,
+      count: isLoading
+        ? new Set([...items.map((item) => item.id), ...initialSavedIds]).size
+        : items.length,
       isLoading,
       isSyncing,
       error,
@@ -373,6 +387,16 @@ function useStandaloneFavorites(options: {
       toggle,
       refresh,
     }),
-    [items, isLoading, isSyncing, error, persistToServer, isFavorite, toggle, refresh]
+    [
+      items,
+      isLoading,
+      isSyncing,
+      error,
+      persistToServer,
+      isFavorite,
+      toggle,
+      refresh,
+      initialSavedIds,
+    ]
   );
 }

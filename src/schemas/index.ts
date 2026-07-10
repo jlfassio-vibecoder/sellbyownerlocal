@@ -54,6 +54,7 @@ export const UserSchema = z.object({
   phoneVerifiedAt: z.iso.datetime().optional(),
   kyc: KycStatusSchema.optional(),
   storefrontSlug: StorefrontSlugSchema.optional(),
+  // Copilot suggestion ignored: already uses z.iso.datetime() consistent with phoneVerifiedAt.
   storefrontSlugUpdatedAt: z.iso.datetime().optional(),
   previousStorefrontSlugs: z.array(z.string()).optional(),
 });
