@@ -885,6 +885,7 @@ export const ClothingListingSchema = z.object({
   sellerId: z.string().min(1),
   prePackRatio: z.string().optional(),
   pdfLineSheetUrl: lineSheetUrl.optional(),
+  pdfDefaultPage: z.number().int().positive().optional().nullable(),
   colors: z.array(z.string().min(1)).optional(),
   isFeatured: z.boolean().optional(),
   isSale: z.boolean().optional(),

@@ -175,21 +175,24 @@ const buyerContext = {
           >
             Contact Seller
           </a>
-
-          {
-            listing.pdfLineSheetUrl?.trim() && (
-              <DocumentViewer
-                client:load
-                title="Brand Catalog"
-                proxyUrl={`/api/clothing/${listing.id}/catalog`}
-                originalUrl={listing.pdfLineSheetUrl}
-                openButtonLabel="Open Full Catalog"
-              />
-            )
-          }
         </div>
       </div>
     </section>
+
+    {
+      listing.pdfLineSheetUrl?.trim() && (
+        <section class="mb-16 w-full">
+          <DocumentViewer
+            client:load
+            title="Brand Catalog"
+            proxyUrl={`/api/clothing/${listing.id}/catalog`}
+            originalUrl={listing.pdfLineSheetUrl}
+            openButtonLabel="Open Full Catalog"
+            defaultPage={listing.pdfDefaultPage ?? undefined}
+          />
+        </section>
+      )
+    }
 
     <ContactForm
       client:load

@@ -10,6 +10,13 @@ interface DocumentViewerProps {
   proxyUrl: string;
   originalUrl: string;
   openButtonLabel?: string;
+  defaultPage?: number;
+}
+
+function withPdfPage(url: string, defaultPage?: number): string {
+  if (!defaultPage || defaultPage < 1) return url;
+  const base = url.split('#')[0];
+  return `${base}#page=${defaultPage}`;
 }
 
 export default function DocumentViewer({
@@ -18,9 +25,14 @@ export default function DocumentViewer({
   proxyUrl,
   originalUrl,
   openButtonLabel = 'Open PDF',
+  defaultPage,
 }: DocumentViewerProps) {
   const pdf = isPdfUrl(originalUrl);
-  const externalUrl = useMemo(() => toDirectStorageObjectUrl(originalUrl), [originalUrl]);
+  const externalUrl = useMemo(
+    () => withPdfPage(toDirectStorageObjectUrl(originalUrl), defaultPage),
+    [originalUrl, defaultPage]
+  );
+  const iframeSrc = useMemo(() => withPdfPage(proxyUrl, defaultPage), [proxyUrl, defaultPage]);
 
   if (!pdf) {
     return (
@@ -69,7 +81,7 @@ export default function DocumentViewer({
         </a>
       </div>
 
-      <PdfIframeViewer fileUrl={proxyUrl} title={title} />
+      <PdfIframeViewer key={iframeSrc} fileUrl={iframeSrc} title={title} />
 
       <p className="text-xs text-slate-500">
         PDF preview not showing?{' '}

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import DocumentViewer from '../DocumentViewer';
 import BasicMultiUploader from './BasicMultiUploader';
 import LineSheetPdfUploader from './LineSheetPdfUploader';
 
@@ -19,6 +20,7 @@ export interface ApparelEditorInitialData {
   colors?: string[];
   prePackRatio?: string;
   pdfLineSheetUrl?: string;
+  pdfDefaultPage?: number | null;
   galleryPhotos: string[];
   status: 'draft' | 'active' | 'archived';
 }
@@ -39,6 +41,10 @@ function joinCommaList(values: string[]): string {
   return values.join(', ');
 }
 
+function normalizeDefaultPage(value: string | number): number {
+  return Math.max(1, Math.floor(Number(value)) || 1);
+}
+
 export default function ApparelEditorForm({ sellerId, initialData }: ApparelEditorFormProps) {
   const isEditing = Boolean(initialData);
 
@@ -51,6 +57,9 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
   const [colors, setColors] = useState(joinCommaList(initialData?.colors ?? []));
   const [prePackRatio, setPrePackRatio] = useState(initialData?.prePackRatio ?? '');
   const [pdfLineSheetUrl, setPdfLineSheetUrl] = useState(initialData?.pdfLineSheetUrl ?? '');
+  const [pdfDefaultPage, setPdfDefaultPage] = useState(
+    String(initialData?.pdfDefaultPage ?? 1)
+  );
   const [galleryPhotos, setGalleryPhotos] = useState<string[]>(
     initialData?.galleryPhotos ?? []
   );
@@ -58,6 +67,8 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const resolvedDefaultPage = normalizeDefaultPage(pdfDefaultPage);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -83,6 +94,7 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
       prePackRatio: prePackRatio.trim() || undefined,
       // Must match buyer DocumentViewer + /api/clothing/[id]/catalog field name.
       pdfLineSheetUrl: pdfLineSheetUrl.trim() || undefined,
+      pdfDefaultPage: normalizeDefaultPage(pdfDefaultPage),
       galleryPhotos,
     };
 
@@ -275,6 +287,38 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
         onChange={setPdfLineSheetUrl}
         disabled={isSubmitting}
       />
+
+      <div>
+        <label htmlFor="pdfDefaultPage" className="mb-1 block text-sm font-medium text-slate-700">
+          Default Catalog Page
+        </label>
+        <input
+          id="pdfDefaultPage"
+          type="number"
+          min={1}
+          step={1}
+          value={pdfDefaultPage}
+          onChange={(e) => setPdfDefaultPage(e.target.value)}
+          className={INPUT_CLASS}
+          disabled={isSubmitting || !pdfLineSheetUrl}
+        />
+        <p className="mt-1 text-xs text-slate-500">
+          Buyers open the catalog at this page. Change it and check the preview below.
+        </p>
+      </div>
+
+      {pdfLineSheetUrl.trim() && initialData?.id ? (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-slate-700">Catalog Preview</p>
+          <DocumentViewer
+            title="Brand Catalog Preview"
+            proxyUrl={`/api/clothing/${initialData.id}/catalog`}
+            originalUrl={pdfLineSheetUrl}
+            openButtonLabel="Open Full Catalog"
+            defaultPage={resolvedDefaultPage}
+          />
+        </div>
+      ) : null}
 
       <div>
         <p className="mb-1 block text-sm font-medium text-slate-700">Gallery Photos</p>
