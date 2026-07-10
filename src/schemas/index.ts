@@ -57,6 +57,9 @@ export const UserSchema = z.object({
   // Copilot suggestion ignored: already uses z.iso.datetime() consistent with phoneVerifiedAt.
   storefrontSlugUpdatedAt: z.iso.datetime().optional(),
   previousStorefrontSlugs: z.array(z.string()).optional(),
+  storefrontName: z.string().trim().min(1).max(50).optional(),
+  storefrontTagline: z.string().trim().min(1).max(150).optional(),
+  storefrontHeroUrl: httpHttpsUrl.optional(),
 });
 
 export const PublicUserResponseSchema = z.object({
@@ -65,11 +68,17 @@ export const PublicUserResponseSchema = z.object({
   stats: UserStatsSchema,
   verificationTier: VerificationTierSchema.default('anonymous'),
   storefrontSlug: StorefrontSlugSchema.optional(),
+  storefrontName: z.string().trim().min(1).max(50).optional(),
+  storefrontTagline: z.string().trim().min(1).max(150).optional(),
+  storefrontHeroUrl: httpHttpsUrl.optional(),
 });
 
 export const UserProfileUpdateSchema = z.object({
   displayName: z.string().min(1).max(100),
   storefrontSlug: StorefrontSlugSchema.optional(),
+  storefrontName: z.union([z.string().trim().min(1).max(50), z.literal('')]).optional(),
+  storefrontTagline: z.union([z.string().trim().min(1).max(150), z.literal('')]).optional(),
+  storefrontHeroUrl: z.union([httpHttpsUrl, z.literal('')]).optional(),
 });
 
 export const PhoneVerifyRequestSchema = z.object({

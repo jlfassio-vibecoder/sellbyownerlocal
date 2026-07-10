@@ -13,6 +13,7 @@ import {
   StorefrontSlugConflictError,
   StorefrontSlugValidationError,
   updateUserDisplayName,
+  updateUserStorefrontBranding,
 } from '../../../lib/buyer-profile';
 import { auth, db } from '../../../lib/firebase-admin';
 import { PublicUserResponseSchema, UserProfileUpdateSchema } from '../../../schemas';
@@ -43,6 +44,9 @@ export const GET: APIRoute = async ({ params }) => {
       stats: data.stats,
       verificationTier: data.verificationTier,
       storefrontSlug: data.storefrontSlug,
+      storefrontName: data.storefrontName,
+      storefrontTagline: data.storefrontTagline,
+      storefrontHeroUrl: data.storefrontHeroUrl,
     });
 
     if (!parsed.success) {
@@ -116,6 +120,12 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
       console.warn(`PATCH /api/users/${id}: Firebase Auth displayName sync failed`, authError);
     }
 
+    await updateUserStorefrontBranding(id, {
+      storefrontName: parsed.data.storefrontName,
+      storefrontTagline: parsed.data.storefrontTagline,
+      storefrontHeroUrl: parsed.data.storefrontHeroUrl,
+    });
+
     const profile = await getUserProfile(id);
     if (!profile) {
       return new Response(JSON.stringify({ error: 'User not found' }), {
@@ -130,6 +140,9 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
       stats: profile.stats,
       verificationTier: profile.verificationTier,
       storefrontSlug: profile.storefrontSlug,
+      storefrontName: profile.storefrontName,
+      storefrontTagline: profile.storefrontTagline,
+      storefrontHeroUrl: profile.storefrontHeroUrl,
     });
 
     if (!response.success) {
