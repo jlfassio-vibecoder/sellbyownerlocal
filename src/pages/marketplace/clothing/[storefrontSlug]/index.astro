@@ -1,8 +1,14 @@
 ---
 import Layout from '../../../../layouts/Layout.astro';
 import { getOptionalSellerSession } from '../../../../lib/auth';
-import { resolveSellerByStorefrontParam } from '../../../../lib/buyer-profile';
-import { getActiveApparelForSeller } from '../../../../lib/clothing-api';
+import {
+  getStorefrontSegmentForSeller,
+  resolveSellerByStorefrontParam,
+} from '../../../../lib/buyer-profile';
+import {
+  getActiveApparelForSeller,
+  getClothingListingById,
+} from '../../../../lib/clothing-api';
 import ClothingInventoryGrid from '../../../../islands/buyer/ClothingInventoryGrid';
 import {
   buildStorefrontSeoDescription,
@@ -11,6 +17,7 @@ import {
   resolveStorefrontOgImage,
 } from '../../../../lib/seo';
 import {
+  getClothingListingPath,
   getStorefrontPath,
   resolveStorefrontSegment,
 } from '../../../../utils/url-helpers';
@@ -23,6 +30,12 @@ if (!param) {
 
 const seller = await resolveSellerByStorefrontParam(param);
 if (!seller) {
+  // Legacy flat URL fallback: /marketplace/clothing/{listingId} → nested path.
+  const listing = await getClothingListingById(param);
+  if (listing) {
+    const resolvedSegment = await getStorefrontSegmentForSeller(listing.sellerId);
+    return Astro.redirect(getClothingListingPath(listing.id, resolvedSegment), 301);
+  }
   return Astro.rewrite('/404');
 }
 
