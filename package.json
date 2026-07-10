@@ -41,11 +41,18 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.9",
+    "ajv": "^8.20.0",
     "typescript": "^6.0.3"
   },
   "overrides": {
     "jwks-rsa": {
       "jose": "5.9.6"
+    },
+    "ajv-draft-04": {
+      "ajv": "8.20.0"
+    },
+    "ajv-i18n": {
+      "ajv": "8.20.0"
     }
   }
 }

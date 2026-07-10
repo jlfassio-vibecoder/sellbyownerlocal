@@ -160,10 +160,18 @@ export async function requireDealer(
   return session;
 }
 
+function buildLoginRedirectPath(request: Request, loginPath?: string): string {
+  const url = new URL(request.url);
+  const next = url.pathname + url.search;
+  const destination = new URL(loginPath ?? '/login', url.origin);
+  destination.searchParams.set('next', next);
+  return destination.pathname + destination.search;
+}
+
 export async function requireDealerOrRedirect(
   request: Request,
   cookies: AstroCookies,
-  loginPath = '/login'
+  loginPath?: string
 ): Promise<UserSession | Response> {
   try {
     return await requireDealer(request, cookies);
@@ -171,19 +179,21 @@ export async function requireDealerOrRedirect(
     if (error instanceof ForbiddenError) {
       return forbiddenResponse('Dealer access required');
     }
-    return Response.redirect(new URL(loginPath, request.url), 302);
+    const destination = buildLoginRedirectPath(request, loginPath);
+    return Response.redirect(new URL(destination, request.url), 302);
   }
 }
 
 export async function requireSellerOrRedirect(
   request: Request,
   cookies: AstroCookies,
-  loginPath = '/login'
+  loginPath?: string
 ): Promise<UserSession | Response> {
   try {
     return await requireSeller(request, cookies);
   } catch {
-    return Response.redirect(new URL(loginPath, request.url), 302);
+    const destination = buildLoginRedirectPath(request, loginPath);
+    return Response.redirect(new URL(destination, request.url), 302);
   }
 }
 

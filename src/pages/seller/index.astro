@@ -1,56 +1,22 @@
 ---
-import { Image } from 'astro:assets';
 import { db } from '../../lib/firebase-admin';
 import { requireSellerOrRedirect } from '../../lib/auth';
-import { VehicleResponseSchema, type VehicleResponse } from '../../schemas';
+import { getApparelCatalogForSeller } from '../../lib/clothing-api';
 import AccountUidBanner from '../../components/AccountUidBanner.astro';
 import '../../styles/global.css';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
 
-const snapshot = await db().collection('vehicles').where('sellerId', '==', seller.uid).get();
+const [vehicleSnapshot, apparelCount] = await Promise.all([
+  db().collection('vehicles').where('sellerId', '==', seller.uid).get(),
+  getApparelCatalogForSeller(seller.uid)
+    .then((catalog) => catalog.length)
+    .catch(() => 0),
+]);
 
-const vehicles = snapshot.docs.flatMap((doc) => {
-  const parsed = VehicleResponseSchema.safeParse({ id: doc.id, ...doc.data() });
-  return parsed.success ? [parsed.data] : [];
-});
-
-if (vehicles.length === 1) {
-  return Astro.redirect(`/seller/vehicles/${vehicles[0]!.id}`);
-}
-
-const priceFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-});
-
-const statusStyles: Record<VehicleResponse['status'], string> = {
-  draft: 'bg-slate-100 text-slate-700',
-  active: 'bg-green-100 text-green-800',
-  pending: 'bg-amber-100 text-amber-800',
-  sold: 'bg-red-100 text-red-800',
-};
-
-const statusLabels: Record<VehicleResponse['status'], string> = {
-  draft: 'Draft',
-  active: 'Active',
-  pending: 'Pending',
-  sold: 'Sold',
-};
-
-const OPTIMIZED_IMAGE_HOSTS = new Set(['storage.googleapis.com', 'firebasestorage.googleapis.com']);
-const HERO_THUMB_WIDTH = 400;
-const HERO_THUMB_HEIGHT = 300;
-
-function isOptimizableImageUrl(url: string): boolean {
-  try {
-    return OPTIMIZED_IMAGE_HOSTS.has(new URL(url).hostname);
-  } catch {
-    return false;
-  }
-}
+const vehicleCount = vehicleSnapshot.size;
+const displayEmail = seller.email ?? 'Seller';
 ---
 
 <html lang="en">
@@ -60,121 +26,69 @@ function isOptimizableImageUrl(url: string): boolean {
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
-    <title>Your Listings · Sell By Owner Local</title>
+    <title>Seller Dashboards · Sell By Owner Local</title>
   </head>
   <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
-    <header class="border-b border-slate-200 bg-white">
-      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
-        <div>
-          <h1 class="text-2xl font-bold">Your Listings</h1>
-          <p class="mt-1 text-sm text-slate-500">Select a vehicle to manage</p>
-        </div>
-        <div class="flex flex-wrap items-center gap-3">
-          <a
-            href="/"
-            class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
-          >
-            View Marketplace
-          </a>
-          <a
-            href="/account"
-            class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
-          >
-            Account
-          </a>
-          <a
-            href="/seller/new"
-            class="inline-flex items-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
-          >
-            Create New Listing
-          </a>
-        </div>
+    <header class="bg-slate-900 text-white">
+      <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <h1 class="text-2xl font-bold">{displayEmail}</h1>
+        <p class="mt-2 text-sm text-slate-400">Choose a dashboard to manage your listings</p>
       </div>
     </header>
 
-    <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <main class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <AccountUidBanner uid={seller.uid} />
 
-      {
-        vehicles.length === 0 ? (
-          <div class="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
-            <p class="text-lg font-medium text-slate-700">No listings yet</p>
-            <p class="mt-2 text-sm text-slate-500">
-              Create your first listing or link existing vehicles to your account.
-            </p>
-            <div class="mt-6 flex flex-wrap items-center justify-center gap-4">
-              <a
-                href="/seller/new"
-                class="inline-flex items-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
-              >
-                Create New Listing
-              </a>
-              <a
-                href="/"
-                class="text-sm font-semibold text-red-600 hover:text-red-700"
-              >
-                Browse public listings →
-              </a>
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <a
+          href="/seller/vehicles"
+          class="group block rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-slate-300 hover:shadow-md"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900 group-hover:text-red-600 transition-colors">
+                Vehicle Dashboard
+              </h2>
+              <p class="mt-2 text-sm text-slate-500">
+                Manage vehicle listings, inquiries, and seller tools
+              </p>
+              <p class="mt-3 text-xs font-medium text-slate-400">
+                {vehicleCount} {vehicleCount === 1 ? 'listing' : 'listings'}
+              </p>
             </div>
+            <span class="text-red-600 text-xl shrink-0" aria-hidden="true">→</span>
           </div>
-        ) : (
-          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {vehicles.map((vehicle) => {
-              const heroImage = vehicle.images[0];
-              const useOptimizedImage = heroImage && isOptimizableImageUrl(heroImage);
+        </a>
 
-              return (
-                <a
-                  href={`/seller/vehicles/${vehicle.id}`}
-                  class="block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 hover:shadow-md"
-                >
-                  {
-                    useOptimizedImage ? (
-                      <Image
-                        src={heroImage}
-                        alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                        width={HERO_THUMB_WIDTH}
-                        height={HERO_THUMB_HEIGHT}
-                        class="aspect-[4/3] w-full object-cover"
-                      />
-                    ) : heroImage ? (
-                      <img
-                        src={heroImage}
-                        alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                        width={HERO_THUMB_WIDTH}
-                        height={HERO_THUMB_HEIGHT}
-                        loading="lazy"
-                        decoding="async"
-                        class="aspect-[4/3] w-full object-cover"
-                      />
-                    ) : (
-                      <div class="flex aspect-[4/3] w-full items-center justify-center bg-slate-200 text-sm text-slate-500">
-                        No photo
-                      </div>
-                    )
-                  }
-                  <div class="space-y-2 p-5">
-                    <div class="flex items-start justify-between gap-3">
-                      <h2 class="text-lg font-bold text-slate-900">
-                        {vehicle.year} {vehicle.make} {vehicle.model}
-                      </h2>
-                      <span
-                        class={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusStyles[vehicle.status]}`}
-                      >
-                        {statusLabels[vehicle.status]}
-                      </span>
-                    </div>
-                    <p class="text-lg font-semibold text-slate-900">
-                      {priceFormatter.format(vehicle.price)}
-                    </p>
-                    <p class="text-sm text-slate-500">{vehicle.location.city}</p>
-                  </div>
-                </a>
-              );
-            })}
+        <a
+          href="/seller/apparel"
+          class="group block rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-slate-300 hover:shadow-md"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900 group-hover:text-red-600 transition-colors">
+                Apparel Dashboard
+              </h2>
+              <p class="mt-2 text-sm text-slate-500">
+                Manage clothing catalog, uploads, and buyer inquiries
+              </p>
+              <p class="mt-3 text-xs font-medium text-slate-400">
+                {apparelCount} {apparelCount === 1 ? 'item' : 'items'}
+              </p>
+            </div>
+            <span class="text-red-600 text-xl shrink-0" aria-hidden="true">→</span>
           </div>
-        )
-      }
+        </a>
+      </div>
+
+      <div class="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm">
+        <a href="/account" class="font-semibold text-slate-600 hover:text-slate-900">
+          Account settings
+        </a>
+        <a href="/" class="font-semibold text-red-600 hover:text-red-700">
+          View marketplace →
+        </a>
+      </div>
     </main>
   </body>
 </html>
