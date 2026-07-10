@@ -52,6 +52,22 @@ async function uploadLineSheetPdf(
   return getDownloadURL(task.snapshot.ref);
 }
 
+/** Persist pdfLineSheetUrl on the listing so the buyer DocumentViewer can render it. */
+async function persistPdfLineSheetUrl(itemId: string, pdfLineSheetUrl: string): Promise<void> {
+  const res = await fetch(`/api/seller/apparel/${encodeURIComponent(itemId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pdfLineSheetUrl }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      typeof data.error === 'string' ? data.error : 'Failed to save catalog PDF to listing'
+    );
+  }
+}
+
 export default function LineSheetPdfUploader({
   sellerId,
   itemId,
@@ -62,9 +78,11 @@ export default function LineSheetPdfUploader({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedHint, setSavedHint] = useState<string | null>(null);
 
   const handleUpload = async (file: File) => {
     setError(null);
+    setSavedHint(null);
 
     if (!isPdfFile(file)) {
       setError('Please upload a PDF file.');
@@ -90,9 +108,18 @@ export default function LineSheetPdfUploader({
     setUploading(true);
 
     try {
-      const itemKey = itemId?.trim() || 'drafts';
+      const trimmedItemId = itemId?.trim();
+      const itemKey = trimmedItemId || 'drafts';
       const url = await uploadLineSheetPdf(sellerId, itemKey, file);
       onChange(url);
+
+      // Buyer page reads listing.pdfLineSheetUrl from Firestore — persist immediately when editing.
+      if (trimmedItemId) {
+        await persistPdfLineSheetUrl(trimmedItemId, url);
+        setSavedHint('Saved to listing — visible on the public item page.');
+      } else {
+        setSavedHint('PDF attached — click Create Catalog Item to save it with the listing.');
+      }
     } catch (err) {
       console.error('Line sheet PDF upload failed', err);
       setError(err instanceof Error ? err.message : 'Failed to upload PDF. Please try again.');
@@ -171,6 +198,12 @@ export default function LineSheetPdfUploader({
           </>
         )}
       </button>
+
+      {savedHint ? (
+        <p className="mt-2 text-xs text-green-700" role="status">
+          {savedHint}
+        </p>
+      ) : null}
 
       {error ? (
         <p className="mt-2 text-xs text-red-600" role="alert">

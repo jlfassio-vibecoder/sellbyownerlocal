@@ -177,7 +177,7 @@ const buyerContext = {
           </a>
 
           {
-            listing.pdfLineSheetUrl && (
+            listing.pdfLineSheetUrl?.trim() && (
               <DocumentViewer
                 client:load
                 title="Brand Catalog"

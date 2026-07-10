@@ -81,6 +81,7 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
       sizes: parseCommaList(sizes),
       colors: parseCommaList(colors),
       prePackRatio: prePackRatio.trim() || undefined,
+      // Must match buyer DocumentViewer + /api/clothing/[id]/catalog field name.
       pdfLineSheetUrl: pdfLineSheetUrl.trim() || undefined,
       galleryPhotos,
     };
