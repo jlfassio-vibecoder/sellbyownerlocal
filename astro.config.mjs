@@ -1,6 +1,6 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-import node from '@astrojs/node';
+import apphosting from '@apphosting/astro-adapter';
 import tailwindcss from '@tailwindcss/vite';
 
 import react from '@astrojs/react';
@@ -17,7 +17,7 @@ export default defineConfig({
     ],
   },
 
-  adapter: node({
+  adapter: apphosting({
     mode: 'standalone',
   }),
 
