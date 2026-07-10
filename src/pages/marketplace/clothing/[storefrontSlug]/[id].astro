@@ -1,16 +1,21 @@
 ---
 import Layout from '../../../../layouts/Layout.astro';
 import { getOptionalSession } from '../../../../lib/auth';
-import { getStorefrontSegmentForSeller, getUserProfile } from '../../../../lib/buyer-profile';
+import {
+  resolveSellerByStorefrontParam,
+  getUserProfile,
+} from '../../../../lib/buyer-profile';
 import { getClothingListingById } from '../../../../lib/clothing-api';
 import {
   buildClothingSeoDescription,
   buildClothingSeoTitle,
+  resolveAbsoluteUrl,
   resolveClothingOgImage,
 } from '../../../../lib/seo';
 import {
   getClothingListingPath,
   getStorefrontPath,
+  resolveStorefrontSegment,
 } from '../../../../utils/url-helpers';
 import ApparelImageGallery from '../../../../islands/ApparelImageGallery';
 import ApparelListingImage from '../../../../components/apparel/ApparelListingImage';
@@ -18,23 +23,33 @@ import ContactForm from '../../../../islands/ContactForm';
 import DocumentViewer from '../../../../islands/DocumentViewer';
 import FavoriteButton from '../../../../islands/buyer/FavoriteButton';
 
-const { storefrontSlug, id } = Astro.params;
+const { storefrontSlug: param, id } = Astro.params;
 
-if (!id) {
-  return new Response('Listing not found', { status: 404, statusText: 'Not Found' });
+if (!param || !id) {
+  return Astro.rewrite('/404');
+}
+
+const resolvedSeller = await resolveSellerByStorefrontParam(param);
+if (!resolvedSeller) {
+  return Astro.rewrite('/404');
 }
 
 const listing = await getClothingListingById(id);
-
 if (!listing) {
-  return new Response('Listing not found', { status: 404, statusText: 'Not Found' });
+  return Astro.rewrite('/404');
 }
 
-const canonicalSegment = await getStorefrontSegmentForSeller(listing.sellerId);
-const canonicalUrl = getClothingListingPath(listing.id, canonicalSegment);
+// Strict ownership: do not serve a listing under another seller's storefront.
+if (listing.sellerId !== resolvedSeller.id) {
+  return Astro.rewrite('/404');
+}
 
-if (storefrontSlug && storefrontSlug !== canonicalSegment) {
-  return Astro.redirect(canonicalUrl, 301);
+const canonicalSegment = resolveStorefrontSegment(resolvedSeller);
+const canonicalPath = getClothingListingPath(listing.id, canonicalSegment);
+
+// Previous slug / UID fallback → 301 to current canonical nested URL.
+if (param !== canonicalSegment) {
+  return Astro.redirect(canonicalPath, 301);
 }
 
 const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
@@ -43,15 +58,16 @@ const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 2,
 });
 
+const origin = Astro.site?.href ?? Astro.url.origin;
 const seoTitle = buildClothingSeoTitle(listing);
 const seoDescription = buildClothingSeoDescription(listing);
 const seoImage = resolveClothingOgImage(listing);
+const canonicalUrl = resolveAbsoluteUrl(canonicalPath, origin);
 const galleryImages = listing.galleryPhotos?.length ? listing.galleryPhotos : [];
 const heroImage = listing.galleryPhotos?.[0];
 const hasGalleryImages = galleryImages.length > 0;
 const session = await getOptionalSession(Astro.request, Astro.cookies);
 const profile = session ? await getUserProfile(session.uid) : null;
-const sellerProfile = await getUserProfile(listing.sellerId);
 const storefrontPath = getStorefrontPath(canonicalSegment);
 
 const buyerContext = {
@@ -60,7 +76,7 @@ const buyerContext = {
   userEmail: session?.email ?? '',
   userDisplayName: profile?.displayName ?? '',
   userPhone: profile?.phone ?? '',
-  loginHref: `/login?next=${encodeURIComponent(`${canonicalUrl}#contact`)}`,
+  loginHref: `/login?next=${encodeURIComponent(`${canonicalPath}#contact`)}`,
 };
 ---
 
@@ -85,7 +101,7 @@ const buyerContext = {
           href={storefrontPath}
           class="inline-flex items-center text-sm font-semibold text-slate-600 hover:text-slate-900"
         >
-          View all from {sellerProfile?.displayName ?? 'this seller'}
+          View all from {resolvedSeller.displayName}
         </a>
       </div>
     </div>

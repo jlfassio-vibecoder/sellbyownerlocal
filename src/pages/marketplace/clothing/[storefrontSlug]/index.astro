@@ -5,6 +5,12 @@ import { resolveSellerByStorefrontParam } from '../../../../lib/buyer-profile';
 import { getActiveApparelForSeller } from '../../../../lib/clothing-api';
 import ClothingInventoryGrid from '../../../../islands/buyer/ClothingInventoryGrid';
 import {
+  buildStorefrontSeoDescription,
+  buildStorefrontSeoTitle,
+  resolveAbsoluteUrl,
+  resolveStorefrontOgImage,
+} from '../../../../lib/seo';
+import {
   getStorefrontPath,
   resolveStorefrontSegment,
 } from '../../../../utils/url-helpers';
@@ -21,6 +27,7 @@ if (!seller) {
 }
 
 const canonicalSegment = resolveStorefrontSegment(seller);
+// Previous slug / UID fallback → 301 to current canonical storefront URL.
 if (param !== canonicalSegment) {
   return Astro.redirect(getStorefrontPath(canonicalSegment), 301);
 }
@@ -34,15 +41,20 @@ const buyerContext = {
   verificationTier: session?.verificationTier ?? 'anonymous',
 };
 
+const origin = Astro.site?.href ?? Astro.url.origin;
 const storefrontPath = getStorefrontPath(canonicalSegment);
-const pageTitle = `${seller.displayName} · Apparel Storefront · Sell By Owner Local`;
-const pageDescription = `Shop active wholesale apparel from ${seller.displayName} on Sell By Owner Local.`;
+const canonicalUrl = resolveAbsoluteUrl(storefrontPath, origin);
+const pageTitle = buildStorefrontSeoTitle(seller.displayName);
+const pageDescription = buildStorefrontSeoDescription(seller.displayName);
+const ogImage = resolveStorefrontOgImage(listings);
 ---
 
 <Layout
   title={pageTitle}
   description={pageDescription}
-  ogUrl={storefrontPath}
+  ogImage={ogImage}
+  ogUrl={canonicalUrl}
+  ogType="website"
   bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
 >
   <header class="border-b border-slate-200 bg-white">
