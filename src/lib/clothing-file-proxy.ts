@@ -8,6 +8,11 @@ const INLINE_PDF_HEADERS: Record<string, string> = {
   'Cache-Control': 'public, max-age=3600',
 };
 
+const ALLOWED_FETCH_HOSTS = new Set([
+  'firebasestorage.googleapis.com',
+  'storage.googleapis.com',
+]);
+
 function parseGsUrl(url: string, bucketName: string): string | null {
   if (!url.startsWith('gs://')) return null;
   const withoutScheme = url.slice('gs://'.length);
@@ -25,6 +30,16 @@ function resolveBucketObjectPath(fileUrl: string, bucketName: string): string | 
 
   const directUrl = toDirectStorageObjectUrl(fileUrl);
   return parseOwnedStorageObjectPath(directUrl, bucketName);
+}
+
+function isAllowedStorageFetchUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return false;
+    return ALLOWED_FETCH_HOSTS.has(parsed.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -48,7 +63,12 @@ export async function streamClothingCatalogFile(fileUrl: string): Promise<Respon
   }
 
   if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
-    const upstream = await fetch(toDirectStorageObjectUrl(fileUrl));
+    const fetchUrl = toDirectStorageObjectUrl(fileUrl);
+    if (!isAllowedStorageFetchUrl(fetchUrl)) {
+      return new Response('Forbidden: Invalid document source.', { status: 403 });
+    }
+
+    const upstream = await fetch(fetchUrl);
     if (!upstream.ok) {
       return new Response('Failed to fetch catalog document', { status: 502 });
     }
