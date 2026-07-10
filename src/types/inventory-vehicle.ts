@@ -1,5 +1,6 @@
 export interface InventoryVehicle {
   id: string;
+  sellerId: string;
   make: string;
   model: string;
   year: number;

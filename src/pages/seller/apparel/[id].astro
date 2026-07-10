@@ -3,6 +3,7 @@ import { requireSellerOrRedirect } from '../../../lib/auth';
 import { getApparelListingForSellerById } from '../../../lib/clothing-api';
 import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
 import ApparelEditorForm from '../../../islands/seller/ApparelEditorForm';
+import ApparelListingImage from '../../../components/apparel/ApparelListingImage';
 import '../../../styles/global.css';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
@@ -30,6 +31,8 @@ const initialData = {
   galleryPhotos: listing.galleryPhotos,
   status: listing.status,
 };
+
+const heroImage = listing.galleryPhotos?.[0];
 ---
 
 <html lang="en">
@@ -56,7 +59,13 @@ const initialData = {
             <p class="mt-1 text-sm text-slate-500">Update wholesale details for this catalog item</p>
           </div>
 
-          <ApparelEditorForm client:load initialData={initialData} />
+          <ApparelListingImage
+            title={listing.title}
+            imageUrl={heroImage}
+            className="mb-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+          />
+
+          <ApparelEditorForm client:load sellerId={seller.uid} initialData={initialData} />
         </div>
       </div>
     </ApparelSellerLayout>

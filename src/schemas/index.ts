@@ -605,6 +605,53 @@ export const SavedVehicleStatusResponseSchema = z.object({
   saved: z.boolean(),
 });
 
+export const SavedClothingSchema = z.object({
+  clothingId: z.string().min(1),
+  buyerUid: z.string().min(1),
+  savedAt: z.iso.datetime(),
+});
+
+export const SavedClothingToggleResponseSchema = z.object({
+  saved: z.boolean(),
+});
+
+export const SavedClothingStatusResponseSchema = z.object({
+  saved: z.boolean(),
+});
+
+export const FavoriteCategorySchema = z.enum(['vehicle', 'clothing']);
+
+export const FavoriteItemSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  price: z.number().nonnegative(),
+  category: FavoriteCategorySchema,
+  sellerId: z.string().min(1),
+});
+
+export const FavoritesListResponseSchema = z.object({
+  items: z.array(FavoriteItemSchema),
+});
+
+export const LeadCreateSchema = z.object({
+  sellerId: z.string().min(1),
+  name: z.string().min(1),
+  email: z.string().email(),
+  phone: z.string().min(1),
+  message: z.string().min(1),
+  items: z.array(FavoriteItemSchema).optional(),
+});
+
+export const LeadRecordSchema = LeadCreateSchema.extend({
+  id: z.string().min(1),
+  createdAt: z.iso.datetime(),
+});
+
+export const LeadCreateResponseSchema = z.object({
+  ok: z.literal(true),
+  id: z.string().min(1),
+});
+
 export const ListingAnalyticsRangeSchema = z.enum(['7d', '30d', 'all']);
 
 export const ListingAnalyticsSummarySchema = z.object({
@@ -789,6 +836,15 @@ export type ListingEvent = z.infer<typeof ListingEventSchema>;
 export type SavedVehicle = z.infer<typeof SavedVehicleSchema>;
 export type SavedVehicleToggleResponse = z.infer<typeof SavedVehicleToggleResponseSchema>;
 export type SavedVehicleStatusResponse = z.infer<typeof SavedVehicleStatusResponseSchema>;
+export type SavedClothing = z.infer<typeof SavedClothingSchema>;
+export type SavedClothingToggleResponse = z.infer<typeof SavedClothingToggleResponseSchema>;
+export type SavedClothingStatusResponse = z.infer<typeof SavedClothingStatusResponseSchema>;
+export type FavoriteCategory = z.infer<typeof FavoriteCategorySchema>;
+export type FavoriteItem = z.infer<typeof FavoriteItemSchema>;
+export type FavoritesListResponse = z.infer<typeof FavoritesListResponseSchema>;
+export type LeadCreate = z.infer<typeof LeadCreateSchema>;
+export type LeadRecord = z.infer<typeof LeadRecordSchema>;
+export type LeadCreateResponse = z.infer<typeof LeadCreateResponseSchema>;
 export type ListingAnalyticsRange = z.infer<typeof ListingAnalyticsRangeSchema>;
 export type ListingAnalyticsSummary = z.infer<typeof ListingAnalyticsSummarySchema>;
 export type ListingAnalyticsSection = z.infer<typeof ListingAnalyticsSectionSchema>;

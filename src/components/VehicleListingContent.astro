@@ -17,6 +17,7 @@ import Gallery from '../islands/Gallery';
 import MarketChart from '../islands/MarketChart';
 import ContactForm from '../islands/ContactForm';
 import VehicleSectionNav from '../islands/VehicleSectionNav';
+import FavoriteButton from '../islands/buyer/FavoriteButton';
 import WindowSticker from '../islands/WindowSticker';
 import SingleDocumentViewer from '../islands/SingleDocumentViewer.tsx';
 import HistoryReportViewer from '../islands/HistoryReportViewer.tsx';
@@ -79,6 +80,8 @@ const monroneyStyleLine = monroney
   : undefined;
 const accent = getAccent(vehicle.accentColor);
 const analyticsSectionIds = navSections.map((section) => section.id);
+const favoriteTitle =
+  vehicle.listingTitle?.trim() || `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
 ---
 
 {
@@ -185,6 +188,18 @@ const analyticsSectionIds = navSections.map((section) => section.id);
       </div>
 
       <div class="group relative h-80 w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 shadow-sm">
+        <div class="absolute top-3 right-3 z-20">
+          <FavoriteButton
+            client:load
+            itemId={vehicle.id}
+            title={favoriteTitle}
+            price={vehicle.price}
+            category="vehicle"
+            sellerId={vehicle.sellerId}
+            isLoggedIn={buyerContext?.isLoggedIn ?? false}
+            verificationTier={buyerContext?.verificationTier ?? 'anonymous'}
+          />
+        </div>
         {
           heroImage ? (
             <img

@@ -3,6 +3,7 @@ import {
   BarChart3,
   CheckCircle2,
   Copy,
+  Globe,
   LogOut,
   Menu,
   MessageCircle,
@@ -191,6 +192,13 @@ export default function SellerHeader(props: SellerHeaderProps) {
               System Online
             </div>
             <a
+              href="/"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+            >
+              <Globe size={14} aria-hidden="true" />
+              View Marketplace
+            </a>
+            <a
               href="/account"
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
             >
@@ -249,6 +257,16 @@ export default function SellerHeader(props: SellerHeaderProps) {
             )
           )}
         </div>
+
+        <hr className="my-4 border-slate-700" />
+        <a
+          href="/"
+          className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+          onClick={() => setIsDrawerOpen(false)}
+        >
+          <Globe size={16} aria-hidden="true" />
+          View Marketplace
+        </a>
 
         <div className="mt-6 border-t border-slate-700 pt-6">
           {sellerUid ? (

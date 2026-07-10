@@ -1,6 +1,7 @@
 import { Copy, Pencil } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import SearchAndFilterBar from './SearchAndFilterBar';
+import ApparelListingImage from '../../components/apparel/ApparelListingImage';
 import {
   APPAREL_SELLER_STATUS_LABELS,
   APPAREL_STATUS_STYLES,
@@ -77,19 +78,7 @@ function ApparelCardContent({ item, isSellerView }: { item: ApparelFilterItem; i
   return (
     <>
       <div className="relative">
-        {item.galleryPhotos[0] ? (
-          <img
-            src={item.galleryPhotos[0]}
-            alt={item.title}
-            loading="lazy"
-            decoding="async"
-            className="aspect-[4/3] w-full object-cover"
-          />
-        ) : (
-          <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-200 text-sm text-slate-500">
-            No photo
-          </div>
-        )}
+        <ApparelListingImage title={item.title} imageUrl={item.galleryPhotos[0]} />
         {(showFeatured || showSale) && (
           <div className="absolute right-3 top-3 z-10 flex flex-col gap-1">
             {showFeatured && (
