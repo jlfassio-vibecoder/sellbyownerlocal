@@ -23,6 +23,14 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*')
         && request.resource.size < 10 * 1024 * 1024;
     }
+    match /apparel-pdfs/{sellerId}/{allPaths=**} {
+      // Copilot suggestion ignored: public read matches apparel-images; buyer Open links use direct storage URLs.
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.uid == sellerId
+        && request.resource.contentType == 'application/pdf'
+        && request.resource.size < 50 * 1024 * 1024;
+    }
     match /{allPaths=**} {
       allow read, write: if false;
     }

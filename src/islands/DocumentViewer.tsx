@@ -4,29 +4,41 @@ import PdfIframeViewer from './PdfIframeViewer';
 import { isPdfUrl } from '../lib/pdf-url';
 import { toDirectStorageObjectUrl } from '../lib/storage-url';
 
-interface SingleDocumentViewerProps {
-  vehicleId: string;
-  url: string;
+interface DocumentViewerProps {
   title: string;
-  description: string;
-  proxyApiRoute: string;
+  description?: string;
+  proxyUrl: string;
+  originalUrl: string;
+  openButtonLabel?: string;
+  defaultPage?: number;
 }
 
-export default function SingleDocumentViewer({
-  url,
+function withPdfPage(url: string, defaultPage?: number): string {
+  if (!defaultPage || defaultPage < 1) return url;
+  const base = url.split('#')[0];
+  return `${base}#page=${defaultPage}`;
+}
+
+export default function DocumentViewer({
   title,
   description,
-  proxyApiRoute,
-}: SingleDocumentViewerProps) {
-  const pdf = isPdfUrl(url);
-  const externalUrl = useMemo(() => toDirectStorageObjectUrl(url), [url]);
-  const previewUrl = proxyApiRoute;
+  proxyUrl,
+  originalUrl,
+  openButtonLabel = 'Open PDF',
+  defaultPage,
+}: DocumentViewerProps) {
+  const pdf = isPdfUrl(originalUrl);
+  const externalUrl = useMemo(
+    () => withPdfPage(toDirectStorageObjectUrl(originalUrl), defaultPage),
+    [originalUrl, defaultPage]
+  );
+  const iframeSrc = useMemo(() => withPdfPage(proxyUrl, defaultPage), [proxyUrl, defaultPage]);
 
   if (!pdf) {
     return (
       <div className="space-y-4">
         <img
-          src={previewUrl}
+          src={proxyUrl}
           alt={title}
           className="h-auto w-full rounded-lg border border-slate-200 bg-white object-contain"
         />
@@ -55,7 +67,7 @@ export default function SingleDocumentViewer({
           </div>
           <div className="min-w-0">
             <p className="text-base font-semibold text-slate-900">{title}</p>
-            <p className="mt-1 text-sm text-slate-600">{description}</p>
+            {description ? <p className="mt-1 text-sm text-slate-600">{description}</p> : null}
           </div>
         </div>
         <a
@@ -65,11 +77,11 @@ export default function SingleDocumentViewer({
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-slate-800"
         >
           <ExternalLink size={16} aria-hidden="true" />
-          Open PDF
+          {openButtonLabel}
         </a>
       </div>
 
-      <PdfIframeViewer fileUrl={previewUrl} title={title} />
+      <PdfIframeViewer key={iframeSrc} fileUrl={iframeSrc} title={title} />
 
       <p className="text-xs text-slate-500">
         PDF preview not showing?{' '}

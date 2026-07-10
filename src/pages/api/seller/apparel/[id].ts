@@ -67,7 +67,18 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
       });
     }
 
-    await ref.update(parsed.data);
+    const updates = Object.fromEntries(
+      Object.entries(parsed.data).filter(([, value]) => value !== undefined)
+    );
+
+    if (Object.keys(updates).length === 0) {
+      return new Response(JSON.stringify({ error: 'No fields to update' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    await ref.update(updates);
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
