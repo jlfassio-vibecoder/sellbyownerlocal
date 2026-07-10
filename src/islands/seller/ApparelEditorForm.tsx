@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import BasicMultiUploader from './BasicMultiUploader';
 
 const INPUT_CLASS =
   'w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none transition-all text-slate-900';
@@ -22,6 +23,7 @@ export interface ApparelEditorInitialData {
 }
 
 interface ApparelEditorFormProps {
+  sellerId: string;
   initialData?: ApparelEditorInitialData;
 }
 
@@ -32,22 +34,11 @@ function parseCommaList(value: string): string[] {
     .filter(Boolean);
 }
 
-function parseUrlLines(value: string): string[] {
-  return value
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
-
 function joinCommaList(values: string[]): string {
   return values.join(', ');
 }
 
-function joinUrlLines(values: string[]): string {
-  return values.join('\n');
-}
-
-export default function ApparelEditorForm({ initialData }: ApparelEditorFormProps) {
+export default function ApparelEditorForm({ sellerId, initialData }: ApparelEditorFormProps) {
   const isEditing = Boolean(initialData);
 
   const [title, setTitle] = useState(initialData?.title ?? '');
@@ -59,8 +50,8 @@ export default function ApparelEditorForm({ initialData }: ApparelEditorFormProp
   const [colors, setColors] = useState(joinCommaList(initialData?.colors ?? []));
   const [prePackRatio, setPrePackRatio] = useState(initialData?.prePackRatio ?? '');
   const [pdfLineSheetUrl, setPdfLineSheetUrl] = useState(initialData?.pdfLineSheetUrl ?? '');
-  const [galleryPhotos, setGalleryPhotos] = useState(
-    joinUrlLines(initialData?.galleryPhotos ?? [])
+  const [galleryPhotos, setGalleryPhotos] = useState<string[]>(
+    initialData?.galleryPhotos ?? []
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,7 +81,7 @@ export default function ApparelEditorForm({ initialData }: ApparelEditorFormProp
       colors: parseCommaList(colors),
       prePackRatio: prePackRatio.trim() || undefined,
       pdfLineSheetUrl: pdfLineSheetUrl.trim() || undefined,
-      galleryPhotos: parseUrlLines(galleryPhotos),
+      galleryPhotos,
     };
 
     try {
@@ -291,19 +282,13 @@ export default function ApparelEditorForm({ initialData }: ApparelEditorFormProp
       </div>
 
       <div>
-        <label htmlFor="galleryPhotos" className="mb-1 block text-sm font-medium text-slate-700">
-          Gallery Photos
-        </label>
-        <textarea
-          id="galleryPhotos"
-          rows={4}
-          placeholder="One image URL per line"
+        <p className="mb-1 block text-sm font-medium text-slate-700">Gallery Photos</p>
+        <BasicMultiUploader
+          sellerId={sellerId}
           value={galleryPhotos}
-          onChange={(e) => setGalleryPhotos(e.target.value)}
-          className={TEXTAREA_CLASS}
+          onChange={setGalleryPhotos}
           disabled={isSubmitting}
         />
-        <p className="mt-1 text-xs text-slate-500">One HTTPS URL per line (file upload coming soon)</p>
       </div>
 
       <button

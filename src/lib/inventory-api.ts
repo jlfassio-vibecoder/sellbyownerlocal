@@ -15,6 +15,7 @@ function toInventoryVehicle(vehicle: VehicleResponse): InventoryVehicle {
 
   return {
     id: vehicle.id,
+    sellerId: vehicle.sellerId,
     make: vehicle.make,
     model: vehicle.model,
     year: vehicle.year,

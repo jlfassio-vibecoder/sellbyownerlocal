@@ -32,7 +32,7 @@ if (seller instanceof Response) return seller;
             <p class="mt-1 text-sm text-slate-500">Create a new wholesale apparel listing</p>
           </div>
 
-          <ApparelEditorForm client:load />
+          <ApparelEditorForm client:load sellerId={seller.uid} />
         </div>
       </div>
     </ApparelSellerLayout>

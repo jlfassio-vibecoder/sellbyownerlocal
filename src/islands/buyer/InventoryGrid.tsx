@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { InventoryVehicle } from '../../types/inventory-vehicle';
+import type { BuyerSaveContext } from '../../components/buyer/VehicleCard';
 import VehicleCard from '../../components/buyer/VehicleCard';
+import type { InventoryVehicle } from '../../types/inventory-vehicle';
 
 interface InventoryGridProps {
   initialVehicles: InventoryVehicle[];
+  buyerContext?: BuyerSaveContext;
 }
 
 interface InventoryFilters {
@@ -91,7 +93,7 @@ function applyFilters(vehicles: InventoryVehicle[], filters: InventoryFilters): 
 const inputClassName =
   'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400';
 
-export default function InventoryGrid({ initialVehicles }: InventoryGridProps) {
+export default function InventoryGrid({ initialVehicles, buyerContext }: InventoryGridProps) {
   const [filters, setFilters] = useState<InventoryFilters>({
     make: '',
     model: '',
@@ -264,6 +266,7 @@ export default function InventoryGrid({ initialVehicles }: InventoryGridProps) {
                 vehicle={vehicle}
                 rank={index}
                 position={index + 1}
+                buyerContext={buyerContext}
               />
             ))}
           </div>

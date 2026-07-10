@@ -4,10 +4,15 @@ import { getOptionalSellerSession } from '../lib/auth';
 import { getPublishedInventory } from '../lib/inventory-api';
 import AuthForm from '../islands/AuthForm';
 import InventoryGrid from '../islands/buyer/InventoryGrid';
+import ContactSellerFab from '../islands/buyer/ContactSellerFab';
 
 const session = await getOptionalSellerSession(Astro.request, Astro.cookies);
 const displayName = session?.email?.split('@')[0] ?? 'there';
 const vehicles = await getPublishedInventory();
+const buyerContext = {
+  isLoggedIn: !!session,
+  verificationTier: session?.verificationTier ?? 'anonymous',
+};
 ---
 
 <Layout>
@@ -88,7 +93,7 @@ const vehicles = await getPublishedInventory();
             </a>
           </div>
         ) : (
-          <div class="max-w-md mx-auto w-full">
+          <div id="hero-auth" class="max-w-md mx-auto w-full">
             <div class="bg-white rounded-2xl shadow-xl border border-slate-100 p-6 sm:p-8">
               <AuthForm client:load embedded />
             </div>
@@ -105,7 +110,7 @@ const vehicles = await getPublishedInventory();
   <section id="inventory">
     {
       vehicles.length > 0 ? (
-        <InventoryGrid client:load initialVehicles={vehicles} />
+        <InventoryGrid client:load initialVehicles={vehicles} buyerContext={buyerContext} />
       ) : (
         <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div class="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
@@ -187,4 +192,6 @@ const vehicles = await getPublishedInventory();
       </div>
     </div>
   </section>
+
+  <ContactSellerFab client:load isLoggedIn={buyerContext.isLoggedIn} />
 </Layout>

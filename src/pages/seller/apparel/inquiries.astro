@@ -1,0 +1,33 @@
+---
+import { requireSellerOrRedirect } from '../../../lib/auth';
+import { getSellerLeads } from '../../../lib/leads';
+import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
+import LeadsPanel from '../../../islands/seller/LeadsPanel';
+import '../../../styles/global.css';
+
+const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
+if (seller instanceof Response) return seller;
+
+const leads = await getSellerLeads(seller.uid);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Inquiries · Apparel Dashboard · Sell By Owner Local</title>
+  </head>
+  <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
+    <ApparelSellerLayout
+      client:load
+      activeNav="inquiries"
+      sellerUid={seller.uid}
+      inquiryCount={leads.length}
+    >
+      <LeadsPanel client:load leads={leads} />
+    </ApparelSellerLayout>
+  </body>
+</html>

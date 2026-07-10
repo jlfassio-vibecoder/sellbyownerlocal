@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import type { VerificationTier } from '../schemas';
+import { useSaveVehicle } from '../lib/use-save-vehicle';
 
 interface SaveVehicleButtonProps {
   vehicleId: string;
@@ -17,43 +17,13 @@ export default function SaveVehicleButton({
   loginHref,
   initialSaved = false,
 }: SaveVehicleButtonProps) {
-  const [saved, setSaved] = useState(initialSaved);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const canSave = isLoggedIn && verificationTier !== 'anonymous';
 
-  const handleToggle = async () => {
-    if (!canSave || isSaving) return;
-
-    const previousSaved = saved;
-    setSaved(!previousSaved);
-    setError(null);
-    setIsSaving(true);
-
-    try {
-      const res = await fetch(`/api/vehicles/${vehicleId}/save`, {
-        method: 'POST',
-        credentials: 'same-origin',
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        if (data.code === 'VERIFICATION_REQUIRED') {
-          throw new Error('Verify your phone number to save listings.');
-        }
-        throw new Error(data.error || 'Failed to update save status');
-      }
-
-      const data = await res.json();
-      setSaved(Boolean(data.saved));
-    } catch (err) {
-      setSaved(previousSaved);
-      setError(err instanceof Error ? err.message : 'Failed to update save status');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const { saved, isSaving, error, toggleSave } = useSaveVehicle({
+    vehicleId,
+    initialSaved,
+    canSave,
+  });
 
   if (!isLoggedIn) {
     return (
@@ -88,7 +58,7 @@ export default function SaveVehicleButton({
     <div className="relative">
       <button
         type="button"
-        onClick={handleToggle}
+        onClick={() => void toggleSave()}
         disabled={isSaving}
         className={`flex items-center gap-1.5 transition-colors ${
           saved ? 'text-rose-400 hover:text-rose-300' : 'text-slate-400 hover:text-white'
