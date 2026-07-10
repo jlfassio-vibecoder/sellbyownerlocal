@@ -1,5 +1,5 @@
 import './load-env';
-import { initializeApp, applicationDefault, cert, getApps, type App } from 'firebase-admin/app';
+import { initializeApp, cert, getApps, type App } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
@@ -10,9 +10,15 @@ let db: Firestore | undefined;
 let adminAuth: Auth | undefined;
 let bucket: AdminBucket | undefined;
 
+function readEnv(name: string): string | undefined {
+  const fromMeta = (import.meta.env as Record<string, string | undefined>)[name];
+  const fromProcess = process.env[name];
+  return fromMeta || fromProcess;
+}
+
 function resolveStorageBucket(projectId?: string, serviceAccountBucket?: string): string {
   const storageBucket =
-    process.env.FIREBASE_STORAGE_BUCKET ??
+    readEnv('FIREBASE_STORAGE_BUCKET') ??
     serviceAccountBucket ??
     (projectId ? `${projectId}.appspot.com` : undefined);
 
@@ -25,68 +31,41 @@ function resolveStorageBucket(projectId?: string, serviceAccountBucket?: string)
   return storageBucket;
 }
 
-function formatPrivateKey(raw?: string): string | undefined {
-  if (!raw) return undefined;
-  return raw.replace(/\\n/g, '\n');
-}
-
-function getCertFromEnvVars():
-  | { projectId: string; clientEmail: string; privateKey: string }
-  | null {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = formatPrivateKey(process.env.FIREBASE_PRIVATE_KEY);
-
-  if (!projectId || !clientEmail || !privateKey) {
-    return null;
-  }
-
-  return { projectId, clientEmail, privateKey };
-}
-
 function initAdmin(): App {
   if (getApps().length > 0) return getApps()[0]!;
 
-  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const projectId = import.meta.env.FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = import.meta.env.FIREBASE_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL;
+  const rawPrivateKey = import.meta.env.FIREBASE_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY;
 
-  const envCert = getCertFromEnvVars();
-  if (envCert) {
-    const storageBucket = resolveStorageBucket(envCert.projectId);
-    return initializeApp({
-      credential: cert(envCert),
-      projectId: envCert.projectId,
-      storageBucket,
-    });
-  }
-
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-    const storageBucket = resolveStorageBucket(projectId ?? sa.project_id, sa.storage_bucket);
-    return initializeApp({
-      credential: cert(sa),
-      projectId: projectId ?? sa.project_id,
-      storageBucket,
-    });
-  }
-
-  if (process.env.K_SERVICE) {
-    const storageBucket = resolveStorageBucket(projectId);
-    return initializeApp({
-      credential: applicationDefault(),
-      projectId,
-      storageBucket,
-    });
-  }
-
-  throw new Error(
-    'Missing Firebase Admin credentials. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY, FIREBASE_SERVICE_ACCOUNT_JSON, or deploy to Cloud Run with a service account that has Firebase access.'
+  console.log(
+    `[DEBUG] ProjectID exists: ${!!projectId}, Email exists: ${!!clientEmail}, Key exists: ${!!rawPrivateKey}`
   );
+
+  if (!projectId || !clientEmail || !rawPrivateKey) {
+    throw new Error(
+      `CRITICAL: Vercel Env Vars missing! ProjectID: ${!!projectId}, Email: ${!!clientEmail}, Key: ${!!rawPrivateKey}`
+    );
+  }
+
+  const formattedPrivateKey = rawPrivateKey.replace(/\\n/g, '\n');
+  const storageBucket = resolveStorageBucket(projectId);
+
+  return initializeApp({
+    credential: cert({
+      projectId,
+      clientEmail,
+      privateKey: formattedPrivateKey,
+    }),
+    projectId,
+    storageBucket,
+  });
 }
 
 export function getDb(): Firestore {
   if (!db) {
     const app = initAdmin();
-    const databaseId = process.env.FIRESTORE_DATABASE_ID;
+    const databaseId = readEnv('FIRESTORE_DATABASE_ID');
     db = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
   }
   return db;
@@ -102,16 +81,8 @@ export function auth(): Auth {
 export function storageBucket(): AdminBucket {
   if (!bucket) {
     const app = initAdmin();
-    const projectId = process.env.FIREBASE_PROJECT_ID;
-    let serviceAccountBucket: string | undefined;
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-      try {
-        serviceAccountBucket = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON).storage_bucket;
-      } catch {
-        serviceAccountBucket = undefined;
-      }
-    }
-    const bucketName = resolveStorageBucket(projectId, serviceAccountBucket);
+    const projectId = readEnv('FIREBASE_PROJECT_ID');
+    const bucketName = resolveStorageBucket(projectId);
     bucket = getStorage(app).bucket(bucketName);
   }
   return bucket;

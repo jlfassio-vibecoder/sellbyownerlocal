@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig, envField } from 'astro/config';
 import vercel from '@astrojs/vercel';
 import tailwindcss from '@tailwindcss/vite';
 
@@ -18,6 +18,16 @@ export default defineConfig({
   },
 
   adapter: vercel(),
+
+  env: {
+    schema: {
+      FIREBASE_PROJECT_ID: envField.string({ context: 'server', access: 'secret' }),
+      FIREBASE_CLIENT_EMAIL: envField.string({ context: 'server', access: 'secret' }),
+      FIREBASE_PRIVATE_KEY: envField.string({ context: 'server', access: 'secret' }),
+      FIRESTORE_DATABASE_ID: envField.string({ context: 'server', access: 'secret', optional: true }),
+      FIREBASE_STORAGE_BUCKET: envField.string({ context: 'server', access: 'secret', optional: true }),
+    },
+  },
 
   vite: {
     plugins: [tailwindcss()],
