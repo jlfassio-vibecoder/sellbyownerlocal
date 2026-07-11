@@ -77,10 +77,12 @@ const ogImage = heroUrl || resolveStorefrontOgImage(listings);
 >
   {
     heroUrl ? (
-      <header
-        class="relative w-full min-h-48 overflow-hidden bg-cover bg-center sm:min-h-80"
-        style={`background-image: url('${heroUrl.replace(/'/g, '%27')}')`}
-      >
+      <header class="relative w-full min-h-48 overflow-hidden sm:min-h-80">
+        <img
+          src={heroUrl}
+          alt=""
+          class="absolute inset-0 h-full w-full object-cover"
+        />
         <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-black/30" />
         <div class="relative mx-auto flex min-h-48 max-w-7xl flex-col justify-end px-4 py-12 sm:min-h-80 sm:px-6 sm:py-16 lg:px-8">
           <h1 class="font-brand text-4xl leading-none text-white uppercase sm:text-5xl">
