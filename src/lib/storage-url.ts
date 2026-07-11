@@ -30,6 +30,30 @@ export function toDirectStorageObjectUrl(url: string): string {
   return url;
 }
 
+/** Normalize and allowlist Storage hosts for server-side PDF image fetches (SSRF guard). */
+export function toAllowedCatalogImageUrl(url: string | undefined): string | undefined {
+  const trimmed = url?.trim();
+  if (!trimmed || trimmed.startsWith('data:') || trimmed.startsWith('/')) {
+    return undefined;
+  }
+
+  try {
+    const direct = toDirectStorageObjectUrl(trimmed);
+    const host = new URL(direct).hostname.toLowerCase();
+    if (
+      host === 'storage.googleapis.com' ||
+      host === 'firebasestorage.googleapis.com' ||
+      host.endsWith('.firebasestorage.app')
+    ) {
+      return direct;
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
+
 /**
  * Parse a public Storage URL into a GCS object path when it belongs to `bucketName`.
  */

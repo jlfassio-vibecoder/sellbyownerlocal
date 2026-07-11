@@ -4,7 +4,7 @@ import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer';
 import StorefrontCatalogPDF from '../../../../components/pdf/StorefrontCatalogPDF';
 import { resolveSellerByStorefrontParam } from '../../../../lib/buyer-profile';
 import { getActiveApparelForSeller } from '../../../../lib/clothing-api';
-import { toDirectStorageObjectUrl } from '../../../../lib/storage-url';
+import { toAllowedCatalogImageUrl } from '../../../../lib/storage-url';
 
 export const prerender = false;
 
@@ -31,17 +31,15 @@ export const GET: APIRoute = async ({ params }) => {
     const storefrontName =
       seller.storefrontName?.trim() || seller.displayName?.trim() || 'Storefront';
     const tagline = seller.storefrontTagline?.trim() || undefined;
-    const heroRaw = seller.storefrontHeroUrl?.trim();
-    const heroImageUrl = heroRaw ? toDirectStorageObjectUrl(heroRaw) : undefined;
+    const heroImageUrl = toAllowedCatalogImageUrl(seller.storefrontHeroUrl);
 
     const items = listings.map((listing) => {
-      const primaryRaw = listing.galleryPhotos[0]?.trim();
       return {
         id: listing.id,
         title: listing.title,
         brand: listing.brand,
         price: listing.price,
-        primaryImageUrl: primaryRaw ? toDirectStorageObjectUrl(primaryRaw) : undefined,
+        primaryImageUrl: toAllowedCatalogImageUrl(listing.galleryPhotos[0]),
         sizes: listing.sizes.length > 0 ? listing.sizes : undefined,
       };
     });
@@ -55,7 +53,8 @@ export const GET: APIRoute = async ({ params }) => {
 
     const buffer = await renderToBuffer(document);
 
-    return new Response(new Uint8Array(buffer), {
+    // Pass Buffer without copying; cast satisfies BodyInit typing under DOM lib.
+    return new Response(buffer as unknown as BodyInit, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
