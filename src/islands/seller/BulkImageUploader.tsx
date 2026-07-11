@@ -9,6 +9,7 @@ const MATCH_POLL_TIMEOUT_MS = 90_000;
 
 interface BulkImageUploaderProps {
   sellerId: string;
+  embedded?: boolean;
 }
 
 interface MatchResult {
@@ -100,7 +101,10 @@ function summarizeMatches(results: MatchResult[]): ToastState {
   };
 }
 
-export default function BulkImageUploader({ sellerId }: BulkImageUploaderProps) {
+export default function BulkImageUploader({
+  sellerId,
+  embedded = false,
+}: BulkImageUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [matching, setMatching] = useState(false);
@@ -236,13 +240,25 @@ export default function BulkImageUploader({ sellerId }: BulkImageUploaderProps) 
   };
 
   return (
-    <section className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-4">
-        <h3 className="text-lg font-bold text-slate-900">Bulk Image Upload</h3>
-        <p className="mt-1 text-sm text-slate-500">
+    <section
+      className={
+        embedded
+          ? ''
+          : 'mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm'
+      }
+    >
+      {!embedded ? (
+        <div className="mb-4">
+          <h3 className="text-lg font-bold text-slate-900">Bulk Image Upload</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Drop screenshots or product images. We will match style codes to your draft catalog items.
+          </p>
+        </div>
+      ) : (
+        <p className="mb-4 text-sm text-slate-500">
           Drop screenshots or product images. We will match style codes to your draft catalog items.
         </p>
-      </div>
+      )}
 
       {error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

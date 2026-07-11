@@ -1,0 +1,68 @@
+---
+interface Props {
+  storefrontPath: string;
+  hasCustomSlug: boolean;
+  activeListingCount: number;
+}
+
+const { storefrontPath, hasCustomSlug, activeListingCount } = Astro.props;
+
+const isLive = activeListingCount > 0;
+const statusLabel = isLive ? 'Storefront is live' : 'Storefront has no public items yet';
+const statusDetail = isLive
+  ? `${activeListingCount} public item${activeListingCount === 1 ? '' : 's'} visible to buyers.`
+  : 'Publish items from My Catalog (Make Public) to show them on your storefront.';
+---
+
+<section
+  class="mb-8 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
+  aria-label="Storefront status"
+>
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <p class="text-[10px] font-bold uppercase tracking-wider text-red-600">Storefront</p>
+      <p class="mt-1 text-base font-semibold text-slate-900">{statusLabel}</p>
+      <p class="mt-1 text-sm text-slate-500">{statusDetail}</p>
+    </div>
+    <span
+      class={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+        isLive ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'
+      }`}
+    >
+      <span
+        class={`h-1.5 w-1.5 rounded-full ${isLive ? 'bg-emerald-500' : 'bg-amber-500'}`}
+        aria-hidden="true"
+      ></span>
+      {isLive ? 'Live' : 'Not live yet'}
+    </span>
+  </div>
+
+  <div class="mt-4 border-t border-slate-100 pt-4">
+    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Public URL</p>
+    {
+      hasCustomSlug ? (
+        <>
+          <p class="mt-1 font-mono text-sm font-semibold text-slate-900 break-all select-all">
+            {storefrontPath}
+          </p>
+          <a
+            href={storefrontPath}
+            class="mt-2 inline-flex text-sm font-semibold text-red-600 hover:text-red-700"
+          >
+            Open public storefront →
+          </a>
+        </>
+      ) : (
+        <>
+          <p class="mt-1 text-sm text-slate-700">
+            You have not claimed a custom storefront URL yet. Buyers can still reach you at:
+          </p>
+          <p class="mt-1 font-mono text-sm text-slate-600 break-all select-all">{storefrontPath}</p>
+          <p class="mt-2 text-xs text-slate-500">
+            Set a custom Storefront URL in the Profile section below.
+          </p>
+        </>
+      )
+    }
+  </div>
+</section>

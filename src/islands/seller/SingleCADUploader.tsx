@@ -6,6 +6,7 @@ const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 interface SingleCADUploaderProps {
   onItemCreated: (item: ApparelFilterItem) => void;
+  embedded?: boolean;
 }
 
 type ToastState = {
@@ -21,7 +22,10 @@ function isImageFile(file: File): boolean {
   return name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.webp');
 }
 
-export default function SingleCADUploader({ onItemCreated }: SingleCADUploaderProps) {
+export default function SingleCADUploader({
+  onItemCreated,
+  embedded = false,
+}: SingleCADUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
@@ -88,13 +92,25 @@ export default function SingleCADUploader({ onItemCreated }: SingleCADUploaderPr
   };
 
   return (
-    <section className="mb-6 rounded-xl border border-dashed border-slate-300 bg-white p-4 shadow-sm sm:p-5">
-      <div className="mb-3">
-        <h3 className="text-sm font-bold text-slate-900">Add Single Item from CAD</h3>
-        <p className="mt-1 text-xs text-slate-500">
+    <section
+      className={
+        embedded
+          ? ''
+          : 'mb-6 rounded-xl border border-dashed border-slate-300 bg-white p-4 shadow-sm sm:p-5'
+      }
+    >
+      {!embedded ? (
+        <div className="mb-3">
+          <h3 className="text-sm font-bold text-slate-900">Add Single Item from CAD</h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Upload one CAD or spec sheet image to OCR details and create a draft listing instantly.
+          </p>
+        </div>
+      ) : (
+        <p className="mb-3 text-xs text-slate-500">
           Upload one CAD or spec sheet image to OCR details and create a draft listing instantly.
         </p>
-      </div>
+      )}
 
       <div
         role="button"

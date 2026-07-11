@@ -1,8 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { signOut } from 'firebase/auth';
 import {
-  CheckCircle2,
-  Copy,
   Globe,
   LayoutGrid,
   LogOut,
@@ -12,15 +10,12 @@ import {
   Users,
 } from 'lucide-react';
 import { auth } from '../../lib/firebase-client';
-import { getStorefrontPath } from '../../utils/url-helpers';
 import MobileDrawer from '../MobileDrawer';
 
 export type ApparelNav = 'catalog' | 'inquiries';
 
 interface ApparelSellerLayoutProps {
   activeNav: ApparelNav;
-  sellerUid: string;
-  storefrontSlug?: string;
   inquiryCount?: number;
   children: ReactNode;
 }
@@ -33,68 +28,12 @@ function navLinkClass(isActive: boolean) {
   }`;
 }
 
-function SellerUidBadge({
-  uid,
-  onCopy,
-  className = '',
-}: {
-  uid: string;
-  onCopy: () => void;
-  className?: string;
-}) {
-  return (
-    <div className={`flex min-w-0 items-start gap-2 ${className}`} aria-label="Account identifier">
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-red-400">Your UID</p>
-        <p className="mt-0.5 truncate font-mono text-xs text-slate-200" title={uid}>
-          {uid}
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onCopy}
-        className="shrink-0 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
-        aria-label="Copy UID"
-        title="Copy UID"
-      >
-        <Copy size={14} aria-hidden="true" />
-      </button>
-    </div>
-  );
-}
-
-function StorefrontUrlBadge({ storefrontSlug }: { storefrontSlug?: string }) {
-  if (storefrontSlug) {
-    const path = getStorefrontPath(storefrontSlug);
-    return (
-      <div className="min-w-0" aria-label="Storefront URL">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-red-400">Storefront</p>
-        <p className="mt-0.5 truncate font-mono text-xs text-slate-200" title={path}>
-          {path}
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <a
-      href="/account"
-      className="text-xs font-medium text-slate-400 underline-offset-2 transition-colors hover:text-white hover:underline"
-    >
-      Claim storefront URL
-    </a>
-  );
-}
-
 export default function ApparelSellerLayout({
   activeNav,
-  sellerUid,
-  storefrontSlug,
   inquiryCount = 0,
   children,
 }: ApparelSellerLayoutProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [uidCopied, setUidCopied] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -104,16 +43,6 @@ export default function ApparelSellerLayout({
     }
     await signOut(auth);
     window.location.href = '/login';
-  };
-
-  const copyUid = async () => {
-    try {
-      await navigator.clipboard.writeText(sellerUid);
-      setUidCopied(true);
-      window.setTimeout(() => setUidCopied(false), 2500);
-    } catch {
-      // Clipboard API may be unavailable; ignore silently.
-    }
   };
 
   const inquiryBadge =
@@ -159,14 +88,6 @@ export default function ApparelSellerLayout({
           <nav className="flex items-center gap-2">{navLinks}</nav>
 
           <div className="flex shrink-0 items-center gap-4 text-sm text-slate-300">
-            <div className="hidden min-w-0 flex-col gap-2 md:flex lg:max-w-[220px]">
-              <SellerUidBadge uid={sellerUid} onCopy={copyUid} className="max-w-full" />
-              <StorefrontUrlBadge storefrontSlug={storefrontSlug} />
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-green-500" />
-              System Online
-            </div>
             <a
               href="/marketplace/clothing"
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
@@ -248,10 +169,6 @@ export default function ApparelSellerLayout({
         </a>
 
         <div className="mt-6 border-t border-slate-700 pt-6">
-          <SellerUidBadge uid={sellerUid} onCopy={copyUid} className="mb-3 px-1" />
-          <div className="mb-4 px-1">
-            <StorefrontUrlBadge storefrontSlug={storefrontSlug} />
-          </div>
           <a
             href="/account"
             className="mb-2 flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
@@ -273,16 +190,6 @@ export default function ApparelSellerLayout({
           </button>
         </div>
       </MobileDrawer>
-
-      {uidCopied ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-4 right-4 z-50 rounded-md bg-emerald-600 px-4 py-3 font-medium text-white shadow-lg"
-        >
-          UID Copied
-        </div>
-      ) : null}
 
       <main className="flex flex-1 overflow-hidden">{children}</main>
     </div>

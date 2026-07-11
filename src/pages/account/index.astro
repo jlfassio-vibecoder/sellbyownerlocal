@@ -1,11 +1,14 @@
 ---
 import { requireSellerOrRedirect } from '../../lib/auth';
 import { getUserProfile } from '../../lib/buyer-profile';
+import { getActiveApparelCountForSeller } from '../../lib/clothing-api';
 import type { VerificationTier } from '../../schemas';
 import AccountUidBanner from '../../components/AccountUidBanner.astro';
+import AccountStorefrontBanner from '../../components/AccountStorefrontBanner.astro';
 import VerificationTierBadge from '../../components/VerificationTierBadge.astro';
 import ProfileEditor from '../../islands/buyer/ProfileEditor';
 import PhoneOtpAccountVerify from '../../islands/PhoneOtpAccountVerify';
+import { getStorefrontPath, resolveStorefrontSegment } from '../../utils/url-helpers';
 import '../../styles/global.css';
 
 const session = await requireSellerOrRedirect(Astro.request, Astro.cookies);
@@ -16,6 +19,13 @@ const verificationTier: VerificationTier = profile?.verificationTier ?? session.
 
 const displayEmail = session.email ?? 'Your account';
 const uid = session.uid;
+const storefrontSegment = resolveStorefrontSegment({
+  id: uid,
+  storefrontSlug: profile?.storefrontSlug,
+});
+const storefrontPath = getStorefrontPath(storefrontSegment);
+const hasCustomSlug = Boolean(profile?.storefrontSlug);
+const activeListingCount = await getActiveApparelCountForSeller(uid);
 
 const showVerifyPhone = verificationTier === 'anonymous';
 const showVerifyIdentity = verificationTier === 'phone_verified';
@@ -34,6 +44,26 @@ const showFullyVerified = verificationTier === 'identity_verified';
   <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
     <header class="bg-slate-900 text-white">
       <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <a
+          href="/seller"
+          class="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-white"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path d="M19 12H5"></path>
+            <path d="m12 19-7-7 7-7"></path>
+          </svg>
+          Back
+        </a>
         <h1 class="text-2xl font-bold">{displayEmail}</h1>
         <p class="mt-2 text-sm text-slate-400">Manage your marketplace account</p>
       </div>
@@ -41,6 +71,11 @@ const showFullyVerified = verificationTier === 'identity_verified';
 
     <main class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <AccountUidBanner uid={uid} />
+      <AccountStorefrontBanner
+        storefrontPath={storefrontPath}
+        hasCustomSlug={hasCustomSlug}
+        activeListingCount={activeListingCount}
+      />
 
       <section class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 class="text-lg font-bold text-slate-900">Profile</h2>

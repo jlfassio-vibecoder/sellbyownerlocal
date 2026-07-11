@@ -156,6 +156,35 @@ export async function getActiveApparelForSeller(sellerId: string): Promise<Cloth
   return listings;
 }
 
+/** Active listing count only — avoids fetching/parsing full docs for status banners. */
+export async function getActiveApparelCountForSeller(sellerId: string): Promise<number> {
+  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? '(default)';
+  const query = db()
+    .collection('clothing_listings')
+    .where('sellerId', '==', sellerId)
+    .where('status', '==', 'active');
+
+  try {
+    const snapshot = await query.count().get();
+    return snapshot.data().count;
+  } catch (error) {
+    console.error(
+      `getActiveApparelCountForSeller count aggregation failed (db=${databaseId}, sellerId=${sellerId}):`,
+      error
+    );
+    try {
+      const snapshot = await query.get();
+      return snapshot.size;
+    } catch (fallbackError) {
+      console.error(
+        `getActiveApparelCountForSeller fallback query failed (db=${databaseId}, sellerId=${sellerId}):`,
+        fallbackError
+      );
+      throw fallbackError;
+    }
+  }
+}
+
 export async function getApparelListingForSellerById(
   id: string,
   sellerId: string

@@ -1,14 +1,11 @@
 ---
 import { requireSellerOrRedirect } from '../../../lib/auth';
-import { getUserProfile } from '../../../lib/buyer-profile';
 import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
 import ApparelEditorForm from '../../../islands/seller/ApparelEditorForm';
 import '../../../styles/global.css';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
-
-const profile = await getUserProfile(seller.uid);
 ---
 
 <html lang="en">
@@ -21,12 +18,7 @@ const profile = await getUserProfile(seller.uid);
     <title>New Item · Apparel Dashboard · Sell By Owner Local</title>
   </head>
   <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
-    <ApparelSellerLayout
-      client:load
-      activeNav="catalog"
-      sellerUid={seller.uid}
-      storefrontSlug={profile?.storefrontSlug}
-    >
+    <ApparelSellerLayout client:load activeNav="catalog">
       <div class="flex-1 overflow-y-auto">
         <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
           <div class="mb-8">
