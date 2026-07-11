@@ -1,0 +1,72 @@
+import type { APIRoute } from 'astro';
+import { createElement, type ReactElement } from 'react';
+import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer';
+import StorefrontCatalogPDF from '../../../../components/pdf/StorefrontCatalogPDF';
+import { resolveSellerByStorefrontParam } from '../../../../lib/buyer-profile';
+import { getActiveApparelForSeller } from '../../../../lib/clothing-api';
+import { toDirectStorageObjectUrl } from '../../../../lib/storage-url';
+
+export const prerender = false;
+
+export const GET: APIRoute = async ({ params }) => {
+  const slug = params.slug?.trim();
+  if (!slug) {
+    return new Response(JSON.stringify({ error: 'Missing storefront slug' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
+    const seller = await resolveSellerByStorefrontParam(slug);
+    if (!seller) {
+      return new Response(JSON.stringify({ error: 'Storefront not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const listings = await getActiveApparelForSeller(seller.id);
+
+    const storefrontName =
+      seller.storefrontName?.trim() || seller.displayName?.trim() || 'Storefront';
+    const tagline = seller.storefrontTagline?.trim() || undefined;
+    const heroRaw = seller.storefrontHeroUrl?.trim();
+    const heroImageUrl = heroRaw ? toDirectStorageObjectUrl(heroRaw) : undefined;
+
+    const items = listings.map((listing) => {
+      const primaryRaw = listing.galleryPhotos[0]?.trim();
+      return {
+        id: listing.id,
+        title: listing.title,
+        brand: listing.brand,
+        price: listing.price,
+        primaryImageUrl: primaryRaw ? toDirectStorageObjectUrl(primaryRaw) : undefined,
+        sizes: listing.sizes.length > 0 ? listing.sizes : undefined,
+      };
+    });
+
+    const document = createElement(StorefrontCatalogPDF, {
+      storefrontName,
+      tagline,
+      heroImageUrl,
+      items,
+    }) as unknown as ReactElement<DocumentProps>;
+
+    const buffer = await renderToBuffer(document);
+
+    return new Response(new Uint8Array(buffer), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'inline; filename="catalog.pdf"',
+      },
+    });
+  } catch (error) {
+    console.error(`GET /api/storefront/${slug}/catalog.pdf failed`, error);
+    return new Response(JSON.stringify({ error: 'Failed to generate catalog PDF' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};

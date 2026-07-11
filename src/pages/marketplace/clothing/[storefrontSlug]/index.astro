@@ -110,6 +110,7 @@ const ogImage = heroUrl || resolveStorefrontOgImage(listings);
         initialListings={listings}
         storefrontSegmentsBySellerId={storefrontSegmentsBySellerId}
         buyerContext={buyerContext}
+        catalogPdfHref={`/api/storefront/${canonicalSegment}/catalog.pdf`}
       />
     ) : (
       <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
