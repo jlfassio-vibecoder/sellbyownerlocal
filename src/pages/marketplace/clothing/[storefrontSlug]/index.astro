@@ -62,9 +62,9 @@ const storefrontTitle = seller.storefrontName?.trim() || seller.displayName;
 const storefrontTagline = seller.storefrontTagline?.trim() || '';
 const heroUrl = seller.storefrontHeroUrl?.trim() || '';
 const storefrontSubtitle = storefrontTagline || 'Apparel storefront';
-const pageTitle = buildStorefrontSeoTitle(seller.displayName);
-const pageDescription = buildStorefrontSeoDescription(seller.displayName);
-const ogImage = resolveStorefrontOgImage(listings);
+const pageTitle = buildStorefrontSeoTitle(storefrontTitle);
+const pageDescription = buildStorefrontSeoDescription(storefrontTitle, storefrontTagline);
+const ogImage = heroUrl || resolveStorefrontOgImage(listings);
 ---
 
 <Layout

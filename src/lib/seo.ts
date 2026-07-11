@@ -92,12 +92,17 @@ export function resolveClothingOgImage(listing: ClothingListing): string | undef
   return listing.galleryPhotos?.[0] || undefined;
 }
 
-export function buildStorefrontSeoTitle(displayName: string): string {
-  return `${displayName} · Apparel Storefront · Sell By Owner Local`;
+export function buildStorefrontSeoTitle(storefrontTitle: string): string {
+  return `${storefrontTitle} · Apparel Storefront · Sell By Owner Local`;
 }
 
-export function buildStorefrontSeoDescription(displayName: string): string {
-  return `Shop active wholesale apparel from ${displayName} on Sell By Owner Local.`;
+export function buildStorefrontSeoDescription(
+  storefrontTitle: string,
+  storefrontTagline?: string
+): string {
+  const tagline = storefrontTagline?.trim();
+  if (tagline) return tagline;
+  return `Shop active wholesale apparel from ${storefrontTitle} on Sell By Owner Local.`;
 }
 
 export function resolveStorefrontOgImage(
