@@ -1,15 +1,26 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import { auth, storage } from '../../lib/firebase-client';
 import {
   getStorefrontPath,
   isValidStorefrontSlug,
   slugifyStorefrontPart,
 } from '../../utils/url-helpers';
 
+const MAX_HERO_BYTES = 10 * 1024 * 1024;
+
 interface ProfileEditorProps {
   userId: string;
   displayName: string;
   email: string;
   storefrontSlug?: string;
+  storefrontName?: string;
+  storefrontTagline?: string;
+  storefrontHeroUrl?: string;
+}
+
+function sanitizeFilename(filename: string): string {
+  return filename.replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
 export default function ProfileEditor({
@@ -17,9 +28,17 @@ export default function ProfileEditor({
   displayName: initialName,
   email,
   storefrontSlug: initialSlug = '',
+  storefrontName: initialStorefrontName,
+  storefrontTagline: initialStorefrontTagline,
+  storefrontHeroUrl: initialStorefrontHeroUrl,
 }: ProfileEditorProps) {
+  const heroInputRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(initialName);
   const [storefrontInput, setStorefrontInput] = useState(initialSlug);
+  const [storefrontName, setStorefrontName] = useState(initialStorefrontName ?? '');
+  const [storefrontTagline, setStorefrontTagline] = useState(initialStorefrontTagline ?? '');
+  const [storefrontHeroUrl, setStorefrontHeroUrl] = useState(initialStorefrontHeroUrl ?? '');
+  const [isUploadingHero, setIsUploadingHero] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -36,6 +55,58 @@ export default function ProfileEditor({
     return null;
   })();
 
+  const handleHeroSelected = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    setError(null);
+
+    const file = files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file only (PNG, JPEG, WebP, etc.).');
+      return;
+    }
+
+    if (file.size > MAX_HERO_BYTES) {
+      setError('Hero image must be 10MB or smaller.');
+      return;
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+      setError('You must be signed in to upload. Please sign in again from the login page.');
+      return;
+    }
+    if (user.uid !== userId) {
+      setError('Account mismatch. Please sign in with the correct seller account.');
+      return;
+    }
+
+    setIsUploadingHero(true);
+    try {
+      const filename = `${Date.now()}-${sanitizeFilename(file.name)}`;
+      const objectRef = ref(storage, `storefront-heroes/${userId}/${filename}`);
+      const task = uploadBytesResumable(objectRef, file, {
+        contentType: file.type || 'image/jpeg',
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        task.on('state_changed', () => {}, reject, () => resolve());
+      });
+
+      const downloadUrl = await getDownloadURL(task.snapshot.ref);
+      setStorefrontHeroUrl(downloadUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload hero image');
+    } finally {
+      setIsUploadingHero(false);
+      if (heroInputRef.current) {
+        heroInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -49,8 +120,17 @@ export default function ProfileEditor({
     setIsSaving(true);
 
     try {
-      const body: { displayName: string; storefrontSlug?: string } = {
+      const body: {
+        displayName: string;
+        storefrontSlug?: string;
+        storefrontName: string;
+        storefrontTagline: string;
+        storefrontHeroUrl: string;
+      } = {
         displayName: displayName.trim(),
+        storefrontName: storefrontName.trim(),
+        storefrontTagline: storefrontTagline.trim(),
+        storefrontHeroUrl,
       };
       if (previewSlug) {
         body.storefrontSlug = previewSlug;
@@ -75,6 +155,21 @@ export default function ProfileEditor({
       if (typeof data.storefrontSlug === 'string') {
         setStorefrontInput(data.storefrontSlug);
       }
+      if (typeof data.storefrontName === 'string') {
+        setStorefrontName(data.storefrontName);
+      } else if (data.storefrontName === undefined) {
+        setStorefrontName('');
+      }
+      if (typeof data.storefrontTagline === 'string') {
+        setStorefrontTagline(data.storefrontTagline);
+      } else if (data.storefrontTagline === undefined) {
+        setStorefrontTagline('');
+      }
+      if (typeof data.storefrontHeroUrl === 'string') {
+        setStorefrontHeroUrl(data.storefrontHeroUrl);
+      } else if (data.storefrontHeroUrl === undefined) {
+        setStorefrontHeroUrl('');
+      }
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -86,7 +181,10 @@ export default function ProfileEditor({
   };
 
   const canSave =
-    !!displayName.trim() && !isSaving && !(storefrontInput.trim() && !!slugError);
+    !!displayName.trim() &&
+    !isSaving &&
+    !isUploadingHero &&
+    !(storefrontInput.trim() && !!slugError);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -145,6 +243,88 @@ export default function ProfileEditor({
         ) : null}
       </div>
 
+      <fieldset className="space-y-4 border-t border-slate-200 pt-4">
+        <legend className="text-sm font-semibold text-slate-900">Storefront Branding</legend>
+        <p className="text-xs text-slate-400">
+          Shown on your public storefront. Does not change your account display name.
+        </p>
+
+        <div>
+          <label htmlFor="profile-storefrontName" className="mb-1 block text-sm font-medium text-slate-700">
+            Storefront name
+          </label>
+          <input
+            type="text"
+            id="profile-storefrontName"
+            name="storefrontName"
+            maxLength={50}
+            value={storefrontName}
+            onChange={(e) => setStorefrontName(e.target.value)}
+            placeholder="E.g. Acme Apparel"
+            className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="profile-storefrontTagline"
+            className="mb-1 block text-sm font-medium text-slate-700"
+          >
+            Storefront tagline
+          </label>
+          <textarea
+            id="profile-storefrontTagline"
+            name="storefrontTagline"
+            maxLength={150}
+            rows={2}
+            value={storefrontTagline}
+            onChange={(e) => setStorefrontTagline(e.target.value)}
+            placeholder="A short description of your brand"
+            className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="profile-storefrontHero" className="mb-1 block text-sm font-medium text-slate-700">
+            Hero image
+          </label>
+          {storefrontHeroUrl ? (
+            <div className="mb-3 overflow-hidden rounded-lg border border-slate-200">
+              <img
+                src={storefrontHeroUrl}
+                alt="Storefront hero preview"
+                className="h-40 w-full object-cover"
+              />
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              ref={heroInputRef}
+              type="file"
+              id="profile-storefrontHero"
+              name="storefrontHero"
+              accept="image/*"
+              disabled={isUploadingHero || isSaving}
+              onChange={(e) => void handleHeroSelected(e.target.files)}
+              className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            {storefrontHeroUrl ? (
+              <button
+                type="button"
+                disabled={isUploadingHero || isSaving}
+                onClick={() => setStorefrontHeroUrl('')}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Remove Image
+              </button>
+            ) : null}
+          </div>
+          <p className="mt-1 text-xs text-slate-400">
+            {isUploadingHero ? 'Uploading…' : 'PNG, JPEG, or WebP up to 10MB. Saved when you click Save.'}
+          </p>
+        </div>
+      </fieldset>
+
       <div>
         <label htmlFor="profile-email" className="mb-1 block text-sm font-medium text-slate-700">
           Email
@@ -166,7 +346,7 @@ export default function ProfileEditor({
         disabled={!canSave}
         className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSaving ? 'Saving...' : 'Save'}
+        {isSaving ? 'Saving...' : isUploadingHero ? 'Uploading...' : 'Save'}
       </button>
     </form>
   );

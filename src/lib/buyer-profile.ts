@@ -1,3 +1,4 @@
+import { FieldValue } from 'firebase-admin/firestore';
 import { db } from './firebase-admin';
 import {
   UserSchema,
@@ -118,6 +119,37 @@ export async function provisionUserProfile(
 export async function updateUserDisplayName(uid: string, displayName: string): Promise<void> {
   const trimmed = displayName.trim();
   await db().collection('users').doc(uid).set({ displayName: trimmed }, { merge: true });
+}
+
+export interface StorefrontBrandingUpdate {
+  storefrontName?: string;
+  storefrontTagline?: string;
+  storefrontHeroUrl?: string;
+}
+
+/** Merge storefront branding fields; empty string clears via FieldValue.delete(). */
+export async function updateUserStorefrontBranding(
+  uid: string,
+  fields: StorefrontBrandingUpdate
+): Promise<void> {
+  const patch: Record<string, string | FieldValue> = {};
+
+  if (fields.storefrontName !== undefined) {
+    patch.storefrontName =
+      fields.storefrontName === '' ? FieldValue.delete() : fields.storefrontName;
+  }
+  if (fields.storefrontTagline !== undefined) {
+    patch.storefrontTagline =
+      fields.storefrontTagline === '' ? FieldValue.delete() : fields.storefrontTagline;
+  }
+  if (fields.storefrontHeroUrl !== undefined) {
+    patch.storefrontHeroUrl =
+      fields.storefrontHeroUrl === '' ? FieldValue.delete() : fields.storefrontHeroUrl;
+  }
+
+  if (Object.keys(patch).length === 0) return;
+
+  await db().collection('users').doc(uid).set(patch, { merge: true });
 }
 
 export async function getStorefrontSegmentForSeller(sellerId: string): Promise<string> {

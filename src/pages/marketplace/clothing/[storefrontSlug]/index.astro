@@ -58,9 +58,13 @@ const buyerContext = {
 const origin = Astro.site?.href ?? Astro.url.origin;
 const storefrontPath = getStorefrontPath(canonicalSegment);
 const canonicalUrl = resolveAbsoluteUrl(storefrontPath, origin);
-const pageTitle = buildStorefrontSeoTitle(seller.displayName);
-const pageDescription = buildStorefrontSeoDescription(seller.displayName);
-const ogImage = resolveStorefrontOgImage(listings);
+const storefrontTitle = seller.storefrontName?.trim() || seller.displayName;
+const storefrontTagline = seller.storefrontTagline?.trim() || '';
+const heroUrl = seller.storefrontHeroUrl?.trim() || '';
+const storefrontSubtitle = storefrontTagline || 'Apparel storefront';
+const pageTitle = buildStorefrontSeoTitle(storefrontTitle);
+const pageDescription = buildStorefrontSeoDescription(storefrontTitle, storefrontTagline);
+const ogImage = heroUrl || resolveStorefrontOgImage(listings);
 ---
 
 <Layout
@@ -71,20 +75,33 @@ const ogImage = resolveStorefrontOgImage(listings);
   ogType="website"
   bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
 >
-  <header class="border-b border-slate-200 bg-white">
-    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
-      <a
-        href="/marketplace/clothing"
-        class="mb-4 inline-flex items-center text-sm font-semibold text-red-600 hover:text-red-700"
-      >
-        ← Browse all apparel
-      </a>
-      <h1 class="font-brand text-4xl leading-none text-slate-900 uppercase sm:text-5xl">
-        {seller.displayName}
-      </h1>
-      <p class="mt-2 text-base text-slate-500 sm:text-lg">Apparel storefront</p>
-    </div>
-  </header>
+  {
+    heroUrl ? (
+      <header class="relative w-full min-h-48 overflow-hidden sm:min-h-80">
+        <img
+          src={heroUrl}
+          alt=""
+          class="absolute inset-0 h-full w-full object-cover"
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-black/30" />
+        <div class="relative mx-auto flex min-h-48 max-w-7xl flex-col justify-end px-4 py-12 sm:min-h-80 sm:px-6 sm:py-16 lg:px-8">
+          <h1 class="font-brand text-4xl leading-none text-white uppercase sm:text-5xl">
+            {storefrontTitle}
+          </h1>
+          <p class="mt-2 text-base text-white/80 sm:text-lg">{storefrontSubtitle}</p>
+        </div>
+      </header>
+    ) : (
+      <header class="border-b border-slate-200 bg-white">
+        <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+          <h1 class="font-brand text-4xl leading-none text-slate-900 uppercase sm:text-5xl">
+            {storefrontTitle}
+          </h1>
+          <p class="mt-2 text-base text-slate-500 sm:text-lg">{storefrontSubtitle}</p>
+        </div>
+      </header>
+    )
+  }
 
   {
     listings.length > 0 ? (
@@ -97,16 +114,10 @@ const ogImage = resolveStorefrontOgImage(listings);
     ) : (
       <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div class="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
-          <p class="text-lg font-medium text-slate-700">This storefront has no active listings</p>
-          <p class="mt-2 text-sm text-slate-500">
-            Check back soon, or browse other apparel on the marketplace.
+          <p class="text-lg font-medium text-slate-700">
+            {storefrontTitle} doesn't have any active items right now.
           </p>
-          <a
-            href="/marketplace/clothing"
-            class="mt-6 inline-flex items-center rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
-          >
-            Browse all apparel
-          </a>
+          <p class="mt-2 text-sm text-slate-500">Check back later.</p>
         </div>
       </main>
     )

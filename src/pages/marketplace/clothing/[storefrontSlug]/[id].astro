@@ -89,6 +89,9 @@ const buyerContext = {
   userPhone: profile?.phone ?? '',
   loginHref: `/login?next=${encodeURIComponent(`${canonicalPath}#contact`)}`,
 };
+
+const storefrontTitle =
+  resolvedSeller.storefrontName?.trim() || resolvedSeller.displayName;
 ---
 
 <Layout
@@ -101,20 +104,12 @@ const buyerContext = {
 >
   <header class="border-b border-slate-200 bg-white">
     <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      <div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <a
-          href="/marketplace/clothing"
-          class="inline-flex items-center text-sm font-semibold text-red-600 hover:text-red-700"
-        >
-          ← Back to Clothing
-        </a>
-        <a
-          href={storefrontPath}
-          class="inline-flex items-center text-sm font-semibold text-slate-600 hover:text-slate-900"
-        >
-          View all from {resolvedSeller.displayName}
-        </a>
-      </div>
+      <a
+        href={storefrontPath}
+        class="mb-4 inline-flex items-center text-sm font-semibold text-red-600 hover:text-red-700"
+      >
+        ← Back to {storefrontTitle}
+      </a>
     </div>
   </header>
 
