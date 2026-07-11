@@ -137,7 +137,6 @@ export default function FilterableApparelGrid({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
-  const [bulkAction, setBulkAction] = useState(BULK_ACTION_OPTIONS[0].value);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [editingItem, setEditingItem] = useState<ApparelFilterItem | null>(null);
   const [editForm, setEditForm] = useState<EditFormState>(EMPTY_EDIT_FORM);
@@ -199,16 +198,23 @@ export default function FilterableApparelGrid({
     [items, selectedIds]
   );
 
-  const selectedBulkAction = BULK_ACTION_OPTIONS.find((option) => option.value === bulkAction) ?? BULK_ACTION_OPTIONS[0];
+  const exitSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedIds(new Set());
+    setIsModalOpen(false);
+  };
 
-  const toggleSelectionMode = () => {
-    setIsSelectionMode((prev) => {
-      if (prev) {
-        setSelectedIds(new Set());
-        setIsModalOpen(false);
-      }
-      return !prev;
-    });
+  const enterSelectionMode = () => {
+    setIsSelectionMode(true);
+  };
+
+  const selectAllFiltered = () => {
+    setSelectedIds(new Set(filteredItems.map((item) => item.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setIsModalOpen(false);
   };
 
   const toggleItemSelection = (id: string) => {
@@ -261,7 +267,6 @@ export default function FilterableApparelGrid({
       setItems((prev) =>
         prev.map((item) => (updatedSet.has(item.id) ? { ...item, ...updates } : item))
       );
-      setSelectedIds(new Set());
       setToast({
         type: 'success',
         message: `${payload.updatedCount ?? ids.length} item${(payload.updatedCount ?? ids.length) === 1 ? '' : 's'} ${successLabel}.`,
@@ -274,10 +279,6 @@ export default function FilterableApparelGrid({
     } finally {
       setIsBulkUpdating(false);
     }
-  };
-
-  const handleApplyBulkAction = () => {
-    handleBulkUpdate(selectedBulkAction.updates, selectedBulkAction.successLabel);
   };
 
   const handleCopyLink = async (id: string) => {
@@ -449,50 +450,53 @@ export default function FilterableApparelGrid({
   return (
     <>
       {isSellerView && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
-            <input
-              type="checkbox"
-              checked={isSelectionMode}
-              onChange={toggleSelectionMode}
-              className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
-            />
-            Select Items
-          </label>
-          {isSelectionMode && selectedIds.size > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="sr-only" htmlFor="bulk-actions">
-                Bulk Actions
-              </label>
-              <select
-                id="bulk-actions"
-                value={bulkAction}
-                onChange={(e) => setBulkAction(e.target.value)}
-                disabled={isBulkUpdating || isDeleting}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600"
-              >
-                {BULK_ACTION_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={handleApplyBulkAction}
-                disabled={isBulkUpdating || isDeleting}
-                className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
-              >
-                {isBulkUpdating ? 'Applying…' : 'Apply'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(true)}
-                disabled={isBulkUpdating || isDeleting}
-                className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50"
-              >
-                Delete {selectedIds.size} Item{selectedIds.size === 1 ? '' : 's'}
-              </button>
+        <div className="mb-4">
+          {!isSelectionMode ? (
+            <button
+              type="button"
+              onClick={enterSelectionMode}
+              className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            >
+              Select multiple
+            </button>
+          ) : (
+            <div className="rounded-xl border border-red-200 bg-red-50/60 px-4 py-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Selecting items</p>
+                  <p className="mt-0.5 text-sm text-slate-600">
+                    Tap items to select them, then choose an action below.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={selectAllFiltered}
+                    disabled={filteredItems.length === 0 || isBulkUpdating || isDeleting}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Select all
+                  </button>
+                  {selectedIds.size > 0 ? (
+                    <button
+                      type="button"
+                      onClick={clearSelection}
+                      disabled={isBulkUpdating || isDeleting}
+                      className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={exitSelectionMode}
+                    disabled={isBulkUpdating || isDeleting}
+                    className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -515,7 +519,11 @@ export default function FilterableApparelGrid({
           <p className="mt-2 text-sm text-slate-500">Try adjusting your search or filters.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div
+          className={`grid grid-cols-1 gap-6 sm:grid-cols-2 ${
+            isSellerView && isSelectionMode ? 'pb-36' : ''
+          }`}
+        >
           {filteredItems.map((item) => {
             const href = isSellerView
               ? `/seller/apparel/${item.id}`
@@ -756,6 +764,49 @@ export default function FilterableApparelGrid({
         </div>
       )}
 
+      {isSellerView && isSelectionMode && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur">
+          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-slate-900">
+                {selectedIds.size > 0
+                  ? `${selectedIds.size} selected`
+                  : 'Select items below'}
+              </p>
+              <button
+                type="button"
+                onClick={exitSelectionMode}
+                disabled={isBulkUpdating || isDeleting}
+                className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 disabled:opacity-50"
+              >
+                Done
+              </button>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {BULK_ACTION_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleBulkUpdate(option.updates, option.successLabel)}
+                  disabled={selectedIds.size === 0 || isBulkUpdating || isDeleting}
+                  className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isBulkUpdating ? 'Working…' : option.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                disabled={selectedIds.size === 0 || isBulkUpdating || isDeleting}
+                className="shrink-0 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isModalOpen && (
         <>
           {/* Copilot suggestion ignored: aria-describedby is not used elsewhere in this codebase and the dialog title already conveys the action. */}
@@ -819,9 +870,9 @@ export default function FilterableApparelGrid({
       {toast && (
         <div
           role="status"
-          className={`fixed bottom-4 right-4 z-50 max-w-sm rounded-md px-4 py-3 font-medium text-white shadow-lg ${
-            toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'
-          }`}
+          className={`fixed right-4 z-50 max-w-sm rounded-md px-4 py-3 font-medium text-white shadow-lg ${
+            isSellerView && isSelectionMode ? 'bottom-28' : 'bottom-4'
+          } ${toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}
         >
           {toast.message}
         </div>
