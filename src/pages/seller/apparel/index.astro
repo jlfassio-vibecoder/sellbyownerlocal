@@ -3,8 +3,6 @@ import { requireSellerOrRedirect } from '../../../lib/auth';
 import { getUserProfile } from '../../../lib/buyer-profile';
 import { getApparelCatalogForSeller } from '../../../lib/clothing-api';
 import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
-import CatalogUploader from '../../../islands/seller/CatalogUploader';
-import BulkImageUploader from '../../../islands/seller/BulkImageUploader';
 import ApparelCatalogSection from '../../../islands/seller/ApparelCatalogSection';
 import type { ApparelFilterItem } from '../../../lib/apparel';
 import { resolveStorefrontSegment } from '../../../utils/url-helpers';
@@ -67,12 +65,9 @@ const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
             </a>
           </div>
 
-          <CatalogUploader client:load sellerId={seller.uid} />
-
-          <BulkImageUploader client:load sellerId={seller.uid} />
-
           <ApparelCatalogSection
             client:load
+            sellerId={seller.uid}
             initialItems={initialItems}
             storefrontSegment={storefrontSegment}
           />

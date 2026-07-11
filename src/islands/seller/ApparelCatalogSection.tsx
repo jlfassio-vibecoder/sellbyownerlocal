@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import FilterableApparelGrid from '../shared/FilterableApparelGrid';
 import type { ApparelFilterItem } from '../../lib/apparel';
-import SingleCADUploader from './SingleCADUploader';
+import ApparelAddItemsPanel from './ApparelAddItemsPanel';
 
 interface ApparelCatalogSectionProps {
+  sellerId: string;
   initialItems: ApparelFilterItem[];
   storefrontSegment: string;
 }
 
 export default function ApparelCatalogSection({
+  sellerId,
   initialItems,
   storefrontSegment,
 }: ApparelCatalogSectionProps) {
@@ -20,7 +22,10 @@ export default function ApparelCatalogSection({
 
   return (
     <>
-      <SingleCADUploader onItemCreated={(item) => setItems((prev) => [item, ...prev])} />
+      <ApparelAddItemsPanel
+        sellerId={sellerId}
+        onItemCreated={(item) => setItems((prev) => [item, ...prev])}
+      />
       <FilterableApparelGrid
         initialItems={items}
         isSellerView={true}

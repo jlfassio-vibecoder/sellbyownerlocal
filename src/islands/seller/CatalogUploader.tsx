@@ -7,6 +7,7 @@ const MAX_PDF_BYTES = 50 * 1024 * 1024;
 
 interface CatalogUploaderProps {
   sellerId: string;
+  embedded?: boolean;
 }
 
 function isPdfFile(file: File): boolean {
@@ -19,7 +20,7 @@ function sanitizeFilename(filename: string): string {
   return base.toLowerCase().endsWith('.pdf') ? base : `${base}.pdf`;
 }
 
-export default function CatalogUploader({ sellerId }: CatalogUploaderProps) {
+export default function CatalogUploader({ sellerId, embedded = false }: CatalogUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -90,13 +91,25 @@ export default function CatalogUploader({ sellerId }: CatalogUploaderProps) {
   };
 
   return (
-    <section className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-4">
-        <h3 className="text-lg font-bold text-slate-900">Upload Catalog PDF</h3>
-        <p className="mt-1 text-sm text-slate-500">
+    <section
+      className={
+        embedded
+          ? ''
+          : 'mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm'
+      }
+    >
+      {!embedded ? (
+        <div className="mb-4">
+          <h3 className="text-lg font-bold text-slate-900">Upload Catalog PDF</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Upload a wholesale line sheet or catalog. We will extract items in the background.
+          </p>
+        </div>
+      ) : (
+        <p className="mb-4 text-sm text-slate-500">
           Upload a wholesale line sheet or catalog. We will extract items in the background.
         </p>
-      </div>
+      )}
 
       {error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
