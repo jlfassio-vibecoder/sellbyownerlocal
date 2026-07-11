@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { signOut } from 'firebase/auth';
 import {
-  CheckCircle2,
   Globe,
   LayoutGrid,
   LogOut,
@@ -89,10 +88,6 @@ export default function ApparelSellerLayout({
           <nav className="flex items-center gap-2">{navLinks}</nav>
 
           <div className="flex shrink-0 items-center gap-4 text-sm text-slate-300">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-green-500" />
-              System Online
-            </div>
             <a
               href="/marketplace/clothing"
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
