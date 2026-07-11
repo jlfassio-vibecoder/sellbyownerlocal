@@ -1,0 +1,40 @@
+---
+interface Props {
+  storefrontPath: string;
+  hasCustomSlug: boolean;
+}
+
+const { storefrontPath, hasCustomSlug } = Astro.props;
+---
+
+<section
+  class="mb-8 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
+  aria-label="Storefront URL"
+>
+  <p class="text-[10px] font-bold uppercase tracking-wider text-red-600">Storefront URL</p>
+  {
+    hasCustomSlug ? (
+      <>
+        <p class="mt-1 font-mono text-sm font-semibold text-slate-900 break-all select-all">
+          {storefrontPath}
+        </p>
+        <a
+          href={storefrontPath}
+          class="mt-2 inline-flex text-sm font-semibold text-red-600 hover:text-red-700"
+        >
+          Open public storefront →
+        </a>
+      </>
+    ) : (
+      <>
+        <p class="mt-1 text-sm text-slate-700">
+          You have not claimed a custom storefront URL yet. Your catalog is available at:
+        </p>
+        <p class="mt-1 font-mono text-sm text-slate-600 break-all select-all">{storefrontPath}</p>
+        <p class="mt-2 text-xs text-slate-500">
+          Set a custom Storefront URL in the Profile section below.
+        </p>
+      </>
+    )
+  }
+</section>
