@@ -265,20 +265,24 @@ export default function FilterableApparelGrid({
 
       const updatedSet = new Set(ids);
       const query = searchTerm.trim().toLowerCase();
-      const nextItems = items.map((item) =>
-        updatedSet.has(item.id) ? { ...item, ...updates } : item
-      );
-      const stillVisibleIds = new Set(
-        nextItems
-          .filter((item) => {
-            if (!matchesSearch(item, query)) return false;
-            if (selectedBrand !== 'All' && item.brand !== selectedBrand) return false;
-            if (selectedStatus !== 'All' && item.status !== selectedStatus) return false;
-            return true;
-          })
-          .map((item) => item.id)
-      );
-      setItems(nextItems);
+      // Apply bulk updates against latest state so in-flight initialItems merges aren't dropped.
+      let stillVisibleIds = new Set<string>();
+      setItems((prev) => {
+        const nextItems = prev.map((item) =>
+          updatedSet.has(item.id) ? { ...item, ...updates } : item
+        );
+        stillVisibleIds = new Set(
+          nextItems
+            .filter((item) => {
+              if (!matchesSearch(item, query)) return false;
+              if (selectedBrand !== 'All' && item.brand !== selectedBrand) return false;
+              if (selectedStatus !== 'All' && item.status !== selectedStatus) return false;
+              return true;
+            })
+            .map((item) => item.id)
+        );
+        return nextItems;
+      });
       // Drop selection for items that leave the current filtered view (e.g. Make Public while
       // filtering Drafts), but keep visible selections so sellers can chain actions.
       setSelectedIds((prevSelected) => {

@@ -1,7 +1,7 @@
 ---
 import { requireSellerOrRedirect } from '../../lib/auth';
 import { getUserProfile } from '../../lib/buyer-profile';
-import { getActiveApparelForSeller } from '../../lib/clothing-api';
+import { getActiveApparelCountForSeller } from '../../lib/clothing-api';
 import type { VerificationTier } from '../../schemas';
 import AccountUidBanner from '../../components/AccountUidBanner.astro';
 import AccountStorefrontBanner from '../../components/AccountStorefrontBanner.astro';
@@ -25,8 +25,7 @@ const storefrontSegment = resolveStorefrontSegment({
 });
 const storefrontPath = getStorefrontPath(storefrontSegment);
 const hasCustomSlug = Boolean(profile?.storefrontSlug);
-const activeListings = await getActiveApparelForSeller(uid);
-const activeListingCount = activeListings.length;
+const activeListingCount = await getActiveApparelCountForSeller(uid);
 
 const showVerifyPhone = verificationTier === 'anonymous';
 const showVerifyIdentity = verificationTier === 'phone_verified';
