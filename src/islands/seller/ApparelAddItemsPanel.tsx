@@ -38,9 +38,22 @@ export default function ApparelAddItemsPanel({
   onItemCreated,
 }: ApparelAddItemsPanelProps) {
   const [activeMethod, setActiveMethod] = useState<AddMethod | null>(null);
+  // Keep opened uploaders mounted (hidden) so in-flight uploads are not torn down.
+  const [openedMethods, setOpenedMethods] = useState<Set<AddMethod>>(() => new Set());
 
   const toggleMethod = (method: AddMethod) => {
-    setActiveMethod((current) => (current === method ? null : method));
+    setActiveMethod((current) => {
+      const next = current === method ? null : method;
+      if (next) {
+        setOpenedMethods((prev) => {
+          if (prev.has(next)) return prev;
+          const copy = new Set(prev);
+          copy.add(next);
+          return copy;
+        });
+      }
+      return next;
+    });
   };
 
   return (
@@ -75,25 +88,37 @@ export default function ApparelAddItemsPanel({
         })}
       </div>
 
-      {activeMethod ? (
-        <div className="mt-4 border-t border-slate-100 pt-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-slate-700">
-              {METHODS.find((method) => method.id === activeMethod)?.label}
-            </p>
-            <button
-              type="button"
-              onClick={() => setActiveMethod(null)}
-              className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
-            >
-              Hide
-            </button>
-          </div>
+      {openedMethods.size > 0 ? (
+        <div className={activeMethod ? 'mt-4 border-t border-slate-100 pt-4' : 'hidden'}>
+          {activeMethod ? (
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-slate-700">
+                {METHODS.find((method) => method.id === activeMethod)?.label}
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveMethod(null)}
+                className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
+              >
+                Hide
+              </button>
+            </div>
+          ) : null}
 
-          {activeMethod === 'pdf' ? <CatalogUploader sellerId={sellerId} embedded /> : null}
-          {activeMethod === 'bulk' ? <BulkImageUploader sellerId={sellerId} embedded /> : null}
-          {activeMethod === 'cad' ? (
-            <SingleCADUploader onItemCreated={onItemCreated} embedded />
+          {openedMethods.has('pdf') ? (
+            <div className={activeMethod === 'pdf' ? undefined : 'hidden'} aria-hidden={activeMethod !== 'pdf'}>
+              <CatalogUploader sellerId={sellerId} embedded />
+            </div>
+          ) : null}
+          {openedMethods.has('bulk') ? (
+            <div className={activeMethod === 'bulk' ? undefined : 'hidden'} aria-hidden={activeMethod !== 'bulk'}>
+              <BulkImageUploader sellerId={sellerId} embedded />
+            </div>
+          ) : null}
+          {openedMethods.has('cad') ? (
+            <div className={activeMethod === 'cad' ? undefined : 'hidden'} aria-hidden={activeMethod !== 'cad'}>
+              <SingleCADUploader onItemCreated={onItemCreated} embedded />
+            </div>
           ) : null}
         </div>
       ) : null}

@@ -264,9 +264,30 @@ export default function FilterableApparelGrid({
       }
 
       const updatedSet = new Set(ids);
-      setItems((prev) =>
-        prev.map((item) => (updatedSet.has(item.id) ? { ...item, ...updates } : item))
+      const query = searchTerm.trim().toLowerCase();
+      const nextItems = items.map((item) =>
+        updatedSet.has(item.id) ? { ...item, ...updates } : item
       );
+      const stillVisibleIds = new Set(
+        nextItems
+          .filter((item) => {
+            if (!matchesSearch(item, query)) return false;
+            if (selectedBrand !== 'All' && item.brand !== selectedBrand) return false;
+            if (selectedStatus !== 'All' && item.status !== selectedStatus) return false;
+            return true;
+          })
+          .map((item) => item.id)
+      );
+      setItems(nextItems);
+      // Drop selection for items that leave the current filtered view (e.g. Make Public while
+      // filtering Drafts), but keep visible selections so sellers can chain actions.
+      setSelectedIds((prevSelected) => {
+        const nextSelected = new Set<string>();
+        for (const id of prevSelected) {
+          if (stillVisibleIds.has(id)) nextSelected.add(id);
+        }
+        return nextSelected;
+      });
       setToast({
         type: 'success',
         message: `${payload.updatedCount ?? ids.length} item${(payload.updatedCount ?? ids.length) === 1 ? '' : 's'} ${successLabel}.`,
