@@ -25,6 +25,7 @@ export default function ClothingCard({
 }: ClothingCardProps) {
   const listingPath = getClothingListingPath(listing.id, storefrontSegment);
   const showFeatured = Boolean(listing.isFeatured);
+  // Copilot suggestion ignored: Sale badge uses isSale so bulk “Mark as Sale” remains visible before a salePrice is set; dual pricing still uses hasSalePricing.
   const showSale = Boolean(listing.isSale);
   const onSale = hasSalePricing(listing);
 

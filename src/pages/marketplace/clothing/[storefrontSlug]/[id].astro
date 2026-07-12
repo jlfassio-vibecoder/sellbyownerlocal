@@ -209,6 +209,7 @@ const storefrontTitle =
             <div class="space-y-2">
               <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{listing.brand}</p>
               {
+                // Copilot suggestion ignored: Sale badge uses isSale so bulk “Mark as Sale” remains visible before a salePrice is set; dual pricing still uses hasSalePricing.
                 (listing.isFeatured || listing.isSale) && (
                   <div class="flex flex-wrap gap-1.5">
                     {

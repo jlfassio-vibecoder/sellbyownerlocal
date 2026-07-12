@@ -134,6 +134,11 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
 
     let parsedSalePrice: number | null = null;
     if (isSale) {
+      if (!salePrice.trim()) {
+        setError('Enter a valid sale price, or uncheck Sale.');
+        setIsSubmitting(false);
+        return;
+      }
       parsedSalePrice = Number(salePrice);
       if (!Number.isFinite(parsedSalePrice) || parsedSalePrice < 0) {
         setError('Enter a valid sale price, or uncheck Sale.');

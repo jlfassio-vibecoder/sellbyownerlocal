@@ -483,6 +483,13 @@ export default function FilterableApparelGrid({
 
     let salePrice: number | null = null;
     if (editForm.isSale) {
+      if (!editForm.salePrice.trim()) {
+        setToast({
+          type: 'error',
+          message: 'Enter a valid sale price, or uncheck Sale.',
+        });
+        return;
+      }
       const parsedSalePrice = Number(editForm.salePrice);
       if (!Number.isFinite(parsedSalePrice) || parsedSalePrice < 0) {
         setToast({
