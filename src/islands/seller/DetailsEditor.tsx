@@ -14,6 +14,7 @@ import HighlightsSection from './components/HighlightsSection';
 import MarketValuationSection from './components/MarketValuationSection';
 import MechanicalSection from './components/MechanicalSection';
 import OverviewSection from './components/OverviewSection';
+import UpgradesEditor from './components/UpgradesEditor';
 import VideoSection from './components/VideoSection';
 
 interface DetailsEditorProps {
@@ -30,6 +31,7 @@ const SECTION_IDS = [
   'basics',
   'overview',
   'mechanical',
+  'upgrades',
   'market',
   'highlights',
   'video',
@@ -42,6 +44,7 @@ const SECTION_LABELS: Record<SectionId, string> = {
   basics: 'Basics',
   overview: "Overview & Seller's Note",
   mechanical: 'Mechanical Integrity',
+  upgrades: 'Upgrades & Modifications',
   market: 'Market Valuation',
   highlights: 'Highlights & Utility',
   video: 'Video',
@@ -74,6 +77,8 @@ export default function DetailsEditor({
       ...formState,
       images: formState.images ?? [],
       marketValuation: formState.marketValuation ?? { comparables: [] },
+      modifications: formState.modifications ?? [],
+      modificationImageUrls: formState.modificationImageUrls ?? [],
     },
   });
 
@@ -82,6 +87,8 @@ export default function DetailsEditor({
       ...formState,
       images: formState.images ?? [],
       marketValuation: formState.marketValuation ?? { comparables: [] },
+      modifications: formState.modifications ?? [],
+      modificationImageUrls: formState.modificationImageUrls ?? [],
     });
   }, [vehicleId, reset]);
 
@@ -133,6 +140,11 @@ export default function DetailsEditor({
       values.mechanicalItem2Text &&
       values.mechanicalItem3Title &&
       values.mechanicalItem3Text
+    ),
+    upgrades: !!(
+      (values.modifications ?? []).some(
+        (row) => row.title?.trim() && row.description?.trim()
+      ) || (values.modificationImageUrls ?? []).length > 0
     ),
     market: !!(
       values.marketValuation?.contextText &&
@@ -206,6 +218,9 @@ export default function DetailsEditor({
               </div>
               <div style={sectionStyle('mechanical')}>
                 <MechanicalSection {...sectionProps} />
+              </div>
+              <div style={sectionStyle('upgrades')}>
+                <UpgradesEditor {...sectionProps} />
               </div>
               <div style={sectionStyle('market')}>
                 <MarketValuationSection vehicleId={vehicleId} {...sectionProps} />

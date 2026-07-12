@@ -23,6 +23,7 @@ import DocumentViewer from '../islands/DocumentViewer.tsx';
 import HistoryReportViewer from '../islands/HistoryReportViewer.tsx';
 import ServiceTimeline from '../islands/ServiceTimeline';
 import AccentText from './AccentText';
+import ImageTrioGallery from './ImageTrioGallery.astro';
 import MarkdownText from './MarkdownText';
 import { Check, Download } from 'lucide-react';
 
@@ -385,23 +386,9 @@ const favoriteTitle =
                       <div class="text-sm leading-relaxed text-slate-700 md:text-base">
                         <MarkdownText text={block.body} accentClass={accent.tailwindText} />
                       </div>
-                      {
-                        block.images && block.images.length > 0 && (
-                          <div class="mt-6 grid grid-cols-3 gap-2">
-                            {
-                              block.images.map((imageUrl) => (
-                                <div class="aspect-video overflow-hidden rounded-lg border border-slate-300 bg-slate-200">
-                                  <img
-                                    src={imageUrl}
-                                    alt=""
-                                    class="h-full w-full object-cover opacity-60 mix-blend-multiply"
-                                  />
-                                </div>
-                              ))
-                            }
-                          </div>
-                        )
-                      }
+                      {block.images && block.images.length > 0 && (
+                        <ImageTrioGallery images={block.images} />
+                      )}
                     </div>
                   ))
                 }
@@ -438,6 +425,33 @@ const favoriteTitle =
   {
     vehicle.galleryPhotos && vehicle.galleryPhotos.length > 0 && (
       <Gallery client:load photos={vehicle.galleryPhotos} />
+    )
+  }
+
+  {
+    ((vehicle.modifications ?? []).length > 0 ||
+      (vehicle.modificationImageUrls ?? []).length > 0) && (
+      <section id="upgrades" class="mb-16 pt-8">
+        <h2 class="mb-6 text-2xl font-bold text-slate-900">Upgrades & Modifications</h2>
+        {
+          (vehicle.modifications ?? []).length > 0 && (
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {(vehicle.modifications ?? []).map((mod) => (
+                <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5">
+                  <div class={`mb-4 h-1 w-8 ${accent.tailwindBg}`} />
+                  <h3 class="mb-2 text-sm font-semibold text-slate-900">
+                    <MarkdownText text={mod.title} accentClass={accent.tailwindText} inline />
+                  </h3>
+                  <div class="text-xs leading-relaxed text-slate-500">
+                    <MarkdownText text={mod.description} accentClass={accent.tailwindText} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        }
+        <ImageTrioGallery images={vehicle.modificationImageUrls ?? []} />
+      </section>
     )
   }
 

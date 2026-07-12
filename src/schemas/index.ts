@@ -432,6 +432,11 @@ export const VehicleHighlightSchema = z.object({
   text: z.string().min(1),
 });
 
+export const VehicleModificationSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().min(1),
+});
+
 export const GenerateHighlightsRequestSchema = z.object({
   vehicleId: z.string().trim().min(1),
 });
@@ -441,6 +446,11 @@ export const GenerateHighlightsResponseSchema = z.object({
 });
 
 const optionalString = z.string().optional().or(z.literal(''));
+
+export const ModificationFormSchema = z.object({
+  title: optionalString,
+  description: optionalString,
+});
 
 export const GalleryPhotoFormSchema = z.object({
   url: httpHttpsUrl,
@@ -501,6 +511,8 @@ export const VehicleFormStateSchema = z.object({
   pitchBlock3ImageUrls: z.array(httpHttpsUrl).max(3).default([]),
   galleryPhotos: z.array(GalleryPhotoFormSchema).default([]),
   serviceRecords: z.array(ServiceRecordFormSchema).default([]),
+  modifications: z.array(ModificationFormSchema).max(12).default([]),
+  modificationImageUrls: z.array(httpHttpsUrl).max(3).default([]),
 });
 
 export const GenerateListingFormFieldsSchema = VehicleFormStateSchema.partial();
@@ -562,6 +574,8 @@ export const VehicleDashboardUpdateSchema = z
     mechanicalIntegrity: MechanicalIntegritySchema.partial().optional(),
     marketValuation: MarketValuationSchema.partial().optional(),
     highlights: z.array(VehicleHighlightSchema).max(4).optional(),
+    modifications: z.array(VehicleModificationSchema).max(12).optional(),
+    modificationImageUrls: z.array(httpHttpsUrl).max(3).optional(),
     images: z.array(httpHttpsUrl).max(30).optional(),
     heroImageUrls: z.array(httpHttpsUrl).optional(),
     carouselImageUrls: z.array(httpHttpsUrl).optional(),
@@ -768,6 +782,8 @@ export const VehicleSchema = z.object({
   specs: VehicleSpecsSchema,
   features: z.array(z.string().min(1)).min(1),
   highlights: z.array(VehicleHighlightSchema).max(4).optional(),
+  modifications: z.array(VehicleModificationSchema).max(12).optional().default([]),
+  modificationImageUrls: z.array(httpHttpsUrl).max(3).optional().default([]),
   serviceRecords: z.array(ServiceRecordSchema).default([]),
   documents: VehicleDocumentsSchema.optional(),
   originalStickerUrl: httpHttpsUrl.optional(),
@@ -847,6 +863,8 @@ export type MechanicalItem = z.infer<typeof MechanicalItemSchema>;
 export type MechanicalIntegrity = z.infer<typeof MechanicalIntegritySchema>;
 export type DocumentsBanner = z.infer<typeof DocumentsBannerSchema>;
 export type VehicleHighlight = z.infer<typeof VehicleHighlightSchema>;
+export type VehicleModification = z.infer<typeof VehicleModificationSchema>;
+export type ModificationForm = z.infer<typeof ModificationFormSchema>;
 export type VehicleFormState = z.infer<typeof VehicleFormStateSchema>;
 export type VehicleDashboardUpdate = z.infer<typeof VehicleDashboardUpdateSchema>;
 export type UploadResponse = z.infer<typeof UploadResponseSchema>;

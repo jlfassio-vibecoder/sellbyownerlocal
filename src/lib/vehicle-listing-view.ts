@@ -173,6 +173,12 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
   if (vehicle.galleryPhotos?.length) {
     navSections.push({ id: 'gallery', label: 'Gallery' });
   }
+  if (
+    (vehicle.modifications ?? []).length > 0 ||
+    (vehicle.modificationImageUrls ?? []).length > 0
+  ) {
+    navSections.push({ id: 'upgrades', label: 'Upgrades & Mods' });
+  }
   navSections.push({ id: 'maintenance', label: 'Maintenance' });
   if (vehicle.marketValuation) {
     navSections.push({ id: 'market', label: 'Market Value' });

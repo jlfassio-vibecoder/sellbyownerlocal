@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
-import { CheckCircle2, ExternalLink, Loader2, Upload } from 'lucide-react';
-import { uploadDocument } from '../../lib/seller-api';
+import { CheckCircle2, ExternalLink, Loader2, Trash2, Upload } from 'lucide-react';
+import { deleteKbbReport, uploadDocument } from '../../lib/seller-api';
 
 interface KbbReportUploaderProps {
   vehicleId: string;
@@ -15,7 +15,10 @@ export default function KbbReportUploader({
 }: KbbReportUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isBusy = uploading || removing;
 
   const handleUpload = async (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -34,6 +37,24 @@ export default function KbbReportUploader({
       setError(err instanceof Error ? err.message : 'Failed to upload file. Please try again.');
     } finally {
       setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemove = async () => {
+    setError(null);
+    setRemoving(true);
+
+    try {
+      await deleteKbbReport(vehicleId);
+      onFieldUpdate('');
+    } catch (err) {
+      console.error('KBB report remove failed', err);
+      setError(err instanceof Error ? err.message : 'Failed to remove KBB report. Please try again.');
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -62,13 +83,13 @@ export default function KbbReportUploader({
         }}
         className="hidden"
         accept=".pdf,image/png,image/jpeg"
-        disabled={uploading}
+        disabled={isBusy}
       />
 
       {kbbReportUrl ? (
         <div className="mb-3 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3">
           <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-green-600" aria-hidden="true" />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-green-800">KBB report uploaded</p>
             <p className="truncate text-xs text-green-700">{filename}</p>
             <a
@@ -81,13 +102,27 @@ export default function KbbReportUploader({
               <ExternalLink size={12} aria-hidden="true" />
             </a>
           </div>
+          <button
+            type="button"
+            onClick={() => void handleRemove()}
+            disabled={isBusy}
+            className="shrink-0 rounded p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+            aria-label="Remove KBB report"
+            title="Remove KBB report"
+          >
+            {removing ? (
+              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <Trash2 size={16} aria-hidden="true" />
+            )}
+          </button>
         </div>
       ) : null}
 
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        disabled={uploading}
+        disabled={isBusy}
         className="inline-flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-white px-4 py-8 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 disabled:opacity-70"
       >
         {uploading ? (

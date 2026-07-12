@@ -1,0 +1,49 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getOptionalSellerSession } from '../../lib/auth';
+import { getPublishedInventory } from '../../lib/inventory-api';
+import InventoryGrid from '../../islands/buyer/InventoryGrid';
+import VehicleMarketplaceHeader from '../../components/vehicles/VehicleMarketplaceHeader.astro';
+import VehicleMarketplaceHero from '../../components/vehicles/VehicleMarketplaceHero.astro';
+
+const session = await getOptionalSellerSession(Astro.request, Astro.cookies);
+const displayName = session?.email?.split('@')[0] ?? 'there';
+const vehicles = await getPublishedInventory();
+const buyerContext = {
+  isLoggedIn: !!session,
+  verificationTier: session?.verificationTier ?? 'anonymous',
+};
+---
+
+<Layout
+  title="Vehicles for Sale by Owner · Sell By Owner Local"
+  description="Browse owner-listed cars and trucks with zero dealer markup. Direct from verified sellers in your area."
+  ogUrl="/vehicles"
+>
+  <VehicleMarketplaceHeader />
+  <VehicleMarketplaceHero session={session} displayName={displayName} />
+
+  <section id="inventory">
+    {
+      vehicles.length > 0 ? (
+        <InventoryGrid client:load initialVehicles={vehicles} buyerContext={buyerContext} />
+      ) : (
+        <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div class="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+            <p class="text-lg font-medium text-slate-700">No vehicles listed yet</p>
+            {
+              import.meta.env.DEV && (
+                <p class="mt-2 text-sm text-slate-500">
+                  In development, seed sample data by visiting{' '}
+                  <a href="/api/dev/seed" class="rounded bg-slate-100 px-1.5 py-0.5 text-xs underline">
+                    /api/dev/seed
+                  </a>
+                </p>
+              )
+            }
+          </div>
+        </main>
+      )
+    }
+  </section>
+</Layout>
