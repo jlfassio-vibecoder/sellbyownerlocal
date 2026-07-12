@@ -17,8 +17,9 @@ export interface BuyerMarketplaceShellProps {
  * plus the Contact Seller FAB.
  *
  * Use this to wrap React grids (ClothingInventoryGrid, InventoryGrid) so all
- * FavoriteButtons share one provider. On Astro pages that only need the FAB,
- * render with showFab and no children.
+ * FavoriteButtons share one provider. Clothing grids typically pass showFab;
+ * vehicle InventoryGrid defaults showFab off (ChatWidget is listing-only).
+ * On Astro pages that only need the FAB, render with showFab and no children.
  */
 export default function BuyerMarketplaceShell({
   isLoggedIn,

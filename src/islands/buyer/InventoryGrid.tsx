@@ -98,7 +98,7 @@ const inputClassName =
 export default function InventoryGrid({
   initialVehicles,
   buyerContext,
-  showFab = true,
+  showFab = false,
 }: InventoryGridProps) {
   const [filters, setFilters] = useState<InventoryFilters>({
     make: '',

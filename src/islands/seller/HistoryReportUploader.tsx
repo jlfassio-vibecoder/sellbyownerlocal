@@ -1,6 +1,13 @@
 import { useRef, useState } from 'react';
-import { CheckCircle2, FileText, Image as ImageIcon, Loader2, Upload } from 'lucide-react';
-import { uploadDocument } from '../../lib/seller-api';
+import {
+  CheckCircle2,
+  FileText,
+  Image as ImageIcon,
+  Loader2,
+  Trash2,
+  Upload,
+} from 'lucide-react';
+import { updateHistoryReportUrls, uploadDocument } from '../../lib/seller-api';
 import { isPdfUrl } from '../../lib/pdf-url';
 
 interface HistoryReportUploaderProps {
@@ -29,7 +36,10 @@ export default function HistoryReportUploader({
 }: HistoryReportUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [removingUrl, setRemovingUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
+
+  const isBusy = uploading || removingUrl !== null;
 
   const handleFiles = async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
@@ -65,6 +75,23 @@ export default function HistoryReportUploader({
     }
   };
 
+  const handleRemove = async (urlToRemove: string) => {
+    const nextUrls = urls.filter((url) => url !== urlToRemove);
+
+    setError(undefined);
+    setRemovingUrl(urlToRemove);
+
+    try {
+      await updateHistoryReportUrls(vehicleId, nextUrls);
+      onUrlsChange(nextUrls);
+    } catch (err) {
+      console.error('History report remove failed', err);
+      setError(err instanceof Error ? err.message : 'Failed to remove file. Please try again.');
+    } finally {
+      setRemovingUrl(null);
+    }
+  };
+
   return (
     <div className="mb-6">
       <label className="mb-2 block text-sm font-medium text-slate-700">
@@ -80,9 +107,10 @@ export default function HistoryReportUploader({
           if (files?.length) void handleFiles(files);
         }}
         className="hidden"
+        disabled={isBusy}
       />
       <div
-        onClick={() => !uploading && inputRef.current?.click()}
+        onClick={() => !isBusy && inputRef.current?.click()}
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -90,11 +118,11 @@ export default function HistoryReportUploader({
         onDrop={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          if (uploading) return;
+          if (isBusy) return;
           const files = e.dataTransfer.files;
           if (files.length) void handleFiles(files);
         }}
-        className={`flex cursor-pointer flex-col items-center rounded-lg border-2 border-dashed border-slate-300 p-8 text-center transition-colors hover:bg-slate-50 group ${uploading ? 'pointer-events-none opacity-70' : ''}`}
+        className={`flex cursor-pointer flex-col items-center rounded-lg border-2 border-dashed border-slate-300 p-8 text-center transition-colors hover:bg-slate-50 group ${isBusy ? 'pointer-events-none opacity-70' : ''}`}
       >
         {uploading ? (
           <div className="flex flex-col items-center">
@@ -125,20 +153,43 @@ export default function HistoryReportUploader({
 
       {urls.length > 0 && (
         <ul className="mt-4 space-y-2">
-          {urls.map((url, index) => (
-            <li
-              key={`${url}-${index}`}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
-            >
-              {isPdfUrl(url) ? (
-                <FileText size={16} className="shrink-0 text-slate-400" aria-hidden="true" />
-              ) : (
-                <ImageIcon size={16} className="shrink-0 text-slate-400" aria-hidden="true" />
-              )}
-              <span className="min-w-0 flex-1 truncate">{fileNameFromUrl(url)}</span>
-              <CheckCircle2 size={16} className="shrink-0 text-green-500" aria-hidden="true" />
-            </li>
-          ))}
+          {urls.map((url, index) => {
+            const isRemoving = removingUrl === url;
+
+            return (
+              <li
+                key={`${url}-${index}`}
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+              >
+                {isPdfUrl(url) ? (
+                  <FileText size={16} className="shrink-0 text-slate-400" aria-hidden="true" />
+                ) : (
+                  <ImageIcon size={16} className="shrink-0 text-slate-400" aria-hidden="true" />
+                )}
+                <span className="min-w-0 flex-1 truncate">{fileNameFromUrl(url)}</span>
+                {isRemoving ? (
+                  <Loader2 size={16} className="shrink-0 animate-spin text-slate-400" />
+                ) : (
+                  <>
+                    <CheckCircle2
+                      size={16}
+                      className="shrink-0 text-green-500"
+                      aria-hidden="true"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleRemove(url)}
+                      disabled={isBusy}
+                      className="shrink-0 rounded p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                      aria-label={`Remove ${fileNameFromUrl(url)}`}
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                    </button>
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
 

@@ -78,6 +78,35 @@ export async function updateSmogCertificateUrls(
   }
 }
 
+export async function updateHistoryReportUrls(
+  vehicleId: string,
+  urls: string[]
+): Promise<void> {
+  const res = await fetch(
+    `/api/seller/vehicles/${encodeURIComponent(vehicleId)}/history-report-urls`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ urls }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
+}
+
+export async function deleteKbbReport(vehicleId: string): Promise<void> {
+  const res = await fetch(
+    `/api/seller/vehicles/${encodeURIComponent(vehicleId)}/kbb-report`,
+    { method: 'DELETE' }
+  );
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
+}
+
 export async function getConversations(vehicleId: string): Promise<Conversation[]> {
   const params = new URLSearchParams({ vehicleId });
   const res = await fetch(`/api/seller/conversations?${params.toString()}`);
