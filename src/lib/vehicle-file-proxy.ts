@@ -1,6 +1,11 @@
 import { Readable } from 'node:stream';
-import { storageBucket } from './firebase-admin';
+import { resolveHistoryReportUrls } from './history-report-urls';
+import { db, storageBucket } from './firebase-admin';
+import { resolveKbbReportUrl } from './kbb-report-url';
+import { resolveOriginalStickerUrl } from './original-sticker-url';
+import { resolveSmogCertificateUrls } from './smog-certificate-url';
 import { parseOwnedStorageObjectPath, toDirectStorageObjectUrl } from './storage-url';
+import { VehicleResponseSchema } from '../schemas';
 
 function inferContentTypeFromPath(objectPath: string, fallback: string): string {
   const lower = objectPath.toLowerCase();
@@ -11,8 +16,34 @@ function inferContentTypeFromPath(objectPath: string, fallback: string): string 
   return fallback;
 }
 
+function normalizeAllowlistUrl(url: string): string {
+  return toDirectStorageObjectUrl(url.trim());
+}
+
+function buildVehicleFileAllowlist(vehicle: {
+  historyReportUrls?: string[];
+  documents?: {
+    carfaxReport?: string;
+    kbbReport?: string;
+    smogReport?: string;
+    windowSticker?: string;
+  };
+  smogCertificateUrls?: string[];
+  smogCertificateUrl?: string;
+  kbbReportUrl?: string;
+  originalStickerUrl?: string;
+}): string[] {
+  const urls = [
+    ...resolveHistoryReportUrls(vehicle),
+    ...resolveSmogCertificateUrls(vehicle),
+    resolveKbbReportUrl(vehicle),
+    resolveOriginalStickerUrl(vehicle),
+  ].filter((url): url is string => Boolean(url?.trim()));
+
+  return urls.map(normalizeAllowlistUrl);
+}
+
 export interface StreamOwnedVehicleFileOptions {
-  allowedSubpaths?: string[];
   fallbackContentType?: string;
   /** Buffer small files (e.g. PDFs) instead of streaming — more reliable for pdf.js fetch. */
   preferBuffered?: boolean;
@@ -42,33 +73,38 @@ function buildResponseHeaders(
 
 /**
  * Stream a GCS object belonging to a vehicle through a same-origin Response.
+ * Authz is the Firestore document allowlist only (Storage folder id may differ).
  */
 export async function streamOwnedVehicleFile(
   vehicleId: string,
   fileUrl: string,
   options: StreamOwnedVehicleFileOptions = {}
 ): Promise<Response> {
-  const { allowedSubpaths, fallbackContentType = 'application/octet-stream', preferBuffered, iframeInlinePdf = false } =
+  const { fallbackContentType = 'application/octet-stream', preferBuffered, iframeInlinePdf = false } =
     options;
+
+  const doc = await db().collection('vehicles').doc(vehicleId).get();
+  if (!doc.exists) {
+    return new Response('Vehicle not found', { status: 404 });
+  }
+
+  const parsed = VehicleResponseSchema.safeParse({ id: doc.id, ...doc.data() });
+  if (!parsed.success) {
+    return new Response('Vehicle not found', { status: 404 });
+  }
+
+  const normalizedRequested = normalizeAllowlistUrl(fileUrl);
+  const allowlist = buildVehicleFileAllowlist(parsed.data);
+  if (!allowlist.includes(normalizedRequested)) {
+    return new Response('File not allowed for this vehicle', { status: 403 });
+  }
+
   const directUrl = toDirectStorageObjectUrl(fileUrl);
   const bucket = storageBucket();
   const objectPath = parseOwnedStorageObjectPath(directUrl, bucket.name);
 
   if (!objectPath) {
     return new Response('Invalid file URL', { status: 400 });
-  }
-
-  const expectedPrefix = `vehicles/${vehicleId}/`;
-  if (!objectPath.startsWith(expectedPrefix)) {
-    return new Response('File does not belong to this vehicle', { status: 400 });
-  }
-
-  if (allowedSubpaths?.length) {
-    const relativePath = objectPath.slice(expectedPrefix.length);
-    const allowed = allowedSubpaths.some((subpath) => relativePath.startsWith(subpath));
-    if (!allowed) {
-      return new Response('File path not allowed', { status: 400 });
-    }
   }
 
   const gcsFile = bucket.file(objectPath);

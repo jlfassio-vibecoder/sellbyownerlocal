@@ -30,7 +30,6 @@ export const GET: APIRoute = async ({ params }) => {
     }
 
     return streamOwnedVehicleFile(vehicleId, kbbUrl, {
-      allowedSubpaths: ['kbb_report/', 'documents/'],
       fallbackContentType: 'application/octet-stream',
       iframeInlinePdf: isPdfUrl(kbbUrl),
     });

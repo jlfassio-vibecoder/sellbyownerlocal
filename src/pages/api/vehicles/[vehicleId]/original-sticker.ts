@@ -31,14 +31,12 @@ export const GET: APIRoute = async ({ params }) => {
 
     if (!isPdfUrl(stickerUrl)) {
       return streamOwnedVehicleFile(vehicleId, stickerUrl, {
-        allowedSubpaths: ['original_sticker/', 'documents/'],
         fallbackContentType: 'application/octet-stream',
         iframeInlinePdf: false,
       });
     }
 
     return streamOwnedVehicleFile(vehicleId, stickerUrl, {
-      allowedSubpaths: ['original_sticker/', 'documents/'],
       fallbackContentType: 'application/pdf',
       iframeInlinePdf: true,
     });
