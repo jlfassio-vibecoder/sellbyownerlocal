@@ -141,8 +141,10 @@ export default function DetailsEditor({
       values.mechanicalItem3Title &&
       values.mechanicalItem3Text
     ),
-    upgrades: !!(values.modifications ?? []).some(
-      (row) => row.title?.trim() && row.description?.trim()
+    upgrades: !!(
+      (values.modifications ?? []).some(
+        (row) => row.title?.trim() && row.description?.trim()
+      ) || (values.modificationImageUrls ?? []).length > 0
     ),
     market: !!(
       values.marketValuation?.contextText &&

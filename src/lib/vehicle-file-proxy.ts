@@ -71,6 +71,7 @@ function buildResponseHeaders(
   };
 }
 
+// Copilot suggestion ignored: reintroducing Storage folder-prefix checks would break duplicated listings; write-side subset validation closes the injection path instead.
 /**
  * Stream a GCS object belonging to a vehicle through a same-origin Response.
  * Authz is the Firestore document allowlist only (Storage folder id may differ).

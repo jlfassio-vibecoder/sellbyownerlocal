@@ -10,11 +10,17 @@ import {
   unauthorizedResponse,
 } from '../../../../../lib/auth';
 import { db } from '../../../../../lib/firebase-admin';
+import { resolveHistoryReportUrls } from '../../../../../lib/history-report-urls';
+import { toDirectStorageObjectUrl } from '../../../../../lib/storage-url';
 import { VehicleResponseSchema, httpHttpsUrl } from '../../../../../schemas';
 
 const UpdateHistoryReportUrlsSchema = z.object({
   urls: z.array(httpHttpsUrl),
 });
+
+function normalizeHistoryUrl(url: string): string {
+  return toDirectStorageObjectUrl(url.trim());
+}
 
 export const PUT: APIRoute = async ({ request, cookies, params }) => {
   const vehicleId = params.vehicleId?.trim();
@@ -75,11 +81,28 @@ export const PUT: APIRoute = async ({ request, cookies, params }) => {
       });
     }
 
+    const existingNormalized = new Set(
+      resolveHistoryReportUrls(vehicleParsed.data).map(normalizeHistoryUrl)
+    );
+    const nextUrls = parsed.data.urls;
+    const isDeletionOnly = nextUrls.every((url) =>
+      existingNormalized.has(normalizeHistoryUrl(url))
+    );
+    if (!isDeletionOnly) {
+      return new Response(
+        JSON.stringify({ error: 'History report URLs can only be removed, not added' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     await db()
       .collection('vehicles')
       .doc(vehicleId)
       .update({
-        historyReportUrls: parsed.data.urls,
+        historyReportUrls: nextUrls,
         'documents.carfaxReport': FieldValue.delete(),
       });
 
