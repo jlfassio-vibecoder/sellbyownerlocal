@@ -4,8 +4,9 @@ import { getUserProfile } from '../../../lib/buyer-profile';
 import { getApparelCatalogForSeller } from '../../../lib/clothing-api';
 import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
 import ApparelCatalogSection from '../../../islands/seller/ApparelCatalogSection';
+import ShareCatalogButton from '../../../islands/seller/ShareCatalogButton';
 import type { ApparelFilterItem } from '../../../lib/apparel';
-import { resolveStorefrontSegment } from '../../../utils/url-helpers';
+import { resolveStorefrontSegment, getStorefrontPath } from '../../../utils/url-helpers';
 import '../../../styles/global.css';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
@@ -16,6 +17,8 @@ const storefrontSegment = resolveStorefrontSegment({
   id: seller.uid,
   storefrontSlug: profile?.storefrontSlug,
 });
+const storefrontHref = getStorefrontPath(storefrontSegment);
+const storefrontUrl = new URL(storefrontHref, Astro.site?.href ?? Astro.url.origin).href;
 const catalog = await getApparelCatalogForSeller(seller.uid);
 
 const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
@@ -31,6 +34,10 @@ const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
   colors: item.colors,
   isFeatured: item.isFeatured,
   isSale: item.isSale,
+  salePrice: item.salePrice,
+  sortOrder: item.sortOrder,
+  featuredSortOrder: item.featuredSortOrder,
+  createdAt: item.createdAt,
 }));
 ---
 
@@ -47,6 +54,7 @@ const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
     <ApparelSellerLayout
       client:load
       activeNav="catalog"
+      storefrontHref={storefrontHref}
     >
       <div class="flex-1 overflow-y-auto">
         <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -55,12 +63,15 @@ const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
               <h2 class="text-2xl font-bold text-slate-900">My Catalog</h2>
               <p class="mt-1 text-sm text-slate-500">Select an item to manage</p>
             </div>
-            <a
-              href="/seller/apparel/new"
-              class="inline-flex items-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
-            >
-              Add Catalog Item
-            </a>
+            <div class="flex flex-wrap items-center gap-3">
+              <ShareCatalogButton client:load storefrontUrl={storefrontUrl} />
+              <a
+                href="/seller/apparel/new"
+                class="inline-flex items-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
+              >
+                Add Catalog Item
+              </a>
+            </div>
           </div>
 
           <ApparelCatalogSection

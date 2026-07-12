@@ -23,6 +23,9 @@ export interface ApparelEditorInitialData {
   pdfDefaultPage?: number | null;
   galleryPhotos: string[];
   status: 'draft' | 'active' | 'archived';
+  isFeatured?: boolean;
+  isSale?: boolean;
+  salePrice?: number;
 }
 
 interface ApparelEditorFormProps {
@@ -51,6 +54,11 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
   const [title, setTitle] = useState(initialData?.title ?? '');
   const [brand, setBrand] = useState(initialData?.brand ?? '');
   const [price, setPrice] = useState(initialData?.price?.toString() ?? '');
+  const [isFeatured, setIsFeatured] = useState(Boolean(initialData?.isFeatured));
+  const [isSale, setIsSale] = useState(Boolean(initialData?.isSale));
+  const [salePrice, setSalePrice] = useState(
+    typeof initialData?.salePrice === 'number' ? String(initialData.salePrice) : ''
+  );
   const [description, setDescription] = useState(initialData?.description ?? '');
   const [material, setMaterial] = useState(initialData?.material ?? '');
   const [sizes, setSizes] = useState(joinCommaList(initialData?.sizes ?? []));
@@ -124,6 +132,26 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
       return;
     }
 
+    let parsedSalePrice: number | null = null;
+    if (isSale) {
+      if (!salePrice.trim()) {
+        setError('Enter a valid sale price, or uncheck Sale.');
+        setIsSubmitting(false);
+        return;
+      }
+      parsedSalePrice = Number(salePrice);
+      if (!Number.isFinite(parsedSalePrice) || parsedSalePrice < 0) {
+        setError('Enter a valid sale price, or uncheck Sale.');
+        setIsSubmitting(false);
+        return;
+      }
+      if (parsedSalePrice >= parsedPrice) {
+        setError('Sale price must be lower than the wholesale price.');
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     const payload = {
       title: title.trim(),
       brand: brand.trim(),
@@ -137,6 +165,13 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
       pdfLineSheetUrl: pdfLineSheetUrl.trim() || undefined,
       pdfDefaultPage: normalizeDefaultPage(pdfDefaultPage),
       galleryPhotos,
+      isFeatured,
+      isSale,
+      ...(isEditing
+        ? { salePrice: isSale ? parsedSalePrice : null }
+        : isSale && parsedSalePrice != null
+          ? { salePrice: parsedSalePrice }
+          : {}),
     };
 
     try {
@@ -152,7 +187,7 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
           throw new Error(data.error || 'Failed to update listing');
         }
 
-        setSuccess('Catalog item saved successfully.');
+        window.location.href = '/seller/apparel';
       } else {
         const res = await fetch('/api/seller/apparel', {
           method: 'POST',
@@ -241,6 +276,50 @@ export default function ApparelEditorForm({ sellerId, initialData }: ApparelEdit
           className={INPUT_CLASS}
           disabled={isSubmitting}
         />
+      </div>
+
+      <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <input
+            type="checkbox"
+            checked={isFeatured}
+            onChange={(e) => setIsFeatured(e.target.checked)}
+            disabled={isSubmitting}
+            className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
+          />
+          Featured (shows at top of catalog)
+        </label>
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <input
+            type="checkbox"
+            checked={isSale}
+            onChange={(e) => {
+              setIsSale(e.target.checked);
+              if (!e.target.checked) setSalePrice('');
+            }}
+            disabled={isSubmitting}
+            className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
+          />
+          On Sale
+        </label>
+        {isSale && (
+          <div>
+            <label htmlFor="salePrice" className="mb-1 block text-sm font-medium text-slate-700">
+              Sale Price
+            </label>
+            <input
+              id="salePrice"
+              type="number"
+              step="0.01"
+              min="0"
+              required={isSale}
+              value={salePrice}
+              onChange={(e) => setSalePrice(e.target.value)}
+              className={INPUT_CLASS}
+              disabled={isSubmitting}
+            />
+          </div>
+        )}
       </div>
 
       <div>

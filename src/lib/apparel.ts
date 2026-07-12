@@ -13,6 +13,10 @@ export interface ApparelFilterItem {
   colors?: string[];
   isFeatured?: boolean;
   isSale?: boolean;
+  salePrice?: number;
+  sortOrder?: number;
+  featuredSortOrder?: number;
+  createdAt?: Date | string;
 }
 
 export type ApparelItemUpdate = {
@@ -26,6 +30,7 @@ export type ApparelItemUpdate = {
   status?: ApparelFilterStatus;
   isFeatured?: boolean;
   isSale?: boolean;
+  salePrice?: number | null;
 };
 
 const ITEM_CODE_TITLE_PATTERN = /^([A-Z0-9]+)\s*-\s*(.+)$/i;
@@ -84,3 +89,50 @@ export type ApparelBulkUpdate = {
   isFeatured?: boolean;
   isSale?: boolean;
 };
+
+function createdAtMs(value: Date | string | undefined): number {
+  if (!value) return 0;
+  const time = value instanceof Date ? value.getTime() : Date.parse(String(value));
+  return Number.isFinite(time) ? time : 0;
+}
+
+/** Full inventory: sortOrder ascending, then createdAt descending. */
+export function sortBySortOrder<
+  T extends { sortOrder?: number; createdAt?: Date | string },
+>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const orderA = a.sortOrder ?? Number.POSITIVE_INFINITY;
+    const orderB = b.sortOrder ?? Number.POSITIVE_INFINITY;
+    if (orderA !== orderB) return orderA - orderB;
+    return createdAtMs(b.createdAt) - createdAtMs(a.createdAt);
+  });
+}
+
+/** Featured merchandising: featuredSortOrder ascending, then createdAt descending. */
+export function sortByFeaturedSortOrder<
+  T extends { featuredSortOrder?: number; createdAt?: Date | string },
+>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const orderA = a.featuredSortOrder ?? Number.POSITIVE_INFINITY;
+    const orderB = b.featuredSortOrder ?? Number.POSITIVE_INFINITY;
+    if (orderA !== orderB) return orderA - orderB;
+    return createdAtMs(b.createdAt) - createdAtMs(a.createdAt);
+  });
+}
+
+/**
+ * Storefront order: featured block first (by featuredSortOrder), then
+ * non-featured (by sortOrder). Preserves relative order via fallbacks.
+ */
+export function sortFeaturedFirst<
+  T extends {
+    isFeatured?: boolean;
+    sortOrder?: number;
+    featuredSortOrder?: number;
+    createdAt?: Date | string;
+  },
+>(items: T[]): T[] {
+  const featured = sortByFeaturedSortOrder(items.filter((item) => Boolean(item.isFeatured)));
+  const rest = sortBySortOrder(items.filter((item) => !item.isFeatured));
+  return [...featured, ...rest];
+}

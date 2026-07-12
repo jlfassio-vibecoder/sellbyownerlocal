@@ -1,5 +1,4 @@
 import type { APIRoute } from 'astro';
-import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import {
   AuthError,
@@ -9,21 +8,19 @@ import {
   unauthorizedResponse,
 } from '../../../../lib/auth';
 import { db } from '../../../../lib/firebase-admin';
-import { ClothingListingStatusSchema } from '../../../../schemas';
 
-const BulkUpdateUpdatesSchema = z
+const ReorderItemSchema = z
   .object({
-    status: ClothingListingStatusSchema.optional(),
-    isFeatured: z.boolean().optional(),
-    isSale: z.boolean().optional(),
+    id: z.string().min(1),
+    sortOrder: z.number().int().nonnegative().optional(),
+    featuredSortOrder: z.number().int().nonnegative().optional(),
   })
-  .refine((value) => Object.keys(value).length > 0, {
-    message: 'At least one field is required in updates',
+  .refine((value) => value.sortOrder !== undefined || value.featuredSortOrder !== undefined, {
+    message: 'At least one of sortOrder or featuredSortOrder is required',
   });
 
-const BulkUpdateSchema = z.object({
-  ids: z.array(z.string().min(1)).min(1).max(500),
-  updates: BulkUpdateUpdatesSchema,
+const ReorderSchema = z.object({
+  items: z.array(ReorderItemSchema).min(1).max(500),
 });
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -40,7 +37,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
 
-    const parsed = BulkUpdateSchema.safeParse(body);
+    const parsed = ReorderSchema.safeParse(body);
 
     if (!parsed.success) {
       return new Response(
@@ -52,20 +49,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    const uniqueIds = [...new Set(parsed.data.ids)];
-    const refs = uniqueIds.map((id) => db().collection('clothing_listings').doc(id));
+    const { items } = parsed.data;
+    const refs = items.map((item) => db().collection('clothing_listings').doc(item.id));
     const docs = await Promise.all(refs.map((ref) => ref.get()));
     const batch = db().batch();
     let updatedCount = 0;
 
-    const firestoreUpdates: Record<string, unknown> = { ...parsed.data.updates };
-    if (parsed.data.updates.isSale === false) {
-      firestoreUpdates.salePrice = FieldValue.delete();
-    }
-
-    for (let i = 0; i < uniqueIds.length; i++) {
-      const doc = docs[i];
-      const ref = refs[i];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]!;
+      const doc = docs[i]!;
+      const ref = refs[i]!;
 
       if (!doc.exists) {
         return new Response(JSON.stringify({ error: 'Listing not found' }), {
@@ -74,12 +67,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         });
       }
 
-      const existingSellerId = doc.data()?.sellerId;
-      if (existingSellerId !== session.uid) {
+      if (doc.data()?.sellerId !== session.uid) {
         return forbiddenResponse();
       }
 
-      batch.update(ref, firestoreUpdates);
+      const updates: Record<string, number> = {};
+      if (item.sortOrder !== undefined) {
+        updates.sortOrder = item.sortOrder;
+      }
+      if (item.featuredSortOrder !== undefined) {
+        updates.featuredSortOrder = item.featuredSortOrder;
+      }
+
+      batch.update(ref, updates);
       updatedCount += 1;
     }
 
@@ -96,8 +96,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (error instanceof ForbiddenError) {
       return forbiddenResponse();
     }
-    console.error('POST /api/seller/apparel/bulk-update failed', error);
-    return new Response(JSON.stringify({ error: 'Failed to update listings' }), {
+    console.error('POST /api/seller/apparel/reorder failed', error);
+    return new Response(JSON.stringify({ error: 'Failed to reorder listings' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

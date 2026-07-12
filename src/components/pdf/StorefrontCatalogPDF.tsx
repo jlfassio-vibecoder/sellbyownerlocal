@@ -5,6 +5,9 @@ export type StorefrontCatalogPdfItem = {
   title: string;
   brand: string;
   price: number;
+  salePrice?: number;
+  isSale?: boolean;
+  isFeatured?: boolean;
   primaryImageUrl?: string;
   sizes?: string[];
 };
@@ -92,6 +95,35 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#0f172a',
   },
+  priceOriginal: {
+    fontSize: 9,
+    color: '#dc2626',
+    textDecoration: 'line-through',
+  },
+  priceSale: {
+    fontSize: 10,
+    color: '#059669',
+    fontFamily: 'Helvetica-Bold',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: 4,
+  },
+  badge: {
+    fontSize: 7,
+    color: '#ffffff',
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  badgeSale: {
+    fontSize: 7,
+    color: '#ffffff',
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
   sizes: {
     marginTop: 3,
     fontSize: 8,
@@ -122,6 +154,10 @@ export default function StorefrontCatalogPDF({
           {items.map((item) => {
             const imageSrc = resolveImageSrc(item.primaryImageUrl);
             const sizesText = item.sizes?.filter(Boolean).join(', ');
+            const onSale =
+              Boolean(item.isSale) &&
+              typeof item.salePrice === 'number' &&
+              item.salePrice < item.price;
 
             return (
               <View key={item.id} style={styles.card} wrap={false}>
@@ -130,9 +166,22 @@ export default function StorefrontCatalogPDF({
                 ) : (
                   <View style={styles.imagePlaceholder} />
                 )}
+                {(item.isFeatured || item.isSale) && (
+                  <View style={styles.badgeRow}>
+                    {item.isFeatured ? <Text style={styles.badge}>FEATURED</Text> : null}
+                    {item.isSale ? <Text style={styles.badgeSale}>SALE</Text> : null}
+                  </View>
+                )}
                 <Text style={styles.brand}>{item.brand}</Text>
                 <Text style={styles.itemTitle}>{item.title}</Text>
-                <Text style={styles.price}>{formatPrice(item.price)}</Text>
+                {onSale ? (
+                  <View style={{ flexDirection: 'row', gap: 6, alignItems: 'baseline' }}>
+                    <Text style={styles.priceOriginal}>{formatPrice(item.price)}</Text>
+                    <Text style={styles.priceSale}>{formatPrice(item.salePrice!)}</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.price}>{formatPrice(item.price)}</Text>
+                )}
                 {sizesText ? <Text style={styles.sizes}>{sizesText}</Text> : null}
               </View>
             );

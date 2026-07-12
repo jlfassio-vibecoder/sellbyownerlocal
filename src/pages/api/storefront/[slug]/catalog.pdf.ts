@@ -5,6 +5,7 @@ import StorefrontCatalogPDF from '../../../../components/pdf/StorefrontCatalogPD
 import { resolveSellerByStorefrontParam } from '../../../../lib/buyer-profile';
 import { getActiveApparelForSeller } from '../../../../lib/clothing-api';
 import { toAllowedCatalogImageUrl } from '../../../../lib/storage-url';
+import { sortFeaturedFirst } from '../../../../lib/apparel';
 
 export const prerender = false;
 
@@ -33,12 +34,15 @@ export const GET: APIRoute = async ({ params }) => {
     const tagline = seller.storefrontTagline?.trim() || undefined;
     const heroImageUrl = toAllowedCatalogImageUrl(seller.storefrontHeroUrl);
 
-    const items = listings.map((listing) => {
+    const items = sortFeaturedFirst(listings).map((listing) => {
       return {
         id: listing.id,
         title: listing.title,
         brand: listing.brand,
         price: listing.price,
+        salePrice: listing.salePrice,
+        isSale: listing.isSale,
+        isFeatured: listing.isFeatured,
         primaryImageUrl: toAllowedCatalogImageUrl(listing.galleryPhotos[0]),
         sizes: listing.sizes.length > 0 ? listing.sizes : undefined,
       };

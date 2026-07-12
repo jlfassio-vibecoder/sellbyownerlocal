@@ -1,9 +1,11 @@
 ---
 import { requireSellerOrRedirect } from '../../../lib/auth';
+import { getUserProfile } from '../../../lib/buyer-profile';
 import { getApparelListingForSellerById } from '../../../lib/clothing-api';
 import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
 import ApparelEditorForm from '../../../islands/seller/ApparelEditorForm';
 import ApparelListingImage from '../../../components/apparel/ApparelListingImage';
+import { getStorefrontPath, resolveStorefrontSegment } from '../../../utils/url-helpers';
 import '../../../styles/global.css';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
@@ -16,6 +18,14 @@ const listing = id ? await getApparelListingForSellerById(id, seller.uid) : null
 if (!listing) {
   return Astro.redirect('/seller/apparel');
 }
+
+const profile = await getUserProfile(seller.uid);
+const storefrontHref = getStorefrontPath(
+  resolveStorefrontSegment({
+    id: seller.uid,
+    storefrontSlug: profile?.storefrontSlug,
+  })
+);
 
 const initialData = {
   id: listing.id,
@@ -31,6 +41,9 @@ const initialData = {
   pdfDefaultPage: listing.pdfDefaultPage,
   galleryPhotos: listing.galleryPhotos,
   status: listing.status,
+  isFeatured: listing.isFeatured,
+  isSale: listing.isSale,
+  salePrice: listing.salePrice,
 };
 
 const heroImage = listing.galleryPhotos?.[0];
@@ -46,7 +59,7 @@ const heroImage = listing.galleryPhotos?.[0];
     <title>{listing.title} · Apparel Dashboard · Sell By Owner Local</title>
   </head>
   <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
-    <ApparelSellerLayout client:load activeNav="catalog">
+    <ApparelSellerLayout client:load activeNav="catalog" storefrontHref={storefrontHref}>
       <div class="flex-1 overflow-y-auto">
         <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
           <div class="mb-8">

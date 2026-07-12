@@ -10,12 +10,24 @@ interface ClothingCardProps {
   buyerContext?: BuyerSaveContext;
 }
 
+function hasSalePricing(listing: ClothingListing): boolean {
+  return Boolean(
+    listing.isSale &&
+      typeof listing.salePrice === 'number' &&
+      listing.salePrice < listing.price
+  );
+}
+
 export default function ClothingCard({
   listing,
   storefrontSegment,
   buyerContext,
 }: ClothingCardProps) {
   const listingPath = getClothingListingPath(listing.id, storefrontSegment);
+  const showFeatured = Boolean(listing.isFeatured);
+  // Copilot suggestion ignored: Sale badge uses isSale so bulk “Mark as Sale” remains visible before a salePrice is set; dual pricing still uses hasSalePricing.
+  const showSale = Boolean(listing.isSale);
+  const onSale = hasSalePricing(listing);
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-lg">
@@ -36,6 +48,30 @@ export default function ClothingCard({
             </div>
           )}
         </a>
+        {(showFeatured || showSale) && (
+          <div className="absolute top-3 left-3 z-10 flex flex-col gap-1">
+            {showFeatured && (
+              <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white shadow-sm">
+                Featured
+              </span>
+            )}
+            {showSale && (
+              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white shadow-sm">
+                Sale
+              </span>
+            )}
+          </div>
+        )}
+        {onSale && (
+          <div className="absolute bottom-3 left-3 z-10 flex items-baseline gap-2 rounded-md bg-white/95 px-2.5 py-1.5 shadow-sm">
+            <span className="text-sm font-semibold text-red-600 line-through">
+              {priceFormatter.format(listing.price)}
+            </span>
+            <span className="text-base font-bold text-emerald-600">
+              {priceFormatter.format(listing.salePrice!)}
+            </span>
+          </div>
+        )}
         <div
           className="absolute top-3 right-3 z-10"
           onClick={(e) => e.stopPropagation()}
@@ -43,7 +79,7 @@ export default function ClothingCard({
           <FavoriteButton
             itemId={listing.id}
             title={listing.title}
-            price={listing.price}
+            price={onSale ? listing.salePrice! : listing.price}
             category="clothing"
             sellerId={listing.sellerId}
             isLoggedIn={buyerContext?.isLoggedIn ?? false}
@@ -57,7 +93,18 @@ export default function ClothingCard({
           {listing.brand}
         </p>
         <h2 className="text-xl font-bold text-slate-900">{listing.title}</h2>
-        <p className="text-xl font-bold text-slate-900">{priceFormatter.format(listing.price)}</p>
+        {onSale ? (
+          <p className="flex items-baseline gap-2 text-xl font-bold">
+            <span className="text-red-600 line-through">
+              {priceFormatter.format(listing.price)}
+            </span>
+            <span className="text-emerald-600">{priceFormatter.format(listing.salePrice!)}</span>
+          </p>
+        ) : (
+          <p className="text-xl font-bold text-slate-900">
+            {priceFormatter.format(listing.price)}
+          </p>
+        )}
         {listing.sizes.length > 0 && (
           <ul className="flex flex-wrap gap-1.5">
             {listing.sizes.map((size) => (
