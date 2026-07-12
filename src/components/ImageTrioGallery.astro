@@ -1,0 +1,24 @@
+---
+interface Props {
+  images: string[];
+  class?: string;
+}
+
+const { images, class: className } = Astro.props;
+---
+
+{
+  (images?.length ?? 0) > 0 && (
+    <div class:list={['mt-6 grid grid-cols-3 gap-2', className]}>
+      {images.map((imageUrl) => (
+        <div class="aspect-video overflow-hidden rounded-lg border border-slate-300 bg-slate-200">
+          <img
+            src={imageUrl}
+            alt=""
+            class="h-full w-full object-cover opacity-60 mix-blend-multiply"
+          />
+        </div>
+      ))}
+    </div>
+  )
+}

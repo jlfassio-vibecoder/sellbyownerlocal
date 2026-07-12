@@ -145,6 +145,16 @@ function buildMechanicalItems(state: VehicleFormState) {
   return items;
 }
 
+function buildModifications(state: VehicleFormState) {
+  return (state.modifications ?? [])
+    .map((row) => ({
+      title: optionalString(row.title).trim(),
+      description: optionalString(row.description).trim(),
+    }))
+    .filter((row) => row.title && row.description)
+    .slice(0, 12);
+}
+
 function sanitizeOptionalNumber(value: unknown): number | undefined {
   if (value === null || value === undefined || value === '' || Number.isNaN(value)) {
     return undefined;
@@ -340,6 +350,8 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
         isEdited: r.isEdited ?? false,
       }))
     ),
+    modifications: vehicle.modifications ?? [],
+    modificationImageUrls: vehicle.modificationImageUrls ?? [],
   };
 }
 
@@ -394,6 +406,9 @@ export function formStateToVehiclePatch(
   if (highlights.length > 0) {
     patch.highlights = highlights;
   }
+
+  patch.modifications = buildModifications(state);
+  patch.modificationImageUrls = (state.modificationImageUrls ?? []).slice(0, 3);
 
   const originalStickerUrl = optionalString(state.originalStickerUrl).trim();
   if (originalStickerUrl) {
