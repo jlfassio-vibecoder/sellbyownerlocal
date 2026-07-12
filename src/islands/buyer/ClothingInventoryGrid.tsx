@@ -4,6 +4,7 @@ import ClothingCard from '../../components/buyer/ClothingCard';
 import type { BuyerSaveContext } from '../../components/buyer/VehicleCard';
 import SearchAndFilterBar from '../shared/SearchAndFilterBar';
 import BuyerMarketplaceShell from './BuyerMarketplaceShell';
+import { sortFeaturedFirst } from '../../lib/apparel';
 
 interface ClothingInventoryGridProps {
   initialListings: ClothingListing[];
@@ -74,7 +75,7 @@ export default function ClothingInventoryGrid({
   );
 
   const filteredListings = useMemo(
-    () => applyFilters(initialListings, filters),
+    () => sortFeaturedFirst(applyFilters(initialListings, filters)),
     [initialListings, filters]
   );
 

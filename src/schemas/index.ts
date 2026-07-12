@@ -910,6 +910,9 @@ export const ClothingListingSchema = z.object({
   colors: z.array(z.string().min(1)).optional(),
   isFeatured: z.boolean().optional(),
   isSale: z.boolean().optional(),
+  salePrice: z.number().nonnegative().optional(),
+  sortOrder: z.number().int().nonnegative().optional(),
+  featuredSortOrder: z.number().int().nonnegative().optional(),
 });
 
 export const ClothingListingResponseSchema = ClothingListingSchema;
@@ -929,7 +932,11 @@ export const ClothingListingUpdateSchema = ClothingListingSchema.omit({
   id: true,
   sellerId: true,
   createdAt: true,
-}).partial();
+})
+  .partial()
+  .extend({
+    salePrice: z.number().nonnegative().nullable().optional(),
+  });
 
 export type ClothingListingCreate = z.infer<typeof ClothingListingCreateSchema>;
 export type ClothingListingUpdate = z.infer<typeof ClothingListingUpdateSchema>;

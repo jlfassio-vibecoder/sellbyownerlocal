@@ -1,5 +1,5 @@
-import { Copy, Pencil } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Copy, GripVertical, Pencil } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import SearchAndFilterBar from './SearchAndFilterBar';
 import ApparelListingImage from '../../components/apparel/ApparelListingImage';
 import {
@@ -11,15 +11,25 @@ import {
   buildTitleWithItemCode,
   joinCommaList,
   parseItemCodeFromTitle,
+  sortByFeaturedSortOrder,
+  sortBySortOrder,
+  sortFeaturedFirst,
   splitCommaList,
 } from '../../lib/apparel';
 import { getClothingListingPath } from '../../utils/url-helpers';
+
+type DragSection = 'featured' | 'full';
+type DragTarget = { section: DragSection; index: number };
 
 const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
   minimumFractionDigits: 2,
 });
+
+function hasSalePricing(item: { isSale?: boolean; salePrice?: number; price: number }): boolean {
+  return Boolean(item.isSale && typeof item.salePrice === 'number' && item.salePrice < item.price);
+}
 
 const BULK_ACTION_OPTIONS: { value: string; label: string; updates: ApparelBulkUpdate; successLabel: string }[] = [
   { value: 'make-public', label: 'Make Public', updates: { status: 'active' }, successLabel: 'made public' },
@@ -46,6 +56,7 @@ type EditFormState = {
   title: string;
   brand: string;
   price: string;
+  salePrice: string;
   description: string;
   itemCode: string;
   sizesCsv: string;
@@ -59,6 +70,7 @@ const EMPTY_EDIT_FORM: EditFormState = {
   title: '',
   brand: '',
   price: '',
+  salePrice: '',
   description: '',
   itemCode: '',
   sizesCsv: '',
@@ -83,7 +95,7 @@ function ApparelCardContent({ item, isSellerView }: { item: ApparelFilterItem; i
       <div className="relative">
         <ApparelListingImage title={item.title} imageUrl={item.galleryPhotos[0]} />
         {(showFeatured || showSale) && (
-          <div className="absolute right-3 top-3 z-10 flex flex-col gap-1">
+          <div className="absolute left-3 top-3 z-10 flex flex-col gap-1">
             {showFeatured && (
               <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white shadow-sm">
                 Featured
@@ -94,6 +106,16 @@ function ApparelCardContent({ item, isSellerView }: { item: ApparelFilterItem; i
                 Sale
               </span>
             )}
+          </div>
+        )}
+        {hasSalePricing(item) && (
+          <div className="absolute top-3 right-3 z-10 flex items-baseline gap-2 rounded-md bg-white/95 px-2.5 py-1.5 shadow-sm">
+            <span className="text-sm font-semibold text-red-600 line-through">
+              {wholesalePriceFormatter.format(item.price)}
+            </span>
+            <span className="text-base font-bold text-emerald-600">
+              {wholesalePriceFormatter.format(item.salePrice!)}
+            </span>
           </div>
         )}
       </div>
@@ -111,9 +133,18 @@ function ApparelCardContent({ item, isSellerView }: { item: ApparelFilterItem; i
             </span>
           )}
         </div>
-        <p className="text-lg font-semibold text-slate-900">
-          {wholesalePriceFormatter.format(item.price)}
-        </p>
+        {hasSalePricing(item) ? (
+          <p className="flex items-baseline gap-2 text-lg font-semibold">
+            <span className="text-red-600 line-through">
+              {wholesalePriceFormatter.format(item.price)}
+            </span>
+            <span className="text-emerald-600">{wholesalePriceFormatter.format(item.salePrice!)}</span>
+          </p>
+        ) : (
+          <p className="text-lg font-semibold text-slate-900">
+            {wholesalePriceFormatter.format(item.price)}
+          </p>
+        )}
       </div>
     </>
   );
@@ -141,6 +172,10 @@ export default function FilterableApparelGrid({
   const [editingItem, setEditingItem] = useState<ApparelFilterItem | null>(null);
   const [editForm, setEditForm] = useState<EditFormState>(EMPTY_EDIT_FORM);
   const [isSaving, setIsSaving] = useState(false);
+  const [dragging, setDragging] = useState<DragTarget | null>(null);
+  const [dragOver, setDragOver] = useState<DragTarget | null>(null);
+  const dragItem = useRef<DragTarget | null>(null);
+  const dragOverItem = useRef<DragTarget | null>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -165,6 +200,8 @@ export default function FilterableApparelGrid({
       title: titleWithoutCode,
       brand: editingItem.brand,
       price: String(editingItem.price),
+      salePrice:
+        typeof editingItem.salePrice === 'number' ? String(editingItem.salePrice) : '',
       description: editingItem.description,
       itemCode,
       sizesCsv: joinCommaList(editingItem.sizes),
@@ -183,7 +220,11 @@ export default function FilterableApparelGrid({
     [items]
   );
 
-  const filteredItems = useMemo(() => {
+  const filtersActive =
+    searchTerm.trim() !== '' || selectedBrand !== 'All' || selectedStatus !== 'All';
+  const canReorder = isSellerView && !filtersActive && !isSelectionMode;
+
+  const baseFilteredItems = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     return items.filter((item) => {
       if (!matchesSearch(item, query)) return false;
@@ -193,10 +234,99 @@ export default function FilterableApparelGrid({
     });
   }, [items, searchTerm, selectedBrand, selectedStatus]);
 
+  const featuredItems = useMemo(
+    () => sortByFeaturedSortOrder(baseFilteredItems.filter((item) => Boolean(item.isFeatured))),
+    [baseFilteredItems]
+  );
+
+  const fullInventoryItems = useMemo(
+    () => sortBySortOrder(baseFilteredItems),
+    [baseFilteredItems]
+  );
+
+  /** Flat filtered list for selection / non-seller grid. */
+  const filteredItems = useMemo(
+    () => (isSellerView ? baseFilteredItems : sortFeaturedFirst(baseFilteredItems)),
+    [isSellerView, baseFilteredItems]
+  );
+
   const selectedItems = useMemo(
     () => items.filter((item) => selectedIds.has(item.id)),
     [items, selectedIds]
   );
+
+  const clearDragState = () => {
+    dragItem.current = null;
+    dragOverItem.current = null;
+    setDragging(null);
+    setDragOver(null);
+  };
+
+  const handleReorderEnd = async () => {
+    const from = dragItem.current;
+    const to = dragOverItem.current;
+    clearDragState();
+
+    if (!canReorder || !from || !to) return;
+    if (from.section !== to.section || from.index === to.index) return;
+
+    const sectionItems = from.section === 'featured' ? featuredItems : fullInventoryItems;
+    if (from.index < 0 || from.index >= sectionItems.length) return;
+    if (to.index < 0 || to.index >= sectionItems.length) return;
+
+    const ordered = [...sectionItems];
+    const [removed] = ordered.splice(from.index, 1);
+    if (!removed) return;
+    ordered.splice(to.index, 0, removed);
+
+    const previousItems = items;
+    const orderById = new Map(ordered.map((item, index) => [item.id, index]));
+
+    if (from.section === 'featured') {
+      setItems((prev) =>
+        prev.map((item) => {
+          const nextOrder = orderById.get(item.id);
+          return nextOrder === undefined ? item : { ...item, featuredSortOrder: nextOrder };
+        })
+      );
+    } else {
+      setItems((prev) =>
+        prev.map((item) => {
+          const nextOrder = orderById.get(item.id);
+          return nextOrder === undefined ? item : { ...item, sortOrder: nextOrder };
+        })
+      );
+    }
+
+    const payloadItems =
+      from.section === 'featured'
+        ? ordered.map((item, index) => ({ id: item.id, featuredSortOrder: index }))
+        : ordered.map((item, index) => ({ id: item.id, sortOrder: index }));
+
+    try {
+      const response = await fetch('/api/seller/apparel/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: payloadItems }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+
+      if (!response.ok) {
+        setItems(previousItems);
+        setToast({
+          type: 'error',
+          message: payload.error ?? 'Failed to save new order. Please try again.',
+        });
+      }
+    } catch {
+      setItems(previousItems);
+      setToast({
+        type: 'error',
+        message: 'Failed to save new order. Please try again.',
+      });
+    }
+  };
 
   const exitSelectionMode = () => {
     setIsSelectionMode(false);
@@ -268,9 +398,14 @@ export default function FilterableApparelGrid({
       // Apply bulk updates against latest state so in-flight initialItems merges aren't dropped.
       let stillVisibleIds = new Set<string>();
       setItems((prev) => {
-        const nextItems = prev.map((item) =>
-          updatedSet.has(item.id) ? { ...item, ...updates } : item
-        );
+        const nextItems = prev.map((item) => {
+          if (!updatedSet.has(item.id)) return item;
+          const next = { ...item, ...updates };
+          if (updates.isSale === false) {
+            next.salePrice = undefined;
+          }
+          return next;
+        });
         stillVisibleIds = new Set(
           nextItems
             .filter((item) => {
@@ -346,6 +481,26 @@ export default function FilterableApparelGrid({
       return;
     }
 
+    let salePrice: number | null = null;
+    if (editForm.isSale) {
+      const parsedSalePrice = Number(editForm.salePrice);
+      if (!Number.isFinite(parsedSalePrice) || parsedSalePrice < 0) {
+        setToast({
+          type: 'error',
+          message: 'Enter a valid sale price, or uncheck Sale.',
+        });
+        return;
+      }
+      if (parsedSalePrice >= price) {
+        setToast({
+          type: 'error',
+          message: 'Sale price must be lower than the wholesale price.',
+        });
+        return;
+      }
+      salePrice = parsedSalePrice;
+    }
+
     const updates: ApparelItemUpdate = {
       title: buildTitleWithItemCode(trimmedTitle, editForm.itemCode),
       brand: trimmedBrand,
@@ -356,6 +511,7 @@ export default function FilterableApparelGrid({
       status: editForm.published ? 'active' : 'draft',
       isFeatured: editForm.isFeatured,
       isSale: editForm.isSale,
+      salePrice,
     };
 
     setIsSaving(true);
@@ -378,7 +534,15 @@ export default function FilterableApparelGrid({
       }
 
       setItems((prev) =>
-        prev.map((item) => (item.id === editingItem.id ? { ...item, ...updates } : item))
+        prev.map((item) =>
+          item.id === editingItem.id
+            ? {
+                ...item,
+                ...updates,
+                salePrice: salePrice ?? undefined,
+              }
+            : item
+        )
       );
       setEditingItem(null);
       setToast({
@@ -438,6 +602,120 @@ export default function FilterableApparelGrid({
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const renderSellerCard = (
+    item: ApparelFilterItem,
+    options: { section: DragSection; index: number; listKey: string }
+  ) => {
+    const { section, index, listKey } = options;
+    const href = `/seller/apparel/${item.id}`;
+    const isSelected = selectedIds.has(item.id);
+    const isDragging =
+      dragging?.section === section && dragging.index === index;
+    const isDragOverTarget =
+      dragOver?.section === section &&
+      dragOver.index === index &&
+      dragging !== null &&
+      !(dragging.section === section && dragging.index === index);
+
+    if (isSelectionMode) {
+      return (
+        <button
+          key={listKey}
+          type="button"
+          onClick={() => toggleItemSelection(item.id)}
+          aria-pressed={isSelected}
+          aria-label={isSelected ? `Deselect ${item.title}` : `Select ${item.title}`}
+          className={`block w-full overflow-hidden rounded-xl border bg-white text-left shadow-sm transition-colors ${
+            isSelected
+              ? 'border-red-600 ring-2 ring-red-600'
+              : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
+          }`}
+        >
+          <div className="relative">
+            <div className="absolute left-3 top-3 z-10">
+              <span
+                aria-hidden="true"
+                className={`flex h-5 w-5 items-center justify-center rounded border bg-white text-xs font-bold ${
+                  isSelected ? 'border-red-600 text-red-600' : 'border-slate-300 text-transparent'
+                }`}
+              >
+                ✓
+              </span>
+            </div>
+            <ApparelCardContent item={item} isSellerView={true} />
+          </div>
+        </button>
+      );
+    }
+
+    return (
+      <div
+        key={listKey}
+        onDragEnter={() => {
+          if (!canReorder || !dragItem.current || dragItem.current.section !== section) return;
+          dragOverItem.current = { section, index };
+          setDragOver({ section, index });
+        }}
+        onDragOver={(e) => {
+          if (!canReorder || !dragItem.current || dragItem.current.section !== section) return;
+          e.preventDefault();
+        }}
+        className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-colors ${
+          isDragging ? 'opacity-50' : ''
+        } ${
+          isDragOverTarget
+            ? 'border-red-400 ring-1 ring-red-400'
+            : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
+        }`}
+      >
+        <div className="relative">
+          <a href={href} className="block">
+            <ApparelCardContent item={item} isSellerView={true} />
+          </a>
+          <div className="absolute left-3 top-3 z-20 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setEditingItem(item)}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+            >
+              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+              Edit
+            </button>
+            {item.status === 'active' && (
+              <button
+                type="button"
+                onClick={() => handleCopyLink(item.id)}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
+              >
+                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                Copy Link
+              </button>
+            )}
+          </div>
+          {canReorder ? (
+            <div
+              draggable
+              onDragStart={() => {
+                dragItem.current = { section, index };
+                dragOverItem.current = { section, index };
+                setDragging({ section, index });
+                setDragOver({ section, index });
+              }}
+              onDragEnd={() => {
+                void handleReorderEnd();
+              }}
+              className="absolute bottom-3 right-3 z-20 flex cursor-grab items-center rounded-lg border border-slate-200 bg-white/95 p-1.5 text-slate-500 shadow-sm transition-colors hover:bg-white hover:text-slate-700 active:cursor-grabbing"
+              aria-label={`Drag to reorder ${item.title}`}
+              title="Drag to reorder"
+            >
+              <GripVertical size={16} aria-hidden="true" />
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
   };
 
   if (items.length === 0) {
@@ -543,94 +821,67 @@ export default function FilterableApparelGrid({
           <p className="text-lg font-medium text-slate-700">No items found matching your criteria</p>
           <p className="mt-2 text-sm text-slate-500">Try adjusting your search or filters.</p>
         </div>
+      ) : isSellerView ? (
+        <div className={`space-y-10 ${isSelectionMode ? 'pb-36' : ''}`}>
+          {!canReorder && filtersActive ? (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Clear search and filters to drag and reorder catalog items.
+            </p>
+          ) : null}
+
+          <section>
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-slate-900">Featured Merchandising</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Drag to set storefront featured order. Featured items only.
+              </p>
+            </div>
+            {featuredItems.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
+                <p className="text-sm text-slate-500">No featured items yet. Mark items as Featured to add them here.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                {featuredItems.map((item, index) =>
+                  renderSellerCard(item, {
+                    section: 'featured',
+                    index,
+                    listKey: `featured-${item.id}`,
+                  })
+                )}
+              </div>
+            )}
+          </section>
+
+          <section>
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-slate-900">Full Inventory</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Drag to set full catalog order, including featured items.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              {fullInventoryItems.map((item, index) =>
+                renderSellerCard(item, {
+                  section: 'full',
+                  index,
+                  listKey: `full-${item.id}`,
+                })
+              )}
+            </div>
+          </section>
+        </div>
       ) : (
-        <div
-          className={`grid grid-cols-1 gap-6 sm:grid-cols-2 ${
-            isSellerView && isSelectionMode ? 'pb-36' : ''
-          }`}
-        >
-          {filteredItems.map((item) => {
-            const href = isSellerView
-              ? `/seller/apparel/${item.id}`
-              : getClothingListingPath(item.id, storefrontSegment);
-            const isSelected = selectedIds.has(item.id);
-
-            if (isSellerView && isSelectionMode) {
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => toggleItemSelection(item.id)}
-                  aria-pressed={isSelected}
-                  aria-label={isSelected ? `Deselect ${item.title}` : `Select ${item.title}`}
-                  className={`block w-full overflow-hidden rounded-xl border bg-white text-left shadow-sm transition-colors ${
-                    isSelected
-                      ? 'border-red-600 ring-2 ring-red-600'
-                      : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
-                  }`}
-                >
-                  <div className="relative">
-                    <div className="absolute left-3 top-3 z-10">
-                      <span
-                        aria-hidden="true"
-                        className={`flex h-5 w-5 items-center justify-center rounded border bg-white text-xs font-bold ${
-                          isSelected ? 'border-red-600 text-red-600' : 'border-slate-300 text-transparent'
-                        }`}
-                      >
-                        ✓
-                      </span>
-                    </div>
-                    <ApparelCardContent item={item} isSellerView={isSellerView} />
-                  </div>
-                </button>
-              );
-            }
-
-            if (isSellerView) {
-              return (
-                <div
-                  key={item.id}
-                  className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 hover:shadow-md"
-                >
-                  <div className="relative">
-                    <a href={href} className="block">
-                      <ApparelCardContent item={item} isSellerView={isSellerView} />
-                    </a>
-                    <div className="absolute left-3 top-3 z-20 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditingItem(item)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
-                      >
-                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                        Edit
-                      </button>
-                      {item.status === 'active' && (
-                        <button
-                          type="button"
-                          onClick={() => handleCopyLink(item.id)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-white"
-                        >
-                          <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                          Copy Link
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-
-            return (
-              <a
-                key={item.id}
-                href={href}
-                className="block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 hover:shadow-md"
-              >
-                <ApparelCardContent item={item} isSellerView={isSellerView} />
-              </a>
-            );
-          })}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          {filteredItems.map((item) => (
+            <a
+              key={item.id}
+              href={getClothingListingPath(item.id, storefrontSegment)}
+              className="block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 hover:shadow-md"
+            >
+              <ApparelCardContent item={item} isSellerView={isSellerView} />
+            </a>
+          ))}
         </div>
       )}
 
@@ -758,12 +1009,35 @@ export default function FilterableApparelGrid({
                   <input
                     type="checkbox"
                     checked={editForm.isSale}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, isSale: e.target.checked }))}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        isSale: e.target.checked,
+                        salePrice: e.target.checked ? prev.salePrice : '',
+                      }))
+                    }
                     disabled={isSaving}
                     className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
                   />
                   Mark as on Sale
                 </label>
+                {editForm.isSale && (
+                  <label className="block pl-6">
+                    <span className="text-sm font-medium text-slate-700">Sale price</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editForm.salePrice}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({ ...prev, salePrice: e.target.value }))
+                      }
+                      disabled={isSaving}
+                      placeholder="Lower than wholesale"
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+                    />
+                  </label>
+                )}
               </div>
             </div>
 

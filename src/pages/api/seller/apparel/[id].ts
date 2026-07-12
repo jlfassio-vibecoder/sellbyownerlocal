@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import {
   AuthError,
@@ -33,7 +34,8 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
       });
     }
 
-    const existingSellerId = doc.data()?.sellerId;
+    const existing = doc.data() ?? {};
+    const existingSellerId = existing.sellerId;
     if (existingSellerId !== session.uid) {
       return forbiddenResponse();
     }
@@ -69,13 +71,35 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
 
     const updates = Object.fromEntries(
       Object.entries(parsed.data).filter(([, value]) => value !== undefined)
-    );
+    ) as Record<string, unknown>;
 
     if (Object.keys(updates).length === 0) {
       return new Response(JSON.stringify({ error: 'No fields to update' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    const nextPrice =
+      typeof updates.price === 'number' ? updates.price : Number(existing.price ?? 0);
+    const nextSalePrice =
+      updates.salePrice === undefined
+        ? typeof existing.salePrice === 'number'
+          ? existing.salePrice
+          : undefined
+        : updates.salePrice === null
+          ? undefined
+          : (updates.salePrice as number);
+
+    if (typeof nextSalePrice === 'number' && nextSalePrice >= nextPrice) {
+      return new Response(
+        JSON.stringify({ error: 'Sale price must be lower than the wholesale price' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (updates.isSale === false || updates.salePrice === null) {
+      updates.salePrice = FieldValue.delete();
     }
 
     await ref.update(updates);

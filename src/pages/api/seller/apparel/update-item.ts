@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { FieldValue } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import {
   AuthError,
@@ -22,6 +23,7 @@ const UpdateItemUpdatesSchema = z
     status: ClothingListingStatusSchema.optional(),
     isFeatured: z.boolean().optional(),
     isSale: z.boolean().optional(),
+    salePrice: z.number().nonnegative().nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: 'At least one field is required in updates',
@@ -68,12 +70,37 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
 
-    const existingSellerId = doc.data()?.sellerId;
+    const existing = doc.data() ?? {};
+    const existingSellerId = existing.sellerId;
     if (existingSellerId !== session.uid) {
       return forbiddenResponse();
     }
 
-    await ref.update(parsed.data.updates);
+    const { updates } = parsed.data;
+    const nextPrice =
+      typeof updates.price === 'number' ? updates.price : Number(existing.price ?? 0);
+    const nextSalePrice =
+      updates.salePrice === undefined
+        ? typeof existing.salePrice === 'number'
+          ? existing.salePrice
+          : undefined
+        : updates.salePrice === null
+          ? undefined
+          : updates.salePrice;
+
+    if (typeof nextSalePrice === 'number' && nextSalePrice >= nextPrice) {
+      return new Response(
+        JSON.stringify({ error: 'Sale price must be lower than the wholesale price' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const firestoreUpdate: Record<string, unknown> = { ...updates };
+    if (updates.isSale === false || updates.salePrice === null) {
+      firestoreUpdate.salePrice = FieldValue.delete();
+    }
+
+    await ref.update(firestoreUpdate);
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
