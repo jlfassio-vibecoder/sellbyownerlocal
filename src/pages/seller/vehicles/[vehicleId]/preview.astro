@@ -79,7 +79,11 @@ const inquiryCount = inquirySnapshot.docs.reduce((count, inquiryDoc) => {
       inquiryCount={inquiryCount}
     />
     <div class="flex-1 overflow-y-auto">
-      <VehicleListingContent vehicle={listingVehicle} analyticsEnabled={false} />
+      <VehicleListingContent
+        vehicle={listingVehicle}
+        analyticsEnabled={false}
+        isVehicleOwner={true}
+      />
     </div>
   </body>
 </html>
