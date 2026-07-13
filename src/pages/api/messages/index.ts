@@ -5,6 +5,7 @@ import {
   ForbiddenError,
   assertVehicleOwner,
   forbiddenResponse,
+  getOptionalSession,
   requireSeller,
   unauthorizedResponse,
 } from '../../../lib/auth';
@@ -17,6 +18,29 @@ const MESSAGE_RATE_LIMIT = {
   windowMs: 15 * 60 * 1000,
   max: 20,
 };
+
+async function resolveThreadBuyerUid(
+  sessionId: string,
+  vehicleId: string
+): Promise<string | undefined> {
+  const snapshot = await db()
+    .collection('messages')
+    .where('sessionId', '==', sessionId)
+    .where('vehicleId', '==', vehicleId)
+    .orderBy('timestamp', 'asc')
+    .limit(25)
+    .get();
+
+  // Prefer the most recent message that already has buyerUid (scan from the end).
+  for (let i = snapshot.docs.length - 1; i >= 0; i -= 1) {
+    const buyerUid = snapshot.docs[i]?.data().buyerUid;
+    if (typeof buyerUid === 'string' && buyerUid.trim()) {
+      return buyerUid.trim();
+    }
+  }
+
+  return undefined;
+}
 
 export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   try {
@@ -99,24 +123,32 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       }
     }
 
-    const timestamp = new Date().toISOString();
-    const docRef = await db().collection('messages').add({
-      sessionId,
-      vehicleId,
-      sender,
-      content,
-      timestamp,
-      isRead: 0,
-    });
+    let buyerUid: string | undefined;
+    if (sender === 'buyer') {
+      const authSession = await getOptionalSession(request, cookies);
+      if (authSession?.uid) {
+        buyerUid = authSession.uid;
+      }
+    } else {
+      buyerUid = await resolveThreadBuyerUid(sessionId, vehicleId);
+    }
 
-    const messageParsed = mapMessageDoc(docRef.id, {
+    const timestamp = new Date().toISOString();
+    const messageData: Record<string, unknown> = {
       sessionId,
       vehicleId,
       sender,
       content,
       timestamp,
       isRead: 0,
-    });
+    };
+    if (buyerUid) {
+      messageData.buyerUid = buyerUid;
+    }
+
+    const docRef = await db().collection('messages').add(messageData);
+
+    const messageParsed = mapMessageDoc(docRef.id, messageData);
 
     if (!messageParsed.success) {
       return new Response(JSON.stringify({ error: 'Failed to create message' }), {

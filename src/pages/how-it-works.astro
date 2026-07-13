@@ -5,25 +5,208 @@ import BuyerMarketplaceNav from '../islands/buyer/BuyerMarketplaceNav';
 
 const session = await getOptionalSellerSession(Astro.request, Astro.cookies);
 const displayName = session?.email?.split('@')[0] ?? 'there';
+
+const buySteps = [
+  {
+    title: 'Browse owner listings',
+    body: 'Explore cars and trucks listed directly by owners—no dealer markup, no lot fees.',
+  },
+  {
+    title: 'Create an account & verify',
+    body: 'Sign in when you are ready to save favorites or message a seller. Phone and identity verification unlock trusted buyer actions.',
+  },
+  {
+    title: 'Inquire or save',
+    body: 'Ask questions on a listing or save vehicles you want to revisit while you compare options.',
+  },
+  {
+    title: 'Start a secure transaction',
+    body: 'When you are ready to buy, use Start Secure Transaction on the listing for a protected checkout path with the seller.',
+  },
+] as const;
+
+const sellSteps = [
+  {
+    title: 'Enter your VIN',
+    body: 'Generate a professional, retail-style listing in minutes from your vehicle identification number.',
+  },
+  {
+    title: 'Review & publish',
+    body: 'Polish photos, pricing, and details in your seller dashboard, then publish when it looks right.',
+  },
+  {
+    title: 'Respond & close securely',
+    body: 'Answer buyer inquiries and complete the deal when a buyer starts a secure transaction on your listing.',
+  },
+] as const;
 ---
 
 <Layout
   title="How It Works · Sell By Owner Local"
-  description="Learn how Sell By Owner Local connects buyers and sellers without dealer markup."
+  description="How private-party vehicle buying and selling works on Sell By Owner Local—browse owner listings, verify your account, and start a secure transaction with zero dealer markup."
   ogUrl="/how-it-works"
 >
   <BuyerMarketplaceNav client:load isLoggedIn={!!session} displayName={displayName} />
 
-  <main class="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-    <h1 class="text-3xl font-bold text-slate-900">How It Works</h1>
-    <p class="mt-4 text-lg text-slate-600">
-      Content coming soon. Sell By Owner Local helps owners list vehicles directly and helps buyers
-      shop without dealer markup.
-    </p>
-    <p class="mt-8">
-      <a href="/vehicles" class="font-semibold text-slate-900 underline underline-offset-2">
-        Search vehicles
-      </a>
-    </p>
-  </main>
+  <section
+    class="relative overflow-hidden border-b border-slate-200 bg-gradient-to-b from-slate-50 via-white to-sky-50"
+  >
+    <div
+      class="pointer-events-none absolute inset-0 opacity-40"
+      style="background-image: radial-gradient(circle at 18% 20%, rgba(14, 165, 233, 0.12), transparent 42%), radial-gradient(circle at 82% 8%, rgba(220, 38, 38, 0.08), transparent 36%)"
+      aria-hidden="true"
+    >
+    </div>
+    <div class="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+      <p class="font-brand text-4xl uppercase tracking-wide text-slate-900 sm:text-5xl lg:text-6xl">
+        Sell By Owner Local
+      </p>
+      <h1 class="mt-4 max-w-3xl text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+        How private-party vehicle buying and selling works
+      </h1>
+      <p class="mt-4 max-w-2xl text-lg text-slate-600 sm:text-xl">
+        A professionalized private market: browse owner-listed vehicles, or list yours with a VIN—then
+        close with a secure transaction when you are ready.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a
+          href="/vehicles"
+          class="inline-flex items-center justify-center rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+        >
+          Browse vehicles
+        </a>
+        <a
+          href="#sell"
+          class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-50"
+        >
+          Start selling
+        </a>
+      </div>
+      <p class="mt-6 text-sm text-slate-500">
+        <a href="#buy" class="font-semibold text-slate-700 underline-offset-2 hover:underline">
+          How buying works
+        </a>
+        <span class="mx-2 text-slate-300" aria-hidden="true">·</span>
+        <a href="#sell" class="font-semibold text-slate-700 underline-offset-2 hover:underline">
+          How selling works
+        </a>
+      </p>
+    </div>
+  </section>
+
+  <section id="buy" class="scroll-mt-20 border-b border-slate-200 bg-white py-16 sm:py-20">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <p class="text-sm font-semibold tracking-wider text-red-600 uppercase">For buyers</p>
+      <h2 class="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">Buy a vehicle from an owner</h2>
+      <p class="mt-3 max-w-2xl text-lg text-slate-600">
+        Go from browsing to a protected checkout without dealer middlemen.
+      </p>
+
+      <ol class="mt-12 space-y-10">
+        {
+          buySteps.map((step, index) => (
+            <li class="grid grid-cols-[auto_1fr] gap-5 sm:gap-6">
+              <span
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white"
+                aria-hidden="true"
+              >
+                {index + 1}
+              </span>
+              <div>
+                <h3 class="text-xl font-bold text-slate-900">{step.title}</h3>
+                <p class="mt-2 max-w-2xl text-base leading-relaxed text-slate-600">{step.body}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+
+      <div class="mt-12">
+        <a
+          href="/vehicles"
+          class="inline-flex items-center justify-center rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+        >
+          Browse vehicles
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section id="sell" class="scroll-mt-20 border-b border-slate-200 bg-slate-50 py-16 sm:py-20">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <p class="text-sm font-semibold tracking-wider text-red-600 uppercase">For sellers</p>
+      <h2 class="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">Sell your vehicle like a pro</h2>
+      <p class="mt-3 max-w-2xl text-lg text-slate-600">
+        Turn a VIN into a retail-quality listing, then manage interest from your dashboard.
+      </p>
+
+      <ol class="mt-12 space-y-10">
+        {
+          sellSteps.map((step, index) => (
+            <li class="grid grid-cols-[auto_1fr] gap-5 sm:gap-6">
+              <span
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white"
+                aria-hidden="true"
+              >
+                {index + 1}
+              </span>
+              <div>
+                <h3 class="text-xl font-bold text-slate-900">{step.title}</h3>
+                <p class="mt-2 max-w-2xl text-base leading-relaxed text-slate-600">{step.body}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+
+      <div class="mt-12">
+        <a
+          href="/seller"
+          class="inline-flex items-center justify-center rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+        >
+          Go to seller dashboard
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="border-b border-slate-200 bg-white py-14 sm:py-16">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-2xl font-bold text-slate-900 sm:text-3xl">Built for trust</h2>
+      <p class="mt-3 max-w-2xl text-base text-slate-600">
+        The same principles that define the marketplace—from first browse to secure close.
+      </p>
+      <ul class="mt-8 grid max-w-3xl list-none grid-cols-1 gap-4 sm:grid-cols-2">
+        <li class="text-base font-medium text-slate-800">Direct from owners</li>
+        <li class="text-base font-medium text-slate-800">No dealer markup</li>
+        <li class="text-base font-medium text-slate-800">Verified identity</li>
+        <li class="text-base font-medium text-slate-800">Secure transaction</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="bg-slate-900 py-14 sm:py-16">
+    <div class="mx-auto flex max-w-7xl flex-col gap-6 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+      <div>
+        <h2 class="text-2xl font-bold text-white sm:text-3xl">Ready when you are</h2>
+        <p class="mt-2 max-w-xl text-base text-slate-300">
+          Browse owner listings or start your own—without the dealer middle.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <a
+          href="/vehicles"
+          class="inline-flex items-center justify-center rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+        >
+          Browse vehicles
+        </a>
+        <a
+          href="/seller"
+          class="inline-flex items-center justify-center rounded-lg border border-slate-500 bg-transparent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:border-slate-300 hover:bg-slate-800"
+        >
+          Sell your vehicle
+        </a>
+      </div>
+    </div>
+  </section>
 </Layout>

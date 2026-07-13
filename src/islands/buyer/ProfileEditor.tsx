@@ -17,6 +17,8 @@ interface ProfileEditorProps {
   storefrontName?: string;
   storefrontTagline?: string;
   storefrontHeroUrl?: string;
+  /** profile = display name only; storefront = branding fields only */
+  mode?: 'profile' | 'storefront';
 }
 
 function sanitizeFilename(filename: string): string {
@@ -31,7 +33,10 @@ export default function ProfileEditor({
   storefrontName: initialStorefrontName,
   storefrontTagline: initialStorefrontTagline,
   storefrontHeroUrl: initialStorefrontHeroUrl,
+  mode = 'profile',
 }: ProfileEditorProps) {
+  const isProfileMode = mode === 'profile';
+  const isStorefrontMode = mode === 'storefront';
   const heroInputRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(initialName);
   const [storefrontInput, setStorefrontInput] = useState(initialSlug);
@@ -112,8 +117,13 @@ export default function ProfileEditor({
     setError(null);
     setSuccess(false);
 
-    if (storefrontInput.trim() && slugError) {
+    if (isStorefrontMode && storefrontInput.trim() && slugError) {
       setError(slugError);
+      return;
+    }
+
+    if (isProfileMode && !displayName.trim()) {
+      setError('Display name is required');
       return;
     }
 
@@ -121,19 +131,24 @@ export default function ProfileEditor({
 
     try {
       const body: {
-        displayName: string;
+        displayName?: string;
         storefrontSlug?: string;
-        storefrontName: string;
-        storefrontTagline: string;
-        storefrontHeroUrl: string;
-      } = {
-        displayName: displayName.trim(),
-        storefrontName: storefrontName.trim(),
-        storefrontTagline: storefrontTagline.trim(),
-        storefrontHeroUrl,
-      };
-      if (previewSlug) {
-        body.storefrontSlug = previewSlug;
+        storefrontName?: string;
+        storefrontTagline?: string;
+        storefrontHeroUrl?: string;
+      } = {};
+
+      if (isProfileMode) {
+        body.displayName = displayName.trim();
+      }
+
+      if (isStorefrontMode) {
+        body.storefrontName = storefrontName.trim();
+        body.storefrontTagline = storefrontTagline.trim();
+        body.storefrontHeroUrl = storefrontHeroUrl;
+        if (previewSlug) {
+          body.storefrontSlug = previewSlug;
+        }
       }
 
       const res = await fetch(`/api/users/${userId}`, {
@@ -152,23 +167,25 @@ export default function ProfileEditor({
         throw new Error(data.error || 'Failed to save profile');
       }
 
-      if (typeof data.storefrontSlug === 'string') {
-        setStorefrontInput(data.storefrontSlug);
-      }
-      if (typeof data.storefrontName === 'string') {
-        setStorefrontName(data.storefrontName);
-      } else if (data.storefrontName === undefined) {
-        setStorefrontName('');
-      }
-      if (typeof data.storefrontTagline === 'string') {
-        setStorefrontTagline(data.storefrontTagline);
-      } else if (data.storefrontTagline === undefined) {
-        setStorefrontTagline('');
-      }
-      if (typeof data.storefrontHeroUrl === 'string') {
-        setStorefrontHeroUrl(data.storefrontHeroUrl);
-      } else if (data.storefrontHeroUrl === undefined) {
-        setStorefrontHeroUrl('');
+      if (isStorefrontMode) {
+        if (typeof data.storefrontSlug === 'string') {
+          setStorefrontInput(data.storefrontSlug);
+        }
+        if (typeof data.storefrontName === 'string') {
+          setStorefrontName(data.storefrontName);
+        } else if (data.storefrontName === undefined) {
+          setStorefrontName('');
+        }
+        if (typeof data.storefrontTagline === 'string') {
+          setStorefrontTagline(data.storefrontTagline);
+        } else if (data.storefrontTagline === undefined) {
+          setStorefrontTagline('');
+        }
+        if (typeof data.storefrontHeroUrl === 'string') {
+          setStorefrontHeroUrl(data.storefrontHeroUrl);
+        } else if (data.storefrontHeroUrl === undefined) {
+          setStorefrontHeroUrl('');
+        }
       }
 
       setSuccess(true);
@@ -180,11 +197,11 @@ export default function ProfileEditor({
     }
   };
 
-  const canSave =
-    !!displayName.trim() &&
-    !isSaving &&
-    !isUploadingHero &&
-    !(storefrontInput.trim() && !!slugError);
+  const canSave = isProfileMode
+    ? !!displayName.trim() && !isSaving
+    : !isSaving &&
+      !isUploadingHero &&
+      !(storefrontInput.trim() && !!slugError);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -195,151 +212,161 @@ export default function ProfileEditor({
       )}
       {success && (
         <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          Profile saved.
+          {isProfileMode ? 'Profile saved.' : 'Storefront settings saved.'}
         </div>
       )}
 
-      <div>
-        <label htmlFor="profile-displayName" className="mb-1 block text-sm font-medium text-slate-700">
-          Display name
-        </label>
-        <input
-          type="text"
-          id="profile-displayName"
-          name="displayName"
-          required
-          maxLength={100}
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="profile-storefrontSlug" className="mb-1 block text-sm font-medium text-slate-700">
-          Storefront URL
-        </label>
-        <input
-          type="text"
-          id="profile-storefrontSlug"
-          name="storefrontSlug"
-          maxLength={48}
-          value={storefrontInput}
-          onChange={(e) => setStorefrontInput(e.target.value)}
-          placeholder="my-brand"
-          className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600"
-        />
-        {previewSlug ? (
-          <p className="mt-1 font-mono text-xs text-slate-500">
-            Preview: {getStorefrontPath(previewSlug)}
-          </p>
-        ) : (
-          <p className="mt-1 text-xs text-slate-400">
-            Choose a public URL for your apparel storefront (optional).
-          </p>
-        )}
-        {slugError && storefrontInput.trim() ? (
-          <p className="mt-1 text-xs text-red-600">{slugError}</p>
-        ) : null}
-      </div>
-
-      <fieldset className="space-y-4 border-t border-slate-200 pt-4">
-        <legend className="text-sm font-semibold text-slate-900">Storefront Branding</legend>
-        <p className="text-xs text-slate-400">
-          Shown on your public storefront. Does not change your account display name.
-        </p>
-
-        <div>
-          <label htmlFor="profile-storefrontName" className="mb-1 block text-sm font-medium text-slate-700">
-            Storefront name
-          </label>
-          <input
-            type="text"
-            id="profile-storefrontName"
-            name="storefrontName"
-            maxLength={50}
-            value={storefrontName}
-            onChange={(e) => setStorefrontName(e.target.value)}
-            placeholder="E.g. Acme Apparel"
-            className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="profile-storefrontTagline"
-            className="mb-1 block text-sm font-medium text-slate-700"
-          >
-            Storefront tagline
-          </label>
-          <textarea
-            id="profile-storefrontTagline"
-            name="storefrontTagline"
-            maxLength={150}
-            rows={2}
-            value={storefrontTagline}
-            onChange={(e) => setStorefrontTagline(e.target.value)}
-            placeholder="A short description of your brand"
-            className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="profile-storefrontHero" className="mb-1 block text-sm font-medium text-slate-700">
-            Hero image
-          </label>
-          {storefrontHeroUrl ? (
-            <div className="mb-3 overflow-hidden rounded-lg border border-slate-200">
-              <img
-                src={storefrontHeroUrl}
-                alt="Storefront hero preview"
-                className="h-40 w-full object-cover"
-              />
-            </div>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-3">
+      {isProfileMode ? (
+        <>
+          <div>
+            <label htmlFor="profile-displayName" className="mb-1 block text-sm font-medium text-slate-700">
+              Display name
+            </label>
             <input
-              ref={heroInputRef}
-              type="file"
-              id="profile-storefrontHero"
-              name="storefrontHero"
-              accept="image/*"
-              disabled={isUploadingHero || isSaving}
-              onChange={(e) => void handleHeroSelected(e.target.files)}
-              className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+              type="text"
+              id="profile-displayName"
+              name="displayName"
+              required
+              maxLength={100}
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600"
             />
-            {storefrontHeroUrl ? (
-              <button
-                type="button"
-                disabled={isUploadingHero || isSaving}
-                onClick={() => setStorefrontHeroUrl('')}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Remove Image
-              </button>
+          </div>
+
+          <div>
+            <label htmlFor="profile-email" className="mb-1 block text-sm font-medium text-slate-700">
+              Email
+            </label>
+            <input
+              type="email"
+              id="profile-email"
+              name="email"
+              readOnly
+              disabled
+              value={email}
+              className="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-slate-500"
+            />
+            <p className="mt-1 text-xs text-slate-400">
+              Email is managed by your sign-in provider and cannot be changed here.
+            </p>
+          </div>
+        </>
+      ) : (
+        <>
+          <div>
+            <label htmlFor="profile-storefrontSlug" className="mb-1 block text-sm font-medium text-slate-700">
+              Storefront URL
+            </label>
+            <input
+              type="text"
+              id="profile-storefrontSlug"
+              name="storefrontSlug"
+              maxLength={48}
+              value={storefrontInput}
+              onChange={(e) => setStorefrontInput(e.target.value)}
+              placeholder="my-brand"
+              className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600"
+            />
+            {previewSlug ? (
+              <p className="mt-1 font-mono text-xs text-slate-500">
+                Preview: {getStorefrontPath(previewSlug)}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-slate-400">
+                Choose a public URL for your apparel storefront (optional).
+              </p>
+            )}
+            {slugError && storefrontInput.trim() ? (
+              <p className="mt-1 text-xs text-red-600">{slugError}</p>
             ) : null}
           </div>
-          <p className="mt-1 text-xs text-slate-400">
-            {isUploadingHero ? 'Uploading…' : 'PNG, JPEG, or WebP up to 10MB. Saved when you click Save.'}
-          </p>
-        </div>
-      </fieldset>
 
-      <div>
-        <label htmlFor="profile-email" className="mb-1 block text-sm font-medium text-slate-700">
-          Email
-        </label>
-        <input
-          type="email"
-          id="profile-email"
-          name="email"
-          readOnly
-          disabled
-          value={email}
-          className="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-slate-500"
-        />
-        <p className="mt-1 text-xs text-slate-400">Email is managed by your sign-in provider and cannot be changed here.</p>
-      </div>
+          <fieldset className="space-y-4 border-t border-slate-200 pt-4">
+            <legend className="text-sm font-semibold text-slate-900">Storefront Branding</legend>
+            <p className="text-xs text-slate-400">
+              Shown on your public storefront. Does not change your account display name.
+            </p>
+
+            <div>
+              <label htmlFor="profile-storefrontName" className="mb-1 block text-sm font-medium text-slate-700">
+                Storefront name
+              </label>
+              <input
+                type="text"
+                id="profile-storefrontName"
+                name="storefrontName"
+                maxLength={50}
+                value={storefrontName}
+                onChange={(e) => setStorefrontName(e.target.value)}
+                placeholder="E.g. Acme Apparel"
+                className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="profile-storefrontTagline"
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
+                Storefront tagline
+              </label>
+              <textarea
+                id="profile-storefrontTagline"
+                name="storefrontTagline"
+                maxLength={150}
+                rows={2}
+                value={storefrontTagline}
+                onChange={(e) => setStorefrontTagline(e.target.value)}
+                placeholder="A short description of your brand"
+                className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="profile-storefrontHero" className="mb-1 block text-sm font-medium text-slate-700">
+                Hero image
+              </label>
+              {storefrontHeroUrl ? (
+                <div className="mb-3 overflow-hidden rounded-lg border border-slate-200">
+                  <img
+                    src={storefrontHeroUrl}
+                    alt="Storefront hero preview"
+                    className="h-40 w-full object-cover"
+                  />
+                </div>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  ref={heroInputRef}
+                  type="file"
+                  id="profile-storefrontHero"
+                  name="storefrontHero"
+                  accept="image/*"
+                  disabled={isUploadingHero || isSaving}
+                  onChange={(e) => void handleHeroSelected(e.target.files)}
+                  className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+                {storefrontHeroUrl ? (
+                  <button
+                    type="button"
+                    disabled={isUploadingHero || isSaving}
+                    onClick={() => setStorefrontHeroUrl('')}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Remove Image
+                  </button>
+                ) : null}
+              </div>
+              <p className="mt-1 text-xs text-slate-400">
+                {isUploadingHero
+                  ? 'Uploading…'
+                  : 'PNG, JPEG, or WebP up to 10MB. Saved when you click Save.'}
+              </p>
+            </div>
+          </fieldset>
+        </>
+      )}
 
       <button
         type="submit"
