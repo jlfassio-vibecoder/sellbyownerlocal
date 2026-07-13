@@ -2,10 +2,13 @@
 import { requireSellerOrRedirect } from '../../lib/auth';
 import { getUserProfile } from '../../lib/buyer-profile';
 import { getActiveApparelCountForSeller } from '../../lib/clothing-api';
+import { listFavoritesForBuyer } from '../../lib/favorites-server';
 import type { VerificationTier } from '../../schemas';
 import AccountUidBanner from '../../components/AccountUidBanner.astro';
 import AccountStorefrontBanner from '../../components/AccountStorefrontBanner.astro';
 import VerificationTierBadge from '../../components/VerificationTierBadge.astro';
+import AccountFavoritesGrid from '../../islands/buyer/AccountFavoritesGrid';
+import BuyerInbox from '../../islands/buyer/BuyerInbox';
 import ProfileEditor from '../../islands/buyer/ProfileEditor';
 import PhoneOtpAccountVerify from '../../islands/PhoneOtpAccountVerify';
 import SignOutButton from '../../islands/SignOutButton';
@@ -27,6 +30,7 @@ const storefrontSegment = resolveStorefrontSegment({
 const storefrontPath = getStorefrontPath(storefrontSegment);
 const hasCustomSlug = Boolean(profile?.storefrontSlug);
 const activeListingCount = await getActiveApparelCountForSeller(uid);
+const initialFavorites = await listFavoritesForBuyer(uid);
 
 const showVerifyPhone = verificationTier === 'anonymous';
 const showVerifyIdentity = verificationTier === 'phone_verified';
@@ -47,7 +51,7 @@ const showFullyVerified = verificationTier === 'identity_verified';
       <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <div class="mb-4 flex items-center justify-between gap-3">
           <a
-            href="/seller"
+            href="/vehicles"
             class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-white"
           >
             <svg
@@ -75,26 +79,6 @@ const showFullyVerified = verificationTier === 'identity_verified';
 
     <main class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <AccountUidBanner uid={uid} />
-      <AccountStorefrontBanner
-        storefrontPath={storefrontPath}
-        hasCustomSlug={hasCustomSlug}
-        activeListingCount={activeListingCount}
-      />
-
-      <section class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="text-lg font-bold text-slate-900">Profile</h2>
-        <p class="mt-1 mb-6 text-sm text-slate-500">Update how your name appears to sellers.</p>
-        <ProfileEditor
-          client:load
-          userId={uid}
-          displayName={profile?.displayName ?? ''}
-          email={displayEmail}
-          storefrontSlug={profile?.storefrontSlug}
-          storefrontName={profile?.storefrontName}
-          storefrontTagline={profile?.storefrontTagline}
-          storefrontHeroUrl={profile?.storefrontHeroUrl}
-        />
-      </section>
 
       <section class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-4">
@@ -114,7 +98,8 @@ const showFullyVerified = verificationTier === 'identity_verified';
               class="mt-6 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4"
             >
               <p class="mb-4 text-sm text-slate-600">
-                Verify your mobile number to send inquiries to sellers.
+                Verify your mobile number to send inquiries to sellers and back up favorites to the
+                cloud.
               </p>
               <PhoneOtpAccountVerify client:load />
             </div>
@@ -149,41 +134,77 @@ const showFullyVerified = verificationTier === 'identity_verified';
         }
       </section>
 
-      <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <section class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-bold text-slate-900">Profile</h2>
+        <p class="mt-1 mb-6 text-sm text-slate-500">Update how your name appears to sellers.</p>
+        <ProfileEditor
+          client:load
+          mode="profile"
+          userId={uid}
+          displayName={profile?.displayName ?? ''}
+          email={displayEmail}
+        />
+      </section>
+
+      <section class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-bold text-slate-900">Saved Vehicles</h2>
+        <p class="mt-1 mb-6 text-sm text-slate-500">Vehicles you've favorited while browsing.</p>
+        <AccountFavoritesGrid
+          client:load
+          isLoggedIn={true}
+          verificationTier={verificationTier}
+          initialItems={initialFavorites}
+        />
+      </section>
+
+      <section class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-bold text-slate-900">My Messages</h2>
+        <p class="mt-1 mb-6 text-sm text-slate-500">
+          Conversations with sellers about vehicles you're interested in.
+        </p>
+        <BuyerInbox client:load />
+      </section>
+
+      <section class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-bold text-slate-900">Selling Tools</h2>
+        <p class="mt-1 mb-6 text-sm text-slate-500">
+          Manage listings, storefront branding, and seller settings.
+        </p>
+
+        <AccountStorefrontBanner
+          storefrontPath={storefrontPath}
+          hasCustomSlug={hasCustomSlug}
+          activeListingCount={activeListingCount}
+        />
+
         <a
           href="/seller"
-          class="group block rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-slate-300 hover:shadow-md"
+          class="group mb-6 flex items-start justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 p-5 transition-colors hover:border-slate-300 hover:bg-white"
         >
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <h2 class="text-lg font-bold text-slate-900 group-hover:text-red-600 transition-colors">
-                Seller Dashboard
-              </h2>
-              <p class="mt-2 text-sm text-slate-500">
-                Manage your vehicle listings and inquiries
-              </p>
-            </div>
-            <span class="text-red-600 text-xl shrink-0" aria-hidden="true">→</span>
+          <div>
+            <h3 class="text-base font-bold text-slate-900 transition-colors group-hover:text-red-600">
+              Seller Dashboard
+            </h3>
+            <p class="mt-1 text-sm text-slate-500">Manage your vehicle listings and inquiries</p>
           </div>
+          <span class="shrink-0 text-xl text-red-600" aria-hidden="true">→</span>
         </a>
 
-        <div
-          class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm opacity-60 cursor-not-allowed"
-          aria-disabled="true"
-        >
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <div class="flex items-center gap-2 flex-wrap">
-                <h2 class="text-lg font-bold text-slate-900">Saved Vehicles</h2>
-                <span class="bg-slate-100 text-slate-500 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                  Coming Soon
-                </span>
-              </div>
-              <p class="mt-2 text-sm text-slate-500">View cars you've favorited</p>
-            </div>
-          </div>
+        <div class="border-t border-slate-200 pt-6">
+          <h3 class="mb-4 text-base font-bold text-slate-900">Storefront Settings</h3>
+          <ProfileEditor
+            client:load
+            mode="storefront"
+            userId={uid}
+            displayName={profile?.displayName ?? ''}
+            email={displayEmail}
+            storefrontSlug={profile?.storefrontSlug}
+            storefrontName={profile?.storefrontName}
+            storefrontTagline={profile?.storefrontTagline}
+            storefrontHeroUrl={profile?.storefrontHeroUrl}
+          />
         </div>
-      </div>
+      </section>
 
       <p class="mt-10 text-center">
         <a href="/vehicles" class="text-sm font-semibold text-red-600 hover:text-red-700">

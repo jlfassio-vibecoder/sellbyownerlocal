@@ -662,6 +662,14 @@ export const FavoriteItemSchema = z.object({
   price: z.number().nonnegative(),
   category: FavoriteCategorySchema,
   sellerId: z.string().min(1),
+  imageUrl: httpHttpsUrl.optional(),
+  year: z.number().int().optional(),
+  make: z.string().optional(),
+  model: z.string().optional(),
+  mileage: z.number().nonnegative().optional(),
+  engine: z.string().optional(),
+  drivetrain: z.string().optional(),
+  highlights: z.array(z.string()).optional(),
 });
 
 export const FavoritesListResponseSchema = z.object({
@@ -757,6 +765,19 @@ export const MessageCreateSchema = z.object({
   vehicleId: z.string().min(1),
   sender: z.enum(['buyer', 'seller']),
   content: z.string().min(1).max(2000),
+});
+
+export const BuyerConversationSchema = z.object({
+  sessionId: z.string().min(1),
+  vehicleId: z.string().min(1),
+  vehicleTitle: z.string().min(1),
+  vehicleImageUrl: z.union([httpHttpsUrl, z.literal('')]).optional(),
+  latestMessage: MessageSchema,
+  unreadCount: z.number().int().nonnegative(),
+});
+
+export const BuyerConversationsResponseSchema = z.object({
+  conversations: z.array(BuyerConversationSchema),
 });
 
 export const VehicleSchema = z.object({
@@ -893,6 +914,8 @@ export type ListingAnalyticsResponse = z.infer<typeof ListingAnalyticsResponseSc
 export type Message = z.infer<typeof MessageSchema>;
 export type Conversation = z.infer<typeof ConversationSchema>;
 export type MessageCreate = z.infer<typeof MessageCreateSchema>;
+export type BuyerConversation = z.infer<typeof BuyerConversationSchema>;
+export type BuyerConversationsResponse = z.infer<typeof BuyerConversationsResponseSchema>;
 export type UserResponse = z.infer<typeof UserResponseSchema>;
 export type VehicleResponse = z.infer<typeof VehicleResponseSchema>;
 

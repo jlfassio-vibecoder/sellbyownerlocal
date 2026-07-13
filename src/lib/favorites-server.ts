@@ -1,6 +1,7 @@
 import { mapClothingDoc } from './clothing-api';
 import { db } from './firebase-admin';
 import { mapVehicleDoc } from './inventory-api';
+import { resolveHeroImageUrls } from './resolve-display-media';
 import {
   FavoriteItemSchema,
   SavedClothingSchema,
@@ -46,12 +47,21 @@ function mapVehicleFavorite(id: string, data: Record<string, unknown>): Favorite
 
   if (parsed.success) {
     const vehicle = parsed.data;
+    const heroImage = resolveHeroImageUrls(vehicle)[0] ?? '';
     return FavoriteItemSchema.parse({
       id: vehicle.id,
       title: `${vehicle.year} ${vehicle.make} ${vehicle.model}`.trim() || 'Untitled Item',
       price: asNumber(vehicle.price, 0),
       category: 'vehicle',
       sellerId: vehicle.sellerId || sellerId,
+      ...(heroImage ? { imageUrl: heroImage } : {}),
+      year: vehicle.year,
+      make: vehicle.make,
+      model: vehicle.model,
+      mileage: vehicle.mileage,
+      engine: vehicle.specs.engine,
+      drivetrain: vehicle.specs.drivetrain,
+      highlights: (vehicle.highlights ?? []).slice(0, 3).map((h) => h.title),
     });
   }
 
@@ -59,6 +69,13 @@ function mapVehicleFavorite(id: string, data: Record<string, unknown>): Favorite
   const make = asString(data.make, '');
   const model = asString(data.model, '');
   const composed = [year || '', make, model].filter(Boolean).join(' ').trim();
+  const specs =
+    data.specs && typeof data.specs === 'object'
+      ? (data.specs as Record<string, unknown>)
+      : {};
+  const images = Array.isArray(data.images) ? data.images : [];
+  const firstImage = typeof images[0] === 'string' ? images[0] : '';
+  const rawImage = asString(data.heroImage, firstImage);
 
   return FavoriteItemSchema.parse({
     id,
@@ -66,6 +83,13 @@ function mapVehicleFavorite(id: string, data: Record<string, unknown>): Favorite
     price: asNumber(data.price, 0),
     category: 'vehicle',
     sellerId,
+    ...(rawImage.startsWith('http') ? { imageUrl: rawImage } : {}),
+    ...(year ? { year } : {}),
+    ...(make ? { make } : {}),
+    ...(model ? { model } : {}),
+    mileage: asNumber(data.mileage, 0) || undefined,
+    engine: asString(specs.engine, '') || undefined,
+    drivetrain: asString(specs.drivetrain, '') || undefined,
   });
 }
 

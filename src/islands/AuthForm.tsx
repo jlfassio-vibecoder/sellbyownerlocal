@@ -71,17 +71,17 @@ function PasswordField({
 function resolvePostLoginPath(): string {
   const next = new URLSearchParams(window.location.search).get('next');
   if (!next || !next.startsWith('/') || next.startsWith('//') || next.includes('\\')) {
-    return '/seller';
+    return '/account';
   }
 
   try {
     const resolved = new URL(next, window.location.origin);
     if (resolved.origin !== window.location.origin) {
-      return '/seller';
+      return '/account';
     }
     return resolved.pathname + resolved.search + resolved.hash;
   } catch {
-    return '/seller';
+    return '/account';
   }
 }
 
