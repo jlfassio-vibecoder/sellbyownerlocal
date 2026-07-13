@@ -27,12 +27,13 @@ async function resolveThreadBuyerUid(
     .collection('messages')
     .where('sessionId', '==', sessionId)
     .where('vehicleId', '==', vehicleId)
-    .orderBy('timestamp', 'desc')
+    .orderBy('timestamp', 'asc')
     .limit(25)
     .get();
 
-  for (const doc of snapshot.docs) {
-    const buyerUid = doc.data().buyerUid;
+  // Prefer the most recent message that already has buyerUid (scan from the end).
+  for (let i = snapshot.docs.length - 1; i >= 0; i -= 1) {
+    const buyerUid = snapshot.docs[i]?.data().buyerUid;
     if (typeof buyerUid === 'string' && buyerUid.trim()) {
       return buyerUid.trim();
     }

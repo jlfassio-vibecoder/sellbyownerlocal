@@ -74,7 +74,7 @@ export const PublicUserResponseSchema = z.object({
 });
 
 export const UserProfileUpdateSchema = z.object({
-  displayName: z.string().min(1).max(100),
+  displayName: z.string().min(1).max(100).optional(),
   storefrontSlug: StorefrontSlugSchema.optional(),
   storefrontName: z.union([z.string().trim().min(1).max(50), z.literal('')]).optional(),
   storefrontTagline: z.union([z.string().trim().min(1).max(150), z.literal('')]).optional(),

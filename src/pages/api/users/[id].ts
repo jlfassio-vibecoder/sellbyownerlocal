@@ -106,18 +106,19 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
       );
     }
 
-    // Copilot suggestion ignored: claim already runs before displayName to avoid partial updates.
     // Claim slug before displayName so a 409/400 does not leave a partial profile update.
     if (parsed.data.storefrontSlug) {
       await claimOrUpdateStorefrontSlug(id, parsed.data.storefrontSlug);
     }
 
-    await updateUserDisplayName(id, parsed.data.displayName);
+    if (parsed.data.displayName) {
+      await updateUserDisplayName(id, parsed.data.displayName);
 
-    try {
-      await auth().updateUser(id, { displayName: parsed.data.displayName.trim() });
-    } catch (authError) {
-      console.warn(`PATCH /api/users/${id}: Firebase Auth displayName sync failed`, authError);
+      try {
+        await auth().updateUser(id, { displayName: parsed.data.displayName.trim() });
+      } catch (authError) {
+        console.warn(`PATCH /api/users/${id}: Firebase Auth displayName sync failed`, authError);
+      }
     }
 
     await updateUserStorefrontBranding(id, {

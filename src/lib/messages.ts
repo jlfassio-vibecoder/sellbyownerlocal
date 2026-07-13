@@ -56,7 +56,12 @@ export function toConversations(messages: Message[]) {
 export function toBuyerConversationRows(
   messages: Message[]
 ): Array<Message & { unreadCount: number }> {
-  return aggregateConversations(messages, 'seller');
+  // Buyer mark-as-read is not implemented yet; do not infer unread from seller isRead
+  // (that flag is only cleared for buyer→seller messages today).
+  return aggregateConversations(messages, 'buyer').map((row) => ({
+    ...row,
+    unreadCount: 0,
+  }));
 }
 
 export function buildBuyerConversation(input: {

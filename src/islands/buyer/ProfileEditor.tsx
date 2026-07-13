@@ -131,15 +131,16 @@ export default function ProfileEditor({
 
     try {
       const body: {
-        displayName: string;
+        displayName?: string;
         storefrontSlug?: string;
         storefrontName?: string;
         storefrontTagline?: string;
         storefrontHeroUrl?: string;
-      } = {
-        // API always requires displayName; storefront mode re-sends the known value.
-        displayName: (isProfileMode ? displayName : initialName).trim() || initialName.trim() || 'User',
-      };
+      } = {};
+
+      if (isProfileMode) {
+        body.displayName = displayName.trim();
+      }
 
       if (isStorefrontMode) {
         body.storefrontName = storefrontName.trim();

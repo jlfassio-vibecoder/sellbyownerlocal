@@ -12,6 +12,9 @@ import {
   VehicleResponseSchema,
 } from '../../../schemas';
 
+/** Enough recent messages to build current conversation rows without unbounded reads. */
+const BUYER_CONVERSATION_MESSAGE_LIMIT = 300;
+
 export const GET: APIRoute = async ({ request, cookies }) => {
   try {
     const session = await requireAuthenticated(request, cookies);
@@ -20,6 +23,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       .collection('messages')
       .where('buyerUid', '==', session.uid)
       .orderBy('timestamp', 'desc')
+      .limit(BUYER_CONVERSATION_MESSAGE_LIMIT)
       .get();
 
     const messages = snapshot.docs.flatMap((messageDoc) => {
@@ -30,9 +34,10 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     const rows = toBuyerConversationRows(messages);
     const vehicleIds = [...new Set(rows.map((row) => row.vehicleId))];
 
-    const vehicleSnaps = await Promise.all(
-      vehicleIds.map((id) => db().collection('vehicles').doc(id).get())
-    );
+    const vehicleSnaps =
+      vehicleIds.length > 0
+        ? await db().getAll(...vehicleIds.map((id) => db().collection('vehicles').doc(id)))
+        : [];
 
     const vehicleMeta = new Map<string, { title: string; imageUrl: string }>();
     for (const snap of vehicleSnaps) {
