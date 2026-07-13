@@ -18,6 +18,7 @@ import MarketChart from '../islands/MarketChart';
 import ContactForm from '../islands/ContactForm';
 import VehicleSectionNav from '../islands/VehicleSectionNav';
 import FavoriteButton from '../islands/buyer/FavoriteButton';
+import SecureCheckoutCTA from '../islands/buyer/SecureCheckoutCTA';
 import WindowSticker from '../islands/WindowSticker';
 import DocumentViewer from '../islands/DocumentViewer.tsx';
 import HistoryReportViewer from '../islands/HistoryReportViewer.tsx';
@@ -42,9 +43,16 @@ interface Props {
   analyticsEnabled?: boolean;
   buyerContext?: BuyerContext;
   initialSaved?: boolean;
+  isVehicleOwner?: boolean;
 }
 
-const { vehicle, analyticsEnabled = true, buyerContext, initialSaved = false } = Astro.props;
+const {
+  vehicle,
+  analyticsEnabled = true,
+  buyerContext,
+  initialSaved = false,
+  isVehicleOwner = false,
+} = Astro.props;
 const view = buildVehicleListingView(vehicle);
 const {
   pageTitle,
@@ -149,6 +157,18 @@ const favoriteTitle =
             />
           </p>
         </div>
+
+        {!isVehicleOwner && (
+          <div class="mt-4">
+            <SecureCheckoutCTA
+              client:load
+              vehicleId={vehicle.id}
+              price={vehicle.price}
+              isLoggedIn={buyerContext?.isLoggedIn ?? false}
+              loginHref={buyerContext?.saveLoginHref ?? buyerContext?.loginHref ?? '/login'}
+            />
+          </div>
+        )}
 
         <p class="max-w-lg text-sm leading-relaxed text-slate-500">
           <AccentText text={descriptionExcerpt} accentClass={accent.tailwindText} />

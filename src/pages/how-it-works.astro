@@ -1,0 +1,29 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getOptionalSellerSession } from '../lib/auth';
+import BuyerMarketplaceNav from '../islands/buyer/BuyerMarketplaceNav';
+
+const session = await getOptionalSellerSession(Astro.request, Astro.cookies);
+const displayName = session?.email?.split('@')[0] ?? 'there';
+---
+
+<Layout
+  title="How It Works · Sell By Owner Local"
+  description="Learn how Sell By Owner Local connects buyers and sellers without dealer markup."
+  ogUrl="/how-it-works"
+>
+  <BuyerMarketplaceNav client:load isLoggedIn={!!session} displayName={displayName} />
+
+  <main class="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+    <h1 class="text-3xl font-bold text-slate-900">How It Works</h1>
+    <p class="mt-4 text-lg text-slate-600">
+      Content coming soon. Sell By Owner Local helps owners list vehicles directly and helps buyers
+      shop without dealer markup.
+    </p>
+    <p class="mt-8">
+      <a href="/vehicles" class="font-semibold text-slate-900 underline underline-offset-2">
+        Search vehicles
+      </a>
+    </p>
+  </main>
+</Layout>

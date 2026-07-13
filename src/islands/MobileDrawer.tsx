@@ -6,6 +6,8 @@ interface MobileDrawerProps {
   onClose: () => void;
   children: ReactNode;
   ariaLabel?: string;
+  /** Seller chrome stays dark; buyer marketplace uses light. */
+  variant?: 'dark' | 'light';
 }
 
 export default function MobileDrawer({
@@ -13,7 +15,10 @@ export default function MobileDrawer({
   onClose,
   children,
   ariaLabel = 'Menu',
+  variant = 'dark',
 }: MobileDrawerProps) {
+  const isLight = variant === 'light';
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -44,9 +49,9 @@ export default function MobileDrawer({
       )}
 
       <div
-        className={`fixed top-0 right-0 z-50 h-full w-64 transform bg-slate-900 shadow-2xl transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed top-0 right-0 z-50 h-full w-72 max-w-[85vw] transform shadow-2xl transition-transform duration-300 ease-in-out ${
+          isLight ? 'bg-white' : 'bg-slate-900'
+        } ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
         role="dialog"
         {...(isOpen ? { 'aria-modal': true as const } : {})}
         aria-label={ariaLabel}
@@ -58,7 +63,11 @@ export default function MobileDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="text-slate-400 transition-colors hover:text-white"
+              className={
+                isLight
+                  ? 'text-slate-500 transition-colors hover:text-slate-900'
+                  : 'text-slate-400 transition-colors hover:text-white'
+              }
               aria-label="Close menu"
             >
               <X size={24} />

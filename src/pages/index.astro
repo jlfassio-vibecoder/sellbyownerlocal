@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import { getOptionalSellerSession } from '../lib/auth';
 import { getPublishedInventory } from '../lib/inventory-api';
+import BuyerMarketplaceNav from '../islands/buyer/BuyerMarketplaceNav';
 import InventoryGrid from '../islands/buyer/InventoryGrid';
 import VehicleMarketplaceHeader from '../components/vehicles/VehicleMarketplaceHeader.astro';
 import VehicleMarketplaceHero from '../components/vehicles/VehicleMarketplaceHero.astro';
@@ -16,6 +17,7 @@ const buyerContext = {
 ---
 
 <Layout>
+  <BuyerMarketplaceNav client:load isLoggedIn={!!session} displayName={displayName} />
   <VehicleMarketplaceHeader />
   <VehicleMarketplaceHero session={session} displayName={displayName} />
 
