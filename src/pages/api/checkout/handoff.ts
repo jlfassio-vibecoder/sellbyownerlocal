@@ -7,19 +7,33 @@ import {
   requireAuthenticated,
   unauthorizedResponse,
 } from '../../../lib/auth';
+// Copilot suggestion ignored: broker-checkout module already exists on this branch after 7d4129a.
 import { generateBrokerCheckoutUrl } from '../../../lib/broker-checkout';
 import { auth, db } from '../../../lib/firebase-admin';
 import { VehicleResponseSchema } from '../../../schemas';
 
 const HandoffBodySchema = z.object({
-  vehicleId: z.string().trim().min(1),
+  vehicleId: z
+    .string()
+    .trim()
+    .min(1)
+    .refine((id) => !id.includes('/'), {
+      message: 'Invalid vehicleId',
+    }),
 });
 
-function jsonError(message: string, status: number): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+function jsonError(
+  message: string,
+  status: number,
+  details?: Record<string, string[] | undefined>
+): Response {
+  return new Response(
+    JSON.stringify(details ? { error: message, details } : { error: message }),
+    {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }
+  );
 }
 
 async function resolveAuthEmail(
@@ -58,7 +72,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const parsed = HandoffBodySchema.safeParse(body);
     if (!parsed.success) {
-      return jsonError('Validation failed', 400);
+      return jsonError('Validation failed', 400, z.flattenError(parsed.error).fieldErrors);
     }
 
     const { vehicleId } = parsed.data;
