@@ -11,6 +11,7 @@ interface InventoryGridProps {
 }
 
 interface InventoryFilters {
+  q: string;
   make: string;
   model: string;
   minPrice: string;
@@ -24,6 +25,7 @@ interface InventoryFilters {
 function parseFiltersFromSearch(search: string): InventoryFilters {
   const params = new URLSearchParams(search);
   return {
+    q: params.get('q') ?? '',
     make: params.get('make') ?? '',
     model: params.get('model') ?? '',
     minPrice: params.get('minPrice') ?? '',
@@ -37,6 +39,7 @@ function parseFiltersFromSearch(search: string): InventoryFilters {
 
 function buildSearchFromFilters(filters: InventoryFilters): string {
   const params = new URLSearchParams();
+  if (filters.q.trim()) params.set('q', filters.q.trim());
   if (filters.make) params.set('make', filters.make);
   if (filters.model) params.set('model', filters.model);
   if (filters.minPrice) params.set('minPrice', filters.minPrice);
@@ -47,6 +50,21 @@ function buildSearchFromFilters(filters: InventoryFilters): string {
   if (filters.maxYear) params.set('maxYear', filters.maxYear);
   const query = params.toString();
   return query ? `?${query}` : '';
+}
+
+function matchesKeyword(vehicle: InventoryVehicle, query: string): boolean {
+  if (!query) return true;
+  const haystack = [
+    vehicle.year,
+    vehicle.make,
+    vehicle.model,
+    vehicle.engine,
+    vehicle.drivetrain,
+    ...(vehicle.highlights ?? []),
+  ]
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(query.toLowerCase());
 }
 
 function normalizeRange(min?: number, max?: number): { min?: number; max?: number } {
@@ -78,8 +96,10 @@ function applyFilters(vehicles: InventoryVehicle[], filters: InventoryFilters): 
   );
 
   const modelFilter = filters.model.trim().toLowerCase();
+  const keyword = filters.q.trim();
 
   return vehicles.filter((vehicle) => {
+    if (!matchesKeyword(vehicle, keyword)) return false;
     if (filters.make && vehicle.make !== filters.make) return false;
     if (modelFilter && vehicle.model.toLowerCase() !== modelFilter) return false;
     if (priceRange.min !== undefined && vehicle.price < priceRange.min) return false;
@@ -101,6 +121,7 @@ export default function InventoryGrid({
   showFab = false,
 }: InventoryGridProps) {
   const [filters, setFilters] = useState<InventoryFilters>({
+    q: '',
     make: '',
     model: '',
     minPrice: '',
@@ -148,6 +169,24 @@ export default function InventoryGrid({
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  useEffect(() => {
+    const focusVehicleSearch = () => {
+      if (window.location.hash !== '#vehicle-search') return;
+      const input = document.getElementById('vehicle-search');
+      if (!(input instanceof HTMLInputElement)) return;
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      input.focus({ preventScroll: true });
+    };
+
+    // Allow layout to settle after navigation / client hydration.
+    const timer = window.setTimeout(focusVehicleSearch, 50);
+    window.addEventListener('hashchange', focusVehicleSearch);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('hashchange', focusVehicleSearch);
+    };
+  }, []);
+
   return (
     <BuyerMarketplaceShell
       isLoggedIn={buyerContext?.isLoggedIn ?? false}
@@ -158,6 +197,19 @@ export default function InventoryGrid({
         <aside className="w-full shrink-0 lg:w-64">
           <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <h2 className="text-sm font-semibold text-slate-900">Filters</h2>
+
+            <label className="block space-y-1">
+              <span className="text-sm text-slate-600">Search</span>
+              <input
+                id="vehicle-search"
+                type="search"
+                value={filters.q}
+                onChange={(e) => updateFilters({ ...filters, q: e.target.value })}
+                placeholder="Make, model, or keyword"
+                className={inputClassName}
+                aria-label="Search vehicles"
+              />
+            </label>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <label className="block space-y-1">

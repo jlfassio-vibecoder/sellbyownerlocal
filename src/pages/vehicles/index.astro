@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import { getOptionalSellerSession } from '../../lib/auth';
 import { getPublishedInventory } from '../../lib/inventory-api';
+import BuyerMarketplaceNav from '../../islands/buyer/BuyerMarketplaceNav';
 import InventoryGrid from '../../islands/buyer/InventoryGrid';
 import VehicleMarketplaceHeader from '../../components/vehicles/VehicleMarketplaceHeader.astro';
 import VehicleMarketplaceHero from '../../components/vehicles/VehicleMarketplaceHero.astro';
@@ -20,6 +21,7 @@ const buyerContext = {
   description="Browse owner-listed cars and trucks with zero dealer markup. Direct from verified sellers in your area."
   ogUrl="/vehicles"
 >
+  <BuyerMarketplaceNav client:load isLoggedIn={!!session} displayName={displayName} />
   <VehicleMarketplaceHeader />
   <VehicleMarketplaceHero session={session} displayName={displayName} />
 
