@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import type { VerificationTier } from '../schemas';
 
 interface ContactFormProps {
@@ -6,9 +6,6 @@ interface ContactFormProps {
   sellerId: string;
   isLoggedIn?: boolean;
   verificationTier?: VerificationTier;
-  userEmail?: string;
-  userDisplayName?: string;
-  userPhone?: string;
   loginHref?: string;
   apiEndpoint?: string;
   listingIdKey?: 'vehicleId' | 'clothingListingId';
@@ -19,9 +16,6 @@ export default function ContactForm({
   sellerId,
   isLoggedIn = false,
   verificationTier = 'anonymous',
-  userEmail = '',
-  userDisplayName = '',
-  userPhone = '',
   loginHref = '/login',
   apiEndpoint = '/api/inquiries',
   listingIdKey = 'vehicleId',
@@ -32,17 +26,6 @@ export default function ContactForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canSubmit = isLoggedIn && verificationTier !== 'anonymous';
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      setFormData((prev) => ({
-        ...prev,
-        name: userDisplayName || prev.name,
-        email: userEmail || prev.email,
-        phone: userPhone || prev.phone,
-      }));
-    }
-  }, [isLoggedIn, userDisplayName, userEmail, userPhone]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -167,7 +150,7 @@ export default function ContactForm({
                     value={formData.name}
                     onChange={handleChange}
                     disabled={!canSubmit}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600 disabled:bg-slate-50"
+                    className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all placeholder:text-slate-400 focus:border-red-600 focus:ring-2 focus:ring-red-600 disabled:bg-slate-50"
                     placeholder="John Doe"
                   />
                 </div>
@@ -183,7 +166,7 @@ export default function ContactForm({
                     value={formData.phone}
                     onChange={handleChange}
                     disabled={!canSubmit}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600 disabled:bg-slate-50"
+                    className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all placeholder:text-slate-400 focus:border-red-600 focus:ring-2 focus:ring-red-600 disabled:bg-slate-50"
                     placeholder="(555) 123-4567"
                   />
                 </div>
@@ -201,7 +184,7 @@ export default function ContactForm({
                   value={formData.email}
                   onChange={handleChange}
                   disabled={!canSubmit}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600 disabled:bg-slate-50"
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all placeholder:text-slate-400 focus:border-red-600 focus:ring-2 focus:ring-red-600 disabled:bg-slate-50"
                   placeholder="john@example.com"
                 />
               </div>
@@ -217,7 +200,7 @@ export default function ContactForm({
                   value={formData.message}
                   onChange={handleChange}
                   disabled={!canSubmit}
-                  className="w-full resize-none rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all focus:border-red-600 focus:ring-2 focus:ring-red-600 disabled:bg-slate-50"
+                  className="w-full resize-none rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all placeholder:text-slate-400 focus:border-red-600 focus:ring-2 focus:ring-red-600 disabled:bg-slate-50"
                   placeholder="I'm interested in this vehicle and would like to..."
                 />
               </div>

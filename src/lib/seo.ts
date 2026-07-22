@@ -1,5 +1,9 @@
 import type { ClothingListing, VehicleResponse } from '../schemas';
-import { resolveHeroImageUrls } from './resolve-display-media';
+import {
+  resolveCarouselImageUrls,
+  resolveGalleryPhotos,
+  resolveHeroImageUrls,
+} from './resolve-display-media';
 import { priceFormatter } from '../utils/formatters';
 
 export const DEFAULT_OG_IMAGE = '/og-default.jpg';
@@ -72,10 +76,16 @@ export function buildVehicleSeoDescription(vehicle: VehicleResponse): string {
 }
 
 export function resolveVehicleOgImage(vehicle: VehicleResponse): string | undefined {
-  const galleryUrl = vehicle.galleryPhotos?.[0]?.url;
+  const heroUrl = resolveHeroImageUrls(vehicle)[0];
+  if (heroUrl) return heroUrl;
+
+  const carouselUrl = resolveCarouselImageUrls(vehicle)[0];
+  if (carouselUrl) return carouselUrl;
+
+  const galleryUrl = resolveGalleryPhotos(vehicle)[0]?.url;
   if (galleryUrl) return galleryUrl;
 
-  return resolveHeroImageUrls(vehicle)[0];
+  return undefined;
 }
 
 export function buildClothingSeoTitle(listing: ClothingListing): string {

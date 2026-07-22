@@ -11,6 +11,7 @@ import AccountFavoritesGrid from '../../islands/buyer/AccountFavoritesGrid';
 import BuyerInbox from '../../islands/buyer/BuyerInbox';
 import ProfileEditor from '../../islands/buyer/ProfileEditor';
 import PhoneOtpAccountVerify from '../../islands/PhoneOtpAccountVerify';
+import HistoryBackLink from '../../islands/HistoryBackLink';
 import SignOutButton from '../../islands/SignOutButton';
 import { getStorefrontPath, resolveStorefrontSegment } from '../../utils/url-helpers';
 import '../../styles/global.css';
@@ -51,9 +52,10 @@ const showFullyVerified = verificationTier === 'identity_verified';
     <header class="bg-slate-900 text-white">
       <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <div class="mb-4 flex items-center justify-between gap-3">
-          <a
-            href="/vehicles"
-            class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-white"
+          <HistoryBackLink
+            client:load
+            fallbackHref="/vehicles"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 transition-colors hover:text-white"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -70,7 +72,7 @@ const showFullyVerified = verificationTier === 'identity_verified';
               <path d="m12 19-7-7 7-7"></path>
             </svg>
             Back
-          </a>
+          </HistoryBackLink>
           <SignOutButton client:load />
         </div>
         <h1 class="text-2xl font-bold">{displayEmail}</h1>

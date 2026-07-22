@@ -8,7 +8,6 @@ interface SellerLayoutProps {
   onTabChange: (tab: SellerTab) => void;
   inquiryCount?: number;
   vehicleTitle?: string;
-  sellerUid?: string;
   children: ReactNode;
 }
 
@@ -17,7 +16,6 @@ export default function SellerLayout({
   onTabChange,
   inquiryCount = 0,
   vehicleTitle,
-  sellerUid,
   children,
 }: SellerLayoutProps) {
   const handleSignOut = async () => {
@@ -37,7 +35,6 @@ export default function SellerLayout({
         onTabChange={onTabChange}
         inquiryCount={inquiryCount}
         vehicleTitle={vehicleTitle}
-        sellerUid={sellerUid}
         onSignOut={handleSignOut}
       />
       <main className="flex flex-1 overflow-hidden">{children}</main>

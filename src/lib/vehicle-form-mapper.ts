@@ -13,11 +13,6 @@ import { resolveSmogCertificateUrls } from './smog-certificate-url';
 import { resolveOriginalStickerUrl } from './original-sticker-url';
 import { resolveHistoryReportUrls } from './history-report-urls';
 import { sortServiceRecordsByDate } from './service-record-sort';
-import {
-  resolveCarouselImageUrls,
-  resolveHeroImageUrls,
-  resolveMarketImageUrls,
-} from './resolve-display-media';
 
 const DEFAULT_PITCH_BLOCKS: Pick<PitchBlock, 'title' | 'icon'>[] = [
   { title: 'The Peace of Mind Guarantee', icon: '🛡️' },
@@ -334,9 +329,9 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
     videoUrl: vehicle.videoUrl ?? '',
     videoPosterUrl: vehicle.videoPosterUrl ?? '',
     images: (vehicle.images ?? []).slice(0, 30),
-    heroImageUrls: resolveHeroImageUrls(vehicle),
-    carouselImageUrls: resolveCarouselImageUrls(vehicle),
-    marketImageUrls: resolveMarketImageUrls(vehicle),
+    heroImageUrls: vehicle.heroImageUrls ?? [],
+    carouselImageUrls: vehicle.carouselImageUrls ?? [],
+    marketImageUrls: vehicle.marketImageUrls ?? [],
     galleryPhotos: (vehicle.galleryPhotos ?? []).map((photo) => ({
       url: photo.url,
       category: photo.category,
@@ -436,11 +431,14 @@ export function formStateToVehiclePatch(
     .slice(0, 30);
   patch.images = images;
 
-  patch.heroImageUrls = state.heroImageUrls;
-  patch.carouselImageUrls = state.carouselImageUrls;
-  patch.marketImageUrls = state.marketImageUrls;
+  const allowedImages = new Set(images);
+  patch.heroImageUrls = state.heroImageUrls.filter((url) => allowedImages.has(url));
+  patch.carouselImageUrls = state.carouselImageUrls.filter((url) => allowedImages.has(url));
+  patch.marketImageUrls = state.marketImageUrls.filter((url) => allowedImages.has(url));
 
-  patch.galleryPhotos = buildGalleryPhotos(state);
+  patch.galleryPhotos = buildGalleryPhotos(state).filter((photo) =>
+    allowedImages.has(photo.url)
+  );
 
   patch.serviceRecords = sortServiceRecordsByDate(state.serviceRecords);
 

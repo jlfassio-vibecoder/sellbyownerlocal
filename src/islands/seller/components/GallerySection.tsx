@@ -36,7 +36,30 @@ export default function GallerySection({
       <GalleryUploadFields
         vehicleId={vehicleId}
         images={images}
-        onChange={(next) => setValue('images', next, { shouldDirty: true })}
+        onChange={(next) => {
+          const allowed = new Set(next);
+          setValue('images', next, { shouldDirty: true });
+          setValue(
+            'heroImageUrls',
+            (watch('heroImageUrls') ?? []).filter((url) => allowed.has(url)),
+            { shouldDirty: true }
+          );
+          setValue(
+            'carouselImageUrls',
+            (watch('carouselImageUrls') ?? []).filter((url) => allowed.has(url)),
+            { shouldDirty: true }
+          );
+          setValue(
+            'marketImageUrls',
+            (watch('marketImageUrls') ?? []).filter((url) => allowed.has(url)),
+            { shouldDirty: true }
+          );
+          setValue(
+            'galleryPhotos',
+            (watch('galleryPhotos') ?? []).filter((photo) => allowed.has(photo.url)),
+            { shouldDirty: true }
+          );
+        }}
         onHeroImageGenerated={(url) =>
           setValue('heroImageUrls', [url], { shouldDirty: true })
         }

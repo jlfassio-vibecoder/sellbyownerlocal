@@ -7,13 +7,14 @@ import {
   Truck,
   type LucideIcon,
 } from 'lucide-react';
-import type { PitchBlock, VehicleResponse } from '../schemas';
+import type { GalleryPhoto, PitchBlock, VehicleResponse } from '../schemas';
 import { isPlaceholderDocumentUrl, resolveOriginalStickerUrl } from './original-sticker-url';
 import { resolveHistoryReportUrls } from './history-report-urls';
 import { resolveKbbReportUrl } from './kbb-report-url';
 import { resolveSmogCertificateUrls } from './smog-certificate-url';
 import {
   resolveCarouselImageUrls,
+  resolveGalleryPhotos,
   resolveHeroImageUrls,
   resolveMarketImageUrls,
 } from './resolve-display-media';
@@ -83,6 +84,7 @@ export interface VehicleListingView {
   heroImage: string | undefined;
   carouselImageUrls: string[];
   marketImageUrls: string[];
+  galleryPhotos: GalleryPhoto[];
   primaryTag: string | undefined;
   availableDocuments: DocumentItem[];
   otherDocuments: DocumentItem[];
@@ -152,6 +154,7 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
   const heroImage = heroImageUrls[0];
   const carouselImageUrls = resolveCarouselImageUrls(vehicle);
   const marketImageUrls = resolveMarketImageUrls(vehicle);
+  const galleryPhotos = resolveGalleryPhotos(vehicle);
   const primaryTag = vehicle.tags[0];
 
   const sellersNote = vehicle.sellersNote;
@@ -170,7 +173,7 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
     navSections.push({ id: 'walkaround', label: 'Walkaround' });
   }
   navSections.push({ id: 'pitch', label: "Seller's Note" });
-  if (vehicle.galleryPhotos?.length) {
+  if (galleryPhotos.length > 0) {
     navSections.push({ id: 'gallery', label: 'Gallery' });
   }
   if (
@@ -211,6 +214,7 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
     heroImage,
     carouselImageUrls,
     marketImageUrls,
+    galleryPhotos,
     primaryTag,
     availableDocuments,
     otherDocuments,

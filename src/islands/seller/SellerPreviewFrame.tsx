@@ -5,14 +5,12 @@ import SellerHeader from './SellerHeader';
 interface SellerPreviewFrameProps {
   vehicleId: string;
   vehicleTitle: string;
-  sellerUid: string;
   inquiryCount: number;
 }
 
 export default function SellerPreviewFrame({
   vehicleId,
   vehicleTitle,
-  sellerUid,
   inquiryCount,
 }: SellerPreviewFrameProps) {
   const handleSignOut = async () => {
@@ -31,7 +29,6 @@ export default function SellerPreviewFrame({
       linkBasePath={`/seller/vehicles/${vehicleId}`}
       inquiryCount={inquiryCount}
       vehicleTitle={vehicleTitle}
-      sellerUid={sellerUid}
       onSignOut={handleSignOut}
     />
   );

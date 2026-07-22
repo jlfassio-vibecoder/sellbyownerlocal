@@ -13,7 +13,6 @@ interface SellerVehicleShellProps {
   vehicleVin?: string;
   hasMonroney?: boolean;
   initialTab?: SellerTab;
-  sellerUid: string;
   initialInquiries: InquiryRecord[];
   initialFormState: VehicleFormState;
 }
@@ -25,7 +24,6 @@ export default function SellerVehicleShell({
   vehicleVin,
   hasMonroney: initialHasMonroney = false,
   initialTab = 'messages',
-  sellerUid,
   initialInquiries,
   initialFormState,
 }: SellerVehicleShellProps) {
@@ -58,7 +56,6 @@ export default function SellerVehicleShell({
       onTabChange={setActiveTab}
       inquiryCount={initialInquiries.length}
       vehicleTitle={vehicleTitle}
-      sellerUid={sellerUid}
     >
       {tabContent}
     </SellerLayout>

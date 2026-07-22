@@ -1,4 +1,6 @@
 ---
+import SystemStatusBadge from '../islands/SystemStatusBadge';
+
 interface Props {
   uid: string;
 }
@@ -10,11 +12,16 @@ const { uid } = Astro.props;
   class="mb-8 rounded-xl border border-red-100 bg-red-50 px-5 py-4 shadow-sm"
   aria-label="Account identifier"
 >
-  <p class="text-[10px] font-bold uppercase tracking-wider text-red-600">Your UID</p>
-  <p class="mt-1 font-mono text-lg font-semibold text-slate-900 break-all select-all">
-    {uid}
-  </p>
-  <p class="mt-2 text-xs text-slate-500">
-    Link this ID to your vehicle listings in Firestore as <code class="text-slate-700">sellerId</code>.
-  </p>
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div class="min-w-0">
+      <p class="text-[10px] font-bold uppercase tracking-wider text-red-600">Your UID</p>
+      <p class="mt-1 font-mono text-lg font-semibold text-slate-900 break-all select-all">
+        {uid}
+      </p>
+      <p class="mt-2 text-xs text-slate-500">
+        Link this ID to your vehicle listings in Firestore as <code class="text-slate-700">sellerId</code>.
+      </p>
+    </div>
+    <SystemStatusBadge client:idle />
+  </div>
 </section>
