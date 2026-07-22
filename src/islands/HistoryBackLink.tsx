@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 
 interface HistoryBackLinkProps {
   fallbackHref?: string;
@@ -20,7 +20,7 @@ export default function HistoryBackLink({
   className,
   children,
 }: HistoryBackLinkProps) {
-  const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (!hasSameOriginReferrer()) {
       return;
     }

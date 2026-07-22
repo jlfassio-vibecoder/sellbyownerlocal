@@ -31,6 +31,7 @@ type HealthCache = {
 };
 
 let healthCache: HealthCache | null = null;
+let inFlightProbe: Promise<HealthResponse> | null = null;
 
 async function timedProbe(probe: () => Promise<void>): Promise<ServiceResult> {
   const started = Date.now();
@@ -97,8 +98,17 @@ export const GET: APIRoute = async () => {
     return jsonResponse(healthCache.payload);
   }
 
-  const payload = await runHealthProbes();
-  healthCache = { payload, cachedAt: now };
+  if (!inFlightProbe) {
+    inFlightProbe = runHealthProbes()
+      .then((payload) => {
+        healthCache = { payload, cachedAt: Date.now() };
+        return payload;
+      })
+      .finally(() => {
+        inFlightProbe = null;
+      });
+  }
 
+  const payload = await inFlightProbe;
   return jsonResponse(payload);
 };

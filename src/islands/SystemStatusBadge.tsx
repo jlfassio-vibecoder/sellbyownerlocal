@@ -44,7 +44,6 @@ async function fetchHealth(): Promise<HealthResponse | null> {
   try {
     const response = await fetch('/api/health', {
       method: 'GET',
-      cache: 'no-store',
     });
     if (!response.ok) {
       return null;
