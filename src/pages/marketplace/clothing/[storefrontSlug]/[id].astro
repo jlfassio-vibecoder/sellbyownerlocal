@@ -3,7 +3,6 @@ import Layout from '../../../../layouts/Layout.astro';
 import { getOptionalSession } from '../../../../lib/auth';
 import {
   resolveSellerByStorefrontParam,
-  getUserProfile,
 } from '../../../../lib/buyer-profile';
 import { getClothingListingById } from '../../../../lib/clothing-api';
 import {
@@ -75,7 +74,6 @@ const heroImage = listing.galleryPhotos?.[0];
 const hasGalleryImages = galleryImages.length > 0;
 const session = await getOptionalSession(Astro.request, Astro.cookies);
 const isStorefrontOwner = Boolean(session?.uid && session.uid === resolvedSeller.id);
-const profile = session ? await getUserProfile(session.uid) : null;
 const storefrontPath = getStorefrontPath(canonicalSegment);
 
 let initialSaved = false;
@@ -90,9 +88,6 @@ if (session) {
 const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
-  userEmail: session?.email ?? '',
-  userDisplayName: profile?.displayName ?? '',
-  userPhone: profile?.phone ?? '',
   loginHref: `/login?next=${encodeURIComponent(`${canonicalPath}#contact`)}`,
 };
 
@@ -303,9 +298,6 @@ const storefrontTitle =
       sellerId={listing.sellerId}
       isLoggedIn={buyerContext.isLoggedIn}
       verificationTier={buyerContext.verificationTier}
-      userEmail={buyerContext.userEmail}
-      userDisplayName={buyerContext.userDisplayName}
-      userPhone={buyerContext.userPhone}
       loginHref={buyerContext.loginHref}
     />
   </main>

@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import {
   BarChart3,
-  CheckCircle2,
-  Copy,
   Globe,
   LayoutGrid,
   LogOut,
@@ -20,7 +18,6 @@ export type SellerTab = 'messages' | 'inquiries' | 'insights' | 'details';
 interface SellerHeaderBaseProps {
   inquiryCount?: number;
   vehicleTitle?: string;
-  sellerUid?: string;
   onSignOut: () => void;
 }
 
@@ -70,41 +67,10 @@ interface TabConfig {
   icon: LucideIcon;
 }
 
-function SellerUidBadge({
-  uid,
-  onCopy,
-  className = '',
-}: {
-  uid: string;
-  onCopy: () => void;
-  className?: string;
-}) {
-  return (
-    <div className={`flex min-w-0 items-start gap-2 ${className}`} aria-label="Account identifier">
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-red-400">Your UID</p>
-        <p className="mt-0.5 truncate font-mono text-xs text-slate-200" title={uid}>
-          {uid}
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onCopy}
-        className="shrink-0 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
-        aria-label="Copy UID"
-        title="Copy UID"
-      >
-        <Copy size={14} aria-hidden="true" />
-      </button>
-    </div>
-  );
-}
-
 export default function SellerHeader(props: SellerHeaderProps) {
   const {
     inquiryCount = 0,
     vehicleTitle,
-    sellerUid,
     onSignOut,
     navigationMode = 'state',
   } = props;
@@ -112,19 +78,6 @@ export default function SellerHeader(props: SellerHeaderProps) {
   const onTabChange = navigationMode === 'state' ? props.onTabChange : undefined;
   const linkBasePath = navigationMode === 'link' ? props.linkBasePath : undefined;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [uidCopied, setUidCopied] = useState(false);
-
-  const copyUid = async () => {
-    if (!sellerUid) return;
-
-    try {
-      await navigator.clipboard.writeText(sellerUid);
-      setUidCopied(true);
-      window.setTimeout(() => setUidCopied(false), 2500);
-    } catch {
-      // Clipboard API may be unavailable; ignore silently.
-    }
-  };
 
   const tabs: TabConfig[] = [
     { id: 'messages', label: 'Live Chat', icon: MessageCircle },
@@ -181,17 +134,6 @@ export default function SellerHeader(props: SellerHeaderProps) {
           </nav>
 
           <div className="flex shrink-0 items-center gap-4 text-sm text-slate-300">
-            {sellerUid ? (
-              <SellerUidBadge
-                uid={sellerUid}
-                onCopy={copyUid}
-                className="hidden max-w-[160px] md:block lg:max-w-[200px]"
-              />
-            ) : null}
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-green-500" />
-              System Online
-            </div>
             <a
               href="/seller"
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
@@ -285,9 +227,6 @@ export default function SellerHeader(props: SellerHeaderProps) {
         </a>
 
         <div className="mt-6 border-t border-slate-700 pt-6">
-          {sellerUid ? (
-            <SellerUidBadge uid={sellerUid} onCopy={copyUid} className="mb-4 px-1" />
-          ) : null}
           <a
             href="/account"
             className="mb-2 flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
@@ -306,16 +245,6 @@ export default function SellerHeader(props: SellerHeaderProps) {
           </button>
         </div>
       </MobileDrawer>
-
-      {uidCopied ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-4 right-4 z-50 rounded-md bg-emerald-600 px-4 py-3 font-medium text-white shadow-lg"
-        >
-          UID Copied
-        </div>
-      ) : null}
     </>
   );
 }

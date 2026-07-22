@@ -3,11 +3,11 @@ import { z } from 'zod';
 import { db } from '../../lib/firebase-admin';
 import { VehicleResponseSchema } from '../../schemas';
 import { getOptionalSession } from '../../lib/auth';
-import { getUserProfile } from '../../lib/buyer-profile';
 import { resolveVehicleDisplayMonroney } from '../../lib/resolve-display-monroney';
 import {
   buildVehicleSeoDescription,
   buildVehicleSeoTitle,
+  DEFAULT_OG_IMAGE,
   resolveVehicleOgImage,
 } from '../../lib/seo';
 import Layout from '../../layouts/Layout.astro';
@@ -56,11 +56,10 @@ const listingVehicle = displayMonroney ? { ...vehicle, monroney: displayMonroney
 
 const seoTitle = buildVehicleSeoTitle(listingVehicle);
 const seoDescription = buildVehicleSeoDescription(listingVehicle);
-const seoImage = resolveVehicleOgImage(listingVehicle);
+const seoImage = resolveVehicleOgImage(listingVehicle) ?? DEFAULT_OG_IMAGE;
 const canonicalUrl = `/vehicles/${canonicalSlug}`;
 
 const session = await getOptionalSession(Astro.request, Astro.cookies);
-const profile = session ? await getUserProfile(session.uid) : null;
 
 let initialSaved = false;
 if (session) {
@@ -74,9 +73,6 @@ if (session) {
 const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
-  userEmail: session?.email ?? '',
-  userDisplayName: profile?.displayName ?? '',
-  userPhone: profile?.phone ?? '',
   loginHref: `/login?next=${encodeURIComponent(`${canonicalUrl}#contact`)}`,
   saveLoginHref: `/login?next=${encodeURIComponent(canonicalUrl)}`,
 };

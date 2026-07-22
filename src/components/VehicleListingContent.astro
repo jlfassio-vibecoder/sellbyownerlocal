@@ -31,9 +31,6 @@ import { Check, Download } from 'lucide-react';
 interface BuyerContext {
   isLoggedIn: boolean;
   verificationTier: VerificationTier;
-  userEmail: string;
-  userDisplayName: string;
-  userPhone: string;
   loginHref: string;
   saveLoginHref?: string;
 }
@@ -60,6 +57,7 @@ const {
   heroImage,
   carouselImageUrls,
   marketImageUrls,
+  galleryPhotos,
   primaryTag,
   otherDocuments,
   originalStickerUrl,
@@ -443,8 +441,8 @@ const favoriteTitle =
   </section>
 
   {
-    vehicle.galleryPhotos && vehicle.galleryPhotos.length > 0 && (
-      <Gallery client:load photos={vehicle.galleryPhotos} />
+    galleryPhotos.length > 0 && (
+      <Gallery client:load photos={galleryPhotos} />
     )
   }
 
@@ -620,9 +618,6 @@ const favoriteTitle =
     sellerId={vehicle.sellerId}
     isLoggedIn={buyerContext?.isLoggedIn ?? false}
     verificationTier={buyerContext?.verificationTier ?? 'anonymous'}
-    userEmail={buyerContext?.userEmail ?? ''}
-    userDisplayName={buyerContext?.userDisplayName ?? ''}
-    userPhone={buyerContext?.userPhone ?? ''}
     loginHref={buyerContext?.loginHref ?? '/login'}
   />
 
