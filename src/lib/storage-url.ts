@@ -82,3 +82,19 @@ export function parseOwnedStorageObjectPath(url: string, bucketName: string): st
 
   return null;
 }
+
+/**
+ * Like parseOwnedStorageObjectPath, but only for objects under vehicles/{vehicleId}/.
+ * Returns null for external URLs or paths outside this vehicle's prefix.
+ */
+export function parseVehicleOwnedStorageObjectPath(
+  url: string,
+  vehicleId: string,
+  bucketName: string
+): string | null {
+  const path = parseOwnedStorageObjectPath(url, bucketName);
+  if (!path) return null;
+  const prefix = `vehicles/${vehicleId}/`;
+  if (!path.startsWith(prefix)) return null;
+  return path;
+}

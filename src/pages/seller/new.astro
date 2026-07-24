@@ -1,10 +1,10 @@
 ---
 import NewListingForm from '../../islands/NewListingForm';
-import { requireDealerOrRedirect } from '../../lib/auth';
+import { requireSellerOrRedirect } from '../../lib/auth';
 import '../../styles/global.css';
 
-const dealer = await requireDealerOrRedirect(Astro.request, Astro.cookies);
-if (dealer instanceof Response) return dealer;
+const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
+if (seller instanceof Response) return seller;
 ---
 
 <html lang="en">
@@ -15,9 +15,9 @@ if (dealer instanceof Response) return dealer;
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
-    <title>New AI Listing · Dealer Workspace</title>
+    <title>New Listing · Sell By Owner Local</title>
   </head>
   <body class="min-h-screen bg-slate-50 py-12 px-4">
-    <NewListingForm client:load mode="dealer" />
+    <NewListingForm client:load mode="seller" />
   </body>
 </html>

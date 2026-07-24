@@ -1,0 +1,103 @@
+---
+import type { VideoEmbed } from '../utils/video';
+import { youtubePosterUrl } from '../utils/video';
+
+interface Props {
+  embed: VideoEmbed;
+  posterUrl?: string;
+  title?: string;
+}
+
+const { embed, posterUrl, title = 'Vehicle Walkaround Video' } = Astro.props;
+
+const facadePoster =
+  embed.kind === 'youtube' && embed.id
+    ? youtubePosterUrl(embed.id)
+    : posterUrl;
+
+const allowAttr =
+  'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+---
+
+<div
+  class="walkaround-video relative mx-auto w-full max-w-4xl overflow-hidden rounded-xl border border-slate-200 bg-slate-900 shadow-lg"
+  style="padding-bottom:56.25%;height:0"
+  data-walkaround-video
+>
+  {
+    embed.kind === 'file' ? (
+      <video
+        controls
+        preload="metadata"
+        poster={posterUrl}
+        class="absolute inset-0 h-full w-full border-0 object-cover"
+        title={title}
+      >
+        <source src={embed.embedUrl} type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+    ) : (
+      <button
+        type="button"
+        class="absolute inset-0 flex h-full w-full cursor-pointer items-center justify-center border-0 bg-slate-900 p-0 text-left"
+        data-walkaround-facade
+        data-embed-src={embed.embedUrl}
+        data-embed-title={title}
+        data-embed-allow={allowAttr}
+        aria-label={`Play ${title}`}
+      >
+        {facadePoster ? (
+          <img
+            src={facadePoster}
+            alt=""
+            class="absolute inset-0 h-full w-full object-cover"
+            loading="eager"
+            decoding="async"
+          />
+        ) : null}
+        <span
+          class="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-lg ring-4 ring-white/30"
+          aria-hidden="true"
+        >
+          <svg class="ml-1 h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z"></path>
+          </svg>
+        </span>
+      </button>
+    )
+  }
+</div>
+
+<script>
+  function mountWalkaroundIframe(button: HTMLButtonElement) {
+    const src = button.dataset.embedSrc;
+    const title = button.dataset.embedTitle || 'Vehicle Walkaround Video';
+    const allow =
+      button.dataset.embedAllow ||
+      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    if (!src) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.src = src;
+    iframe.title = title;
+    iframe.width = '560';
+    iframe.height = '315';
+    iframe.allow = allow;
+    iframe.allowFullscreen = true;
+    iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    iframe.className = 'absolute inset-0 h-full w-full border-0';
+
+    button.replaceWith(iframe);
+  }
+
+  function bindFacades(root: ParentNode = document) {
+    root.querySelectorAll<HTMLButtonElement>('[data-walkaround-facade]').forEach((button) => {
+      if (button.dataset.bound === '1') return;
+      button.dataset.bound = '1';
+      button.addEventListener('click', () => mountWalkaroundIframe(button), { once: true });
+    });
+  }
+
+  bindFacades();
+  document.addEventListener('astro:page-load', () => bindFacades());
+</script>

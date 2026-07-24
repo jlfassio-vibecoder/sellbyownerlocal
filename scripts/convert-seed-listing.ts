@@ -1,6 +1,7 @@
 #!/usr/bin/env npx tsx
 /**
  * Duplicate vehicles/seed-ram-1500 into a production-style listing with a Firestore auto-ID.
+ * After conversion, the seed document is set to status "draft" so it no longer appears in inventory.
  *
  * The app routes public listings at /vehicles/[id] using the Firestore document ID directly
  * (no slug field). New listings created via generate-listing use collection('vehicles').add().
@@ -97,12 +98,13 @@ async function main() {
 
   const newRef = db.collection('vehicles').doc();
   await newRef.set(parsed.data);
+  await seedRef.update({ status: 'draft' });
 
   const vehicle = { ...parsed.data, id: newRef.id };
   const listingUrl = `${resolveBaseUrl()}${getVehicleListingPath(vehicle)}`;
 
   console.log('Seed listing converted successfully.');
-  console.log(`  Source (unchanged): vehicles/${SEED_DOC_ID}`);
+  console.log(`  Source (now draft): vehicles/${SEED_DOC_ID}`);
   console.log(`  New document:       vehicles/${newRef.id}`);
   console.log(`  Status:             ${parsed.data.status}`);
   console.log(`  Seller ID:          ${parsed.data.sellerId}`);

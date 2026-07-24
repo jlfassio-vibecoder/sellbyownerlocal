@@ -66,7 +66,7 @@ export default function DesktopRailNav({
 
   return (
     <nav
-      className={`hidden md:flex shrink-0 flex-col overflow-hidden bg-slate-800 transition-all duration-300 ${
+      className={`hidden h-full min-h-0 md:flex shrink-0 flex-col overflow-hidden bg-slate-800 transition-all duration-300 ${
         isRailOpen ? 'w-64' : 'w-16'
       }`}
     >

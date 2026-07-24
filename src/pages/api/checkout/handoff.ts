@@ -92,6 +92,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const vehicle = vehicleParsed.data;
 
+    if (vehicle.inventorySource === 'dealer_comp') {
+      return jsonError('Checkout is not available for dealer comparable listings', 403);
+    }
+
     if (session.uid === vehicle.sellerId) {
       throw new ForbiddenError('Owners cannot start checkout on their own listing');
     }

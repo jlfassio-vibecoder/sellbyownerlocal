@@ -18,6 +18,7 @@ import {
   resolveHeroImageUrls,
   resolveMarketImageUrls,
 } from './resolve-display-media';
+import { toVideoEmbed, type VideoEmbed } from '../utils/video';
 export { canEmbedPdf, isPdfUrl } from './pdf-url';
 export { mileageFormatter, priceFormatter } from '../utils/formatters';
 
@@ -54,18 +55,6 @@ export type DocumentItem = {
   url: string;
 };
 
-function getYoutubeId(url: string): string | null {
-  const match = url.match(
-    /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/
-  );
-  return match?.[1] ?? null;
-}
-
-function getVimeoId(url: string): string | null {
-  const match = url.match(/vimeo\.com\/(?:.*#|.*\/videos\/)?([0-9]+)/);
-  return match?.[1] ?? null;
-}
-
 function normalizePosterUrl(posterUrl: string): string {
   if (posterUrl.includes('imgur.com') && !posterUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
     const imgurMatch = posterUrl.match(/imgur\.com\/([a-zA-Z0-9]+)/);
@@ -97,10 +86,8 @@ export interface VehicleListingView {
   showWindowStickerSection: boolean;
   showDocumentsSection: boolean;
   historyReportUrls: string[];
-  walkaroundVideoUrl: string | undefined;
   walkaroundPosterUrl: string | undefined;
-  walkaroundYoutubeId: string | null;
-  walkaroundVimeoId: string | null;
+  walkaroundEmbed: VideoEmbed | null;
   sellersNote: VehicleResponse['sellersNote'];
   pitchSubtitle: string;
   pitchIntro: string;
@@ -136,12 +123,10 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
     Boolean(smogCertificateUrls.length > 0) ||
     otherDocuments.length > 0;
 
-  const walkaroundVideoUrl = vehicle.videoUrl;
+  const walkaroundEmbed = vehicle.videoUrl ? toVideoEmbed(vehicle.videoUrl) : null;
   const walkaroundPosterUrl = vehicle.videoPosterUrl
     ? normalizePosterUrl(vehicle.videoPosterUrl)
     : undefined;
-  const walkaroundYoutubeId = walkaroundVideoUrl ? getYoutubeId(walkaroundVideoUrl) : null;
-  const walkaroundVimeoId = walkaroundVideoUrl ? getVimeoId(walkaroundVideoUrl) : null;
 
   const pageTitle =
     vehicle.listingTitle?.trim() ||
@@ -169,7 +154,7 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
     sellersNote?.ctaButtonLabel ?? 'Contact Seller to Schedule a Showing';
 
   const navSections: { id: string; label: string }[] = [{ id: 'overview', label: 'Overview' }];
-  if (vehicle.videoUrl) {
+  if (walkaroundEmbed) {
     navSections.push({ id: 'walkaround', label: 'Walkaround' });
   }
   navSections.push({ id: 'pitch', label: "Seller's Note" });
@@ -188,7 +173,9 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
   }
   navSections.push({ id: 'features', label: 'Utility' });
   navSections.push({ id: 'specs', label: 'Specifications' });
-  navSections.push({ id: 'contact', label: 'Contact' });
+  if (vehicle.inventorySource !== 'dealer_comp') {
+    navSections.push({ id: 'contact', label: 'Contact' });
+  }
   if (showWindowStickerSection) {
     navSections.push({ id: 'build-sheet', label: 'Build Sheet' });
   }
@@ -227,10 +214,8 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
     showWindowStickerSection,
     showDocumentsSection,
     historyReportUrls,
-    walkaroundVideoUrl,
     walkaroundPosterUrl,
-    walkaroundYoutubeId,
-    walkaroundVimeoId,
+    walkaroundEmbed,
     sellersNote,
     pitchSubtitle,
     pitchIntro,

@@ -80,6 +80,13 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       });
     }
 
+    if (vehicleData?.inventorySource === 'dealer_comp') {
+      return new Response(
+        JSON.stringify({ error: 'Inquiries are not available for dealer comparable listings' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     await db().collection('inquiries').add({
       vehicleId,
       sellerId,

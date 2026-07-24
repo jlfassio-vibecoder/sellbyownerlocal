@@ -24,6 +24,9 @@ async function resolveListingSellerId(itemId: string): Promise<string | null> {
     if (!snapshot.exists) continue;
 
     const data = snapshot.data() as Record<string, unknown> | undefined;
+    if (collection === 'vehicles' && data?.inventorySource === 'dealer_comp') {
+      return null;
+    }
     const sellerId = data?.sellerId;
     return typeof sellerId === 'string' && sellerId.trim() ? sellerId.trim() : null;
   }

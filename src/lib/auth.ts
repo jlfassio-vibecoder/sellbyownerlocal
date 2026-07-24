@@ -89,7 +89,12 @@ async function decodeToken(token: string): Promise<DecodedTokenBase> {
 }
 
 export async function enrichSession(base: DecodedTokenBase): Promise<UserSession> {
-  const verificationTier = await resolveVerificationTier(base.uid);
+  let verificationTier: VerificationTier = 'anonymous';
+  try {
+    verificationTier = await resolveVerificationTier(base.uid);
+  } catch (error) {
+    console.error('resolveVerificationTier failed; defaulting to anonymous', error);
+  }
   return {
     uid: base.uid,
     email: base.email,

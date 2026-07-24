@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { Loader2, Sparkles, Upload, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Sparkles, Star, Upload, X } from 'lucide-react';
 import { generateHeroImage } from '../../lib/ai-api';
 import { uploadDocument } from '../../lib/seller-api';
 
@@ -10,6 +10,8 @@ interface GalleryUploadFieldsProps {
   vehicleId: string;
   images: string[];
   onChange: (images: string[]) => void;
+  coverUrl?: string;
+  onSetCover?: (url: string) => void;
   onHeroImageGenerated?: (url: string) => void;
 }
 
@@ -17,6 +19,8 @@ export default function GalleryUploadFields({
   vehicleId,
   images,
   onChange,
+  coverUrl,
+  onSetCover,
   onHeroImageGenerated,
 }: GalleryUploadFieldsProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,6 +47,15 @@ export default function GalleryUploadFields({
 
   const handleRemove = (index: number) => {
     onChange(images.filter((_, i) => i !== index));
+  };
+
+  const handleMove = (index: number, delta: number) => {
+    const to = index + delta;
+    if (to < 0 || to >= images.length) return;
+    const sorted = [...images];
+    const [removed] = sorted.splice(index, 1);
+    sorted.splice(to, 0, removed!);
+    onChange(sorted);
   };
 
   const handleSort = () => {
@@ -76,7 +89,7 @@ export default function GalleryUploadFields({
 
     const remaining = MAX_IMAGES - imagesRef.current.length;
     if (remaining <= 0) {
-      setError(`Maximum of ${MAX_IMAGES} media library images allowed.`);
+      setError(`Maximum of ${MAX_IMAGES} photos allowed.`);
       return;
     }
 
@@ -183,8 +196,8 @@ export default function GalleryUploadFields({
     <div className="border-t border-slate-100 pt-6">
       <h3 className="mb-1 text-lg font-bold text-slate-900">Upload Photos</h3>
       <p className="mb-4 text-sm text-slate-500">
-        Up to {MAX_IMAGES} images (max 20MB each). Drag thumbnails to reorder. Select multiple
-        files at once to bulk upload.
+        Up to {MAX_IMAGES} images (max 20MB each). Star a photo for the cover, use arrows or drag
+        to reorder. Select multiple files at once to bulk upload.
       </p>
 
       <button
@@ -208,40 +221,95 @@ export default function GalleryUploadFields({
 
       {showGrid && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-4">
-          {images.map((url, index) => (
-            <div
-              key={`${url}-${index}`}
-              draggable={!isBusy}
-              onDragStart={() => {
-                dragItem.current = index;
-              }}
-              onDragEnter={() => {
-                dragOverItem.current = index;
-              }}
-              onDragEnd={handleSort}
-              onDragOver={(e) => e.preventDefault()}
-              className="relative group cursor-grab active:cursor-grabbing"
-            >
-              <img
-                src={url}
-                alt={`Media library image ${index + 1}`}
-                draggable={false}
-                className="pointer-events-none aspect-[4/3] w-full select-none rounded-lg border border-slate-200 object-cover"
-              />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRemove(index);
+          {images.map((url, index) => {
+            const isCover = coverUrl === url;
+            return (
+              <div
+                key={`${url}-${index}`}
+                draggable={!isBusy}
+                onDragStart={() => {
+                  dragItem.current = index;
                 }}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="absolute top-2 right-2 rounded-full bg-red-600 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 z-10"
-                aria-label={`Remove media library image ${index + 1}`}
+                onDragEnter={() => {
+                  dragOverItem.current = index;
+                }}
+                onDragEnd={handleSort}
+                onDragOver={(e) => e.preventDefault()}
+                className="relative group cursor-grab active:cursor-grabbing"
               >
-                <X size={14} />
-              </button>
-            </div>
-          ))}
+                <img
+                  src={url}
+                  alt={`Photo ${index + 1}`}
+                  draggable={false}
+                  className="pointer-events-none aspect-[4/3] w-full select-none rounded-lg border border-slate-200 object-cover"
+                />
+                {onSetCover ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSetCover(url);
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className={`absolute top-2 left-2 z-10 rounded-full bg-white/90 p-1 shadow-sm transition-opacity ${
+                      isCover
+                        ? 'opacity-100'
+                        : 'opacity-0 group-hover:opacity-100 focus:opacity-100'
+                    }`}
+                    aria-label={isCover ? 'Cover photo' : 'Set as cover'}
+                  >
+                    <Star
+                      size={14}
+                      className={
+                        isCover ? 'fill-amber-400 text-amber-400' : 'text-slate-600'
+                      }
+                      aria-hidden="true"
+                    />
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemove(index);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="absolute top-2 right-2 z-10 rounded-full bg-red-600 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+                  aria-label={`Remove photo ${index + 1}`}
+                >
+                  <X size={14} />
+                </button>
+                <div className="absolute bottom-2 left-2 right-2 z-10 flex justify-between opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                  <button
+                    type="button"
+                    disabled={isBusy || index === 0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMove(index, -1);
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="rounded-full bg-white/90 p-1 text-slate-700 shadow-sm disabled:opacity-40"
+                    aria-label="Move left"
+                  >
+                    <ChevronLeft size={14} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isBusy || index === images.length - 1}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMove(index, 1);
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="rounded-full bg-white/90 p-1 text-slate-700 shadow-sm disabled:opacity-40"
+                    aria-label="Move right"
+                  >
+                    <ChevronRight size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
 
           {canAddMore && (
             <div

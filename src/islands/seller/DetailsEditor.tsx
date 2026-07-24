@@ -48,7 +48,7 @@ const SECTION_LABELS: Record<SectionId, string> = {
   market: 'Market Valuation',
   highlights: 'Highlights & Utility',
   video: 'Video',
-  gallery: 'Media Library',
+  gallery: 'Photos',
   documents: 'Documents',
 };
 
@@ -184,7 +184,7 @@ export default function DetailsEditor({
     <>
       <form
         onSubmit={handleSubmit(onValidSubmit)}
-        className="flex-1 min-h-0 flex overflow-hidden bg-slate-50"
+        className="flex h-full min-h-0 flex-1 overflow-hidden bg-slate-50"
       >
         <DesktopRailNav
           vehicleId={vehicleId}
@@ -194,15 +194,15 @@ export default function DetailsEditor({
           onSelect={(id) => setActiveSection(id as SectionId)}
         />
 
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <MobilePillNav
             sections={sections}
             activeId={activeSection}
             onSelect={(id) => setActiveSection(id as SectionId)}
           />
 
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="max-w-2xl mx-auto space-y-6">
+          <div className="min-h-0 flex-1 overflow-y-auto p-8">
+            <div className="mx-auto max-w-2xl space-y-6">
               <div style={sectionStyle('basics')}>
                 <BasicsSection
                   {...sectionProps}
@@ -240,12 +240,12 @@ export default function DetailsEditor({
             </div>
           </div>
 
-          <div className="shrink-0 border-t border-slate-200 bg-white px-8 py-4 flex items-center gap-4">
+          <div className="flex shrink-0 items-center gap-4 border-t border-slate-200 bg-white px-8 py-4">
             <span className="text-sm text-slate-500">{SECTION_LABELS[activeSection]}</span>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="ml-auto bg-slate-900 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-70"
+              className="ml-auto flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-6 py-2.5 font-bold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:opacity-70"
             >
               <Save size={18} />
               {isSubmitting ? 'Saving...' : 'Save Changes'}
