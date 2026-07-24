@@ -128,14 +128,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     const { vin, vehicleId, prospect, stickerFile } = parsed.data;
-    const isDealerCreate = Boolean(prospect && !vehicleId);
+    const isCreate = !vehicleId;
     const isSellerPopulate = Boolean(vehicleId);
 
-    if (!isDealerCreate && !isSellerPopulate) {
-      return jsonError('Provide vehicleId (seller) or prospect without vehicleId (dealer create)', 400);
+    if (!isCreate && !isSellerPopulate) {
+      return jsonError(
+        'Provide vehicleId to populate an existing listing, or omit it to create a new listing.',
+        400
+      );
     }
 
-    if (isDealerCreate && !session.isDealer) {
+    if (isCreate && prospect && !session.isDealer) {
       return forbiddenResponse('Dealer access required');
     }
 
@@ -206,7 +209,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         content: generation.content,
         sellerId: session.uid,
         sellerName,
-        prospect,
+        ...(prospect ? { prospect } : {}),
         aiGeneration,
         monroney,
       });

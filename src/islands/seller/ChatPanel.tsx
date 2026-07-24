@@ -10,7 +10,8 @@ interface ChatPanelProps {
   vehicleTitle: string;
 }
 
-const POLL_INTERVAL_MS = 3000;
+const POLL_INTERVAL_MS = 15_000;
+const MAX_CONSECUTIVE_POLL_FAILURES = 3;
 
 export default function ChatPanel({ vehicleId, vehicleTitle }: ChatPanelProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -22,24 +23,34 @@ export default function ChatPanel({ vehicleId, vehicleTitle }: ChatPanelProps) {
 
   useEffect(() => {
     let cancelled = false;
+    let consecutiveFailures = 0;
+    let intervalId: number | undefined;
 
     const fetchConversations = async () => {
       try {
         const data = await getConversations(vehicleId);
         if (!cancelled) {
+          consecutiveFailures = 0;
           setConversations(data);
         }
       } catch (err) {
         console.error('Failed to fetch conversations', err);
+        consecutiveFailures += 1;
+        if (consecutiveFailures >= MAX_CONSECUTIVE_POLL_FAILURES && intervalId != null) {
+          window.clearInterval(intervalId);
+          intervalId = undefined;
+        }
       }
     };
 
     fetchConversations();
-    const intervalId = window.setInterval(fetchConversations, POLL_INTERVAL_MS);
+    intervalId = window.setInterval(fetchConversations, POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      if (intervalId != null) {
+        window.clearInterval(intervalId);
+      }
     };
   }, [vehicleId]);
 
@@ -50,15 +61,23 @@ export default function ChatPanel({ vehicleId, vehicleTitle }: ChatPanelProps) {
     }
 
     let cancelled = false;
+    let consecutiveFailures = 0;
+    let intervalId: number | undefined;
 
     const fetchMessages = async () => {
       try {
         const data = await getSessionMessages(activeSession, vehicleId);
         if (!cancelled) {
+          consecutiveFailures = 0;
           setMessages(data);
         }
       } catch (err) {
         console.error('Failed to fetch messages', err);
+        consecutiveFailures += 1;
+        if (consecutiveFailures >= MAX_CONSECUTIVE_POLL_FAILURES && intervalId != null) {
+          window.clearInterval(intervalId);
+          intervalId = undefined;
+        }
       }
     };
 
@@ -79,11 +98,13 @@ export default function ChatPanel({ vehicleId, vehicleTitle }: ChatPanelProps) {
 
     fetchMessages();
     markRead();
-    const intervalId = window.setInterval(fetchMessages, POLL_INTERVAL_MS);
+    intervalId = window.setInterval(fetchMessages, POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      if (intervalId != null) {
+        window.clearInterval(intervalId);
+      }
     };
   }, [activeSession, vehicleId]);
 

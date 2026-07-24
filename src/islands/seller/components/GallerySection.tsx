@@ -27,15 +27,17 @@ export default function GallerySection({
 
   return (
     <>
-      <h2 className="mb-2 text-2xl font-bold text-slate-900">Media Library</h2>
+      <h2 className="mb-2 text-2xl font-bold text-slate-900">Photos</h2>
       <p className="mb-6 text-sm text-slate-500">
-        Upload all your vehicle photos here first. You will select which photos appear in specific
-        sections (like the Hero or Market Valuation) below.
+        Upload all your vehicle photos here first. Star a photo to set the cover, or select which
+        photos appear in specific sections (like the Hero or Market Valuation) below.
       </p>
 
       <GalleryUploadFields
         vehicleId={vehicleId}
         images={images}
+        coverUrl={heroImageUrls[0]}
+        onSetCover={(url) => setValue('heroImageUrls', [url], { shouldDirty: true })}
         onChange={(next) => {
           const allowed = new Set(next);
           setValue('images', next, { shouldDirty: true });
@@ -57,6 +59,31 @@ export default function GallerySection({
           setValue(
             'galleryPhotos',
             (watch('galleryPhotos') ?? []).filter((photo) => allowed.has(photo.url)),
+            { shouldDirty: true }
+          );
+          setValue(
+            'pitchBlock0ImageUrls',
+            (watch('pitchBlock0ImageUrls') ?? []).filter((url) => allowed.has(url)),
+            { shouldDirty: true }
+          );
+          setValue(
+            'pitchBlock1ImageUrls',
+            (watch('pitchBlock1ImageUrls') ?? []).filter((url) => allowed.has(url)),
+            { shouldDirty: true }
+          );
+          setValue(
+            'pitchBlock2ImageUrls',
+            (watch('pitchBlock2ImageUrls') ?? []).filter((url) => allowed.has(url)),
+            { shouldDirty: true }
+          );
+          setValue(
+            'pitchBlock3ImageUrls',
+            (watch('pitchBlock3ImageUrls') ?? []).filter((url) => allowed.has(url)),
+            { shouldDirty: true }
+          );
+          setValue(
+            'modificationImageUrls',
+            (watch('modificationImageUrls') ?? []).filter((url) => allowed.has(url)),
             { shouldDirty: true }
           );
         }}

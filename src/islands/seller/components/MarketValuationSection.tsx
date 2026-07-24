@@ -398,9 +398,10 @@ export default function MarketValuationSection({
               <h3 className="text-sm font-medium text-slate-700">Comparable Vehicles</h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 Up to 5 dealer listings shown in the pricing comparison chart. Drag to reorder the
-                default view. Optional specs, exterior color, and source URL enrich chart
-                labels. Source URLs are stored for your records but not linked on the public
-                listing. Your listing price and mileage are added automatically.
+                default view. Optional specs, exterior color, image URL, and source URL enrich the
+                card. On promoted public listings, only the source site name is shown (not linked).
+                After promoting, saving this form also updates the public marketplace card price and
+                details. Your listing price and mileage are added automatically.
               </p>
             </div>
             <button
@@ -412,6 +413,7 @@ export default function MarketValuationSection({
                   price: 0,
                   mileage: undefined,
                   sourceUrl: '',
+                  imageUrl: '',
                   matchLevel: 'exact',
                   differences: [],
                 })
@@ -433,6 +435,7 @@ export default function MarketValuationSection({
                 <ComparableRow
                   key={field.id}
                   index={index}
+                  vehicleId={vehicleId}
                   register={register}
                   setValue={setValue}
                   watch={watch}

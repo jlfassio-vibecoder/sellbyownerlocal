@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { VehicleFormState } from '../../../schemas';
 import MediaPickerModal from '../MediaPickerModal';
 import type { DetailsSectionFormProps } from './form-section-types';
 
@@ -58,9 +57,23 @@ export default function PitchBlockEditor({ watch, setValue }: PitchBlockEditorPr
                 {selectedUrls.map((url, index) => (
                   <div
                     key={`${url}-${index}`}
-                    className="h-16 w-16 overflow-hidden rounded-md border border-slate-200 bg-white"
+                    className="relative h-16 w-16 overflow-hidden rounded-md border border-slate-200 bg-white"
                   >
                     <img src={url} alt="" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      aria-label="Remove image"
+                      onClick={() =>
+                        setValue(
+                          field,
+                          selectedUrls.filter((_, i) => i !== index),
+                          { shouldDirty: true }
+                        )
+                      }
+                      className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded bg-slate-900/70 text-xs font-bold text-white hover:bg-slate-900"
+                    >
+                      ×
+                    </button>
                   </div>
                 ))}
               </div>

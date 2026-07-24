@@ -13,6 +13,7 @@ import { resolveSmogCertificateUrls } from './smog-certificate-url';
 import { resolveOriginalStickerUrl } from './original-sticker-url';
 import { resolveHistoryReportUrls } from './history-report-urls';
 import { sortServiceRecordsByDate } from './service-record-sort';
+import { normalizeVideoUrlForStorage } from '../utils/video';
 
 const DEFAULT_PITCH_BLOCKS: Pick<PitchBlock, 'title' | 'icon'>[] = [
   { title: 'The Peace of Mind Guarantee', icon: '🛡️' },
@@ -80,9 +81,32 @@ function buildGalleryPhotos(state: VehicleFormState): GalleryPhoto[] {
     });
 }
 
+/** Append pitch/mod/gallery URLs missing from the master library so orphans become deletable. */
+function absorbOrphanImageUrls(vehicle: VehicleResponse): string[] {
+  const library = (vehicle.images ?? []).filter((url) => url.trim().length > 0);
+  const seen = new Set(library);
+  const orphans: string[] = [];
+
+  const consider = (url: string | undefined) => {
+    const trimmed = url?.trim() ?? '';
+    if (!trimmed || seen.has(trimmed)) return;
+    seen.add(trimmed);
+    orphans.push(trimmed);
+  };
+
+  for (const block of vehicle.sellersNote?.blocks ?? []) {
+    for (const url of block.images ?? []) consider(url);
+  }
+  for (const url of vehicle.modificationImageUrls ?? []) consider(url);
+  for (const photo of vehicle.galleryPhotos ?? []) consider(photo.url);
+
+  return [...library, ...orphans].slice(0, 30);
+}
+
 function buildPitchBlocks(
   state: VehicleFormState,
-  existing: VehicleResponse
+  existing: VehicleResponse,
+  allowedImages: Set<string>
 ): PitchBlock[] {
   const existingBlocks = existing.sellersNote?.blocks ?? [];
 
@@ -90,8 +114,9 @@ function buildPitchBlocks(
     const existingBlock = existingBlocks[index];
     const defaults = DEFAULT_PITCH_BLOCKS[index]!;
     const body = optionalString(state[bodyKey] as string | undefined);
-    const imageUrls =
-      (state[FORM_BLOCK_IMAGE_KEYS[index]!] as string[] | undefined) ?? [];
+    const imageUrls = (
+      (state[FORM_BLOCK_IMAGE_KEYS[index]!] as string[] | undefined) ?? []
+    ).filter((url) => allowedImages.has(url));
 
     return {
       title: existingBlock?.title ?? defaults.title,
@@ -162,6 +187,7 @@ function sanitizeComparable(
   comparable: VehicleFormState['marketValuation']['comparables'][number]
 ) {
   const sourceUrl = optionalString(comparable.sourceUrl as string | undefined).trim();
+  const imageUrl = optionalString(comparable.imageUrl as string | undefined).trim();
   const matchLevel = comparable.matchLevel ?? 'exact';
   const differences = (comparable.differences ?? [])
     .map((d) => (typeof d === 'string' ? d.trim() : ''))
@@ -172,6 +198,7 @@ function sanitizeComparable(
     mileage: sanitizeOptionalNumber(comparable.mileage),
     price: sanitizeOptionalNumber(comparable.price) ?? 0,
     sourceUrl: sourceUrl || undefined,
+    imageUrl: imageUrl || undefined,
     matchLevel,
     differences,
   };
@@ -240,6 +267,8 @@ function buildMarketValuation(state: VehicleFormState): MarketValuation | undefi
       ...(c.drivetrain?.trim() ? { drivetrain: c.drivetrain.trim() } : {}),
       ...(c.color?.trim() ? { color: c.color.trim() } : {}),
       ...(c.sourceUrl?.trim() ? { sourceUrl: c.sourceUrl.trim() } : {}),
+      ...(c.imageUrl?.trim() ? { imageUrl: c.imageUrl.trim() } : {}),
+      ...(c.promotedVehicleId?.trim() ? { promotedVehicleId: c.promotedVehicleId.trim() } : {}),
       matchLevel: c.matchLevel,
       differences: c.differences,
     }));
@@ -328,7 +357,7 @@ export function vehicleToFormState(vehicle: VehicleResponse): VehicleFormState {
     highlight4Text: highlights[3]?.text ?? '',
     videoUrl: vehicle.videoUrl ?? '',
     videoPosterUrl: vehicle.videoPosterUrl ?? '',
-    images: (vehicle.images ?? []).slice(0, 30),
+    images: absorbOrphanImageUrls(vehicle),
     heroImageUrls: vehicle.heroImageUrls ?? [],
     carouselImageUrls: vehicle.carouselImageUrls ?? [],
     marketImageUrls: vehicle.marketImageUrls ?? [],
@@ -359,8 +388,14 @@ export function formStateToVehiclePatch(
     price: parseCurrencyString(state.price),
   };
 
+  const images = state.images
+    .map((url) => url.trim())
+    .filter((url) => url.length > 0)
+    .slice(0, 30);
+  const allowedImages = new Set(images);
+
   const sellersNote: NonNullable<VehicleDashboardUpdate['sellersNote']> = {
-    blocks: buildPitchBlocks(state, existing),
+    blocks: buildPitchBlocks(state, existing, allowedImages),
   };
 
   const subtitle = optionalString(state.subtitle).trim();
@@ -403,7 +438,9 @@ export function formStateToVehiclePatch(
   }
 
   patch.modifications = buildModifications(state);
-  patch.modificationImageUrls = (state.modificationImageUrls ?? []).slice(0, 3);
+  patch.modificationImageUrls = (state.modificationImageUrls ?? [])
+    .filter((url) => allowedImages.has(url))
+    .slice(0, 3);
 
   const originalStickerUrl = optionalString(state.originalStickerUrl).trim();
   if (originalStickerUrl) {
@@ -419,19 +456,17 @@ export function formStateToVehiclePatch(
 
   patch.historyReportUrls = state.historyReportUrls;
 
-  const videoUrl = optionalString(state.videoUrl).trim();
-  if (videoUrl) patch.videoUrl = videoUrl;
+  const videoUrlRaw = optionalString(state.videoUrl).trim();
+  if (videoUrlRaw) {
+    const normalized = normalizeVideoUrlForStorage(videoUrlRaw);
+    if (normalized) patch.videoUrl = normalized;
+  }
 
   const videoPosterUrl = optionalString(state.videoPosterUrl).trim();
   if (videoPosterUrl) patch.videoPosterUrl = videoPosterUrl;
 
-  const images = state.images
-    .map((url) => url.trim())
-    .filter((url) => url.length > 0)
-    .slice(0, 30);
   patch.images = images;
 
-  const allowedImages = new Set(images);
   patch.heroImageUrls = state.heroImageUrls.filter((url) => allowedImages.has(url));
   patch.carouselImageUrls = state.carouselImageUrls.filter((url) => allowedImages.has(url));
   patch.marketImageUrls = state.marketImageUrls.filter((url) => allowedImages.has(url));

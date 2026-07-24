@@ -8,9 +8,12 @@ import {
   requireSeller,
   unauthorizedResponse,
 } from '../../../../lib/auth';
-import { db } from '../../../../lib/firebase-admin';
+import { db, storageBucket } from '../../../../lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { formStateToVehiclePatch } from '../../../../lib/vehicle-form-mapper';
+import { buildPromotedComparablePatch } from '../../../../lib/build-vehicle-from-comparable';
+import { deleteStorageObjectBestEffort } from '../../../../lib/storage-upload';
+import { parseVehicleOwnedStorageObjectPath } from '../../../../lib/storage-url';
 import {
   VehicleDashboardUpdateSchema,
   VehicleFormStateSchema,
@@ -122,6 +125,52 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
     }
 
     await db().collection('vehicles').doc(vehicleId).update(firestoreUpdate);
+
+    // Best-effort: delete GCS objects removed from master images (never fail the PATCH).
+    // Copilot suggestion ignored: comps/docs Storage cleanup is out of Phase 3 scope (master images only).
+    try {
+      const previousImages = vehicle.images ?? [];
+      const nextImages = new Set(patchParsed.data.images ?? []);
+      const removed = previousImages.filter((url) => !nextImages.has(url));
+      const bucketName = storageBucket().name;
+
+      for (const url of removed) {
+        const objectPath = parseVehicleOwnedStorageObjectPath(url, vehicleId, bucketName);
+        if (objectPath) {
+          await deleteStorageObjectBestEffort(objectPath, { vehicleId });
+        }
+      }
+    } catch (cleanupError) {
+      console.error(
+        `PATCH /api/seller/vehicles/${vehicleId} storage cleanup failed`,
+        cleanupError
+      );
+    }
+
+    const comparables = patchParsed.data.marketValuation?.comparables ?? [];
+    await Promise.all(
+      comparables.map(async (comparable) => {
+        const promotedId = comparable.promotedVehicleId?.trim();
+        if (!promotedId) return;
+
+        const promotedPatch = buildPromotedComparablePatch(comparable);
+        if (!promotedPatch) return;
+
+        const promotedDoc = await db().collection('vehicles').doc(promotedId).get();
+        if (!promotedDoc.exists) return;
+
+        const promotedData = promotedDoc.data() as Record<string, unknown> | undefined;
+        if (
+          promotedData?.inventorySource !== 'dealer_comp' ||
+          promotedData?.parentVehicleId !== vehicleId ||
+          promotedData?.sellerId !== vehicle.sellerId
+        ) {
+          return;
+        }
+
+        await db().collection('vehicles').doc(promotedId).update(promotedPatch);
+      })
+    );
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

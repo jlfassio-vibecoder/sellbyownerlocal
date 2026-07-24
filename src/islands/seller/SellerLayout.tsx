@@ -29,7 +29,7 @@ export default function SellerLayout({
   };
 
   return (
-    <div className="flex h-screen min-h-screen flex-col bg-[#f8f9fa] font-sans text-slate-900">
+    <div className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-[#f8f9fa] font-sans text-slate-900">
       <SellerHeader
         activeTab={activeTab}
         onTabChange={onTabChange}
@@ -37,7 +37,7 @@ export default function SellerLayout({
         vehicleTitle={vehicleTitle}
         onSignOut={handleSignOut}
       />
-      <main className="flex flex-1 overflow-hidden">{children}</main>
+      <main className="flex min-h-0 flex-1 overflow-hidden">{children}</main>
     </div>
   );
 }

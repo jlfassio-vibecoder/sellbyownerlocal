@@ -55,7 +55,7 @@ export default function PhotoGalleryEditor({
 
       {fields.length === 0 ? (
         <p className="mt-4 text-sm text-slate-500">
-          No gallery photos selected yet. Upload to the Media Library first, then choose photos
+          No gallery photos selected yet. Upload to Photos first, then choose photos
           above.
         </p>
       ) : (

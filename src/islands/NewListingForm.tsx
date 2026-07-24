@@ -1,10 +1,14 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { Loader2, Sparkles } from 'lucide-react';
 import { generateHeroImage, generateListingFromVin } from '../lib/ai-api';
 import { readStickerFileAsDataUri, STICKER_FILE_ACCEPT } from '../lib/sticker-file';
 
-interface DealerFormValues {
+interface NewListingFormProps {
+  mode: 'dealer' | 'seller';
+}
+
+interface ListingFormValues {
   firstName: string;
   lastName: string;
   vin: string;
@@ -26,7 +30,8 @@ function stepIndex(step: Step): number {
   return -1;
 }
 
-export default function DealerNewListingForm() {
+export default function NewListingForm({ mode }: NewListingFormProps) {
+  const isDealer = mode === 'dealer';
   const [step, setStep] = useState<Step>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [stickerFile, setStickerFile] = useState<string | undefined>();
@@ -38,11 +43,11 @@ export default function DealerNewListingForm() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<DealerFormValues>({
+  } = useForm<ListingFormValues>({
     defaultValues: { firstName: '', lastName: '', vin: '' },
   });
 
-  const onSubmit = async (values: DealerFormValues) => {
+  const onSubmit = async (values: ListingFormValues) => {
     setErrorMessage(null);
 
     let vehicleId: string;
@@ -51,15 +56,19 @@ export default function DealerNewListingForm() {
       setStep('text');
       const listing = await generateListingFromVin({
         vin: values.vin.trim().toUpperCase(),
-        prospect: {
-          firstName: values.firstName.trim(),
-          lastName: values.lastName.trim(),
-        },
+        ...(isDealer
+          ? {
+              prospect: {
+                firstName: values.firstName.trim(),
+                lastName: values.lastName.trim(),
+              },
+            }
+          : {}),
         ...(stickerFile ? { stickerFile } : {}),
       });
       vehicleId = listing.vehicleId;
       if (listing.partial) {
-        console.warn('Dealer listing generated with partial content', listing.fieldErrors);
+        console.warn('Listing generated with partial content', listing.fieldErrors);
       }
       setStickerFile(undefined);
       setStickerFileName(null);
@@ -67,7 +76,7 @@ export default function DealerNewListingForm() {
         stickerInputRef.current.value = '';
       }
     } catch (error) {
-      console.error('Dealer listing generation failed', error);
+      console.error('Listing generation failed', error);
       setStep('error');
       setErrorMessage(
         error instanceof Error ? error.message : 'Generation failed. Please retry.'
@@ -89,7 +98,7 @@ export default function DealerNewListingForm() {
   const activeIndex = stepIndex(step);
   const isBusy = step !== 'idle' && step !== 'error' && step !== 'done';
 
-  const handleStickerSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStickerSelect = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       setStickerFile(undefined);
@@ -119,10 +128,13 @@ export default function DealerNewListingForm() {
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-white">
           <Sparkles size={22} aria-hidden="true" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-900">AI VIN Listing Generator</h1>
+        <h1 className="text-2xl font-bold text-slate-900">
+          {isDealer ? 'AI VIN Listing Generator' : 'Generate your listing'}
+        </h1>
         <p className="mt-2 text-sm text-slate-600">
-          Enter customer details and a VIN to generate a personalized listing with Monroney sticker
-          data and hero image.
+          {isDealer
+            ? 'Enter customer details and a VIN to generate a personalized listing with Monroney sticker data and hero image.'
+            : 'Enter your VIN to generate a personalized listing with Monroney sticker data and hero image.'}
         </p>
       </div>
 
@@ -130,36 +142,38 @@ export default function DealerNewListingForm() {
         onSubmit={handleSubmit(onSubmit)}
         className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="firstName" className="mb-2 block text-sm font-medium text-slate-700">
-              Customer First Name
-            </label>
-            <input
-              id="firstName"
-              {...register('firstName', { required: 'First name is required' })}
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600"
-              disabled={isBusy}
-            />
-            {errors.firstName ? (
-              <p className="mt-1 text-xs text-red-600">{errors.firstName.message}</p>
-            ) : null}
+        {isDealer ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="firstName" className="mb-2 block text-sm font-medium text-slate-700">
+                Customer First Name
+              </label>
+              <input
+                id="firstName"
+                {...register('firstName', { required: 'First name is required' })}
+                className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600"
+                disabled={isBusy}
+              />
+              {errors.firstName ? (
+                <p className="mt-1 text-xs text-red-600">{errors.firstName.message}</p>
+              ) : null}
+            </div>
+            <div>
+              <label htmlFor="lastName" className="mb-2 block text-sm font-medium text-slate-700">
+                Customer Last Name
+              </label>
+              <input
+                id="lastName"
+                {...register('lastName', { required: 'Last name is required' })}
+                className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600"
+                disabled={isBusy}
+              />
+              {errors.lastName ? (
+                <p className="mt-1 text-xs text-red-600">{errors.lastName.message}</p>
+              ) : null}
+            </div>
           </div>
-          <div>
-            <label htmlFor="lastName" className="mb-2 block text-sm font-medium text-slate-700">
-              Customer Last Name
-            </label>
-            <input
-              id="lastName"
-              {...register('lastName', { required: 'Last name is required' })}
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600"
-              disabled={isBusy}
-            />
-            {errors.lastName ? (
-              <p className="mt-1 text-xs text-red-600">{errors.lastName.message}</p>
-            ) : null}
-          </div>
-        </div>
+        ) : null}
 
         <div>
           <label htmlFor="vin" className="mb-2 block text-sm font-medium text-slate-700">

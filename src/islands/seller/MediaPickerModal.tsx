@@ -110,7 +110,7 @@ export default function MediaPickerModal({
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {libraryUrls.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-500">
-              No images in your media library yet. Upload photos in the Media Library section first.
+              No images in your Photos library yet. Upload photos in the Photos section first.
             </p>
           ) : (
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">

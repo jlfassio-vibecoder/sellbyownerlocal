@@ -8,13 +8,13 @@ export default function VideoSection({ register }: DetailsSectionFormProps) {
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            Walkaround Video URL (MP4)
+            Walkaround Video URL or Embed
           </label>
           <input
             type="text"
             {...register('videoUrl')}
             className={INPUT_CLASS_SIMPLE}
-            placeholder="https://example.com/video.mp4"
+            placeholder="https://youtu.be/…, https://vimeo.com/…, MP4 URL, or iframe embed"
           />
         </div>
         <div>

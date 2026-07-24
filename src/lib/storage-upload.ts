@@ -4,6 +4,7 @@ import { storageBucket } from './firebase-admin';
 export type VehicleUploadFolder =
   | 'documents'
   | 'gallery'
+  | 'comps'
   | 'original_sticker'
   | 'history_report'
   | 'kbb_report'
@@ -85,6 +86,22 @@ export async function uploadVehicleFile({
   await makeObjectPublicIfSupported(gcsFile);
 
   return buildPublicStorageUrl(bucket.name, objectPath);
+}
+
+/** Best-effort GCS delete; never throws (missing objects are ignored). */
+export async function deleteStorageObjectBestEffort(
+  objectPath: string,
+  context?: { vehicleId?: string }
+): Promise<void> {
+  try {
+    await storageBucket().file(objectPath).delete({ ignoreNotFound: true });
+  } catch (error) {
+    console.error(
+      `Failed to delete storage object ${objectPath}` +
+        (context?.vehicleId ? ` (vehicleId=${context.vehicleId})` : ''),
+      error
+    );
+  }
 }
 
 /** Firebase-compatible public download URL (works with bucket IAM public read). */

@@ -37,6 +37,7 @@ export async function uploadDocument(
   purpose:
     | 'document'
     | 'gallery'
+    | 'comps'
     | 'original_sticker'
     | 'history_report'
     | 'kbb_report'
@@ -172,4 +173,21 @@ export async function populateMonroneyFromSticker(
   }
 
   return (await res.json()) as PopulateMonroneyFromStickerResponse;
+}
+
+export async function promoteComparableToMarketplace(
+  parentVehicleId: string,
+  comparableIndex: number
+): Promise<{ vehicleId: string; path: string }> {
+  const res = await fetch('/api/seller/vehicles/from-comparable', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ parentVehicleId, comparableIndex }),
+  });
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
+
+  return (await res.json()) as { vehicleId: string; path: string };
 }

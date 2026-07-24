@@ -73,7 +73,9 @@ if (session) {
 const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
-  loginHref: `/login?next=${encodeURIComponent(`${canonicalUrl}#contact`)}`,
+  loginHref: `/login?next=${encodeURIComponent(
+    vehicle.inventorySource === 'dealer_comp' ? canonicalUrl : `${canonicalUrl}#contact`
+  )}`,
   saveLoginHref: `/login?next=${encodeURIComponent(canonicalUrl)}`,
 };
 const isVehicleOwner = Boolean(session?.uid && session.uid === vehicle.sellerId);

@@ -23,6 +23,7 @@ const GALLERY_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 type UploadPurpose =
   | 'document'
   | 'gallery'
+  | 'comps'
   | 'original_sticker'
   | 'history_report'
   | 'kbb_report'
@@ -30,6 +31,7 @@ type UploadPurpose =
 
 function parsePurpose(raw: FormDataEntryValue | null): UploadPurpose {
   if (raw === 'gallery') return 'gallery';
+  if (raw === 'comps') return 'comps';
   if (raw === 'original_sticker') return 'original_sticker';
   if (raw === 'history_report') return 'history_report';
   if (raw === 'kbb_report') return 'kbb_report';
@@ -104,8 +106,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       throw error;
     }
 
-    const maxFileSize = purpose === 'gallery' ? MAX_GALLERY_FILE_SIZE : MAX_DOCUMENT_FILE_SIZE;
-    const maxFileSizeLabel = purpose === 'gallery' ? '20MB' : '5MB';
+    const isImagePurpose = purpose === 'gallery' || purpose === 'comps';
+    const maxFileSize = isImagePurpose ? MAX_GALLERY_FILE_SIZE : MAX_DOCUMENT_FILE_SIZE;
+    const maxFileSizeLabel = isImagePurpose ? '20MB' : '5MB';
 
     if (file.size > maxFileSize) {
       return new Response(JSON.stringify({ error: `File size exceeds ${maxFileSizeLabel} limit` }), {
@@ -122,9 +125,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    if (purpose === 'gallery' && !GALLERY_MIME_TYPES.has(contentType)) {
+    if (isImagePurpose && !GALLERY_MIME_TYPES.has(contentType)) {
       return new Response(
-        JSON.stringify({ error: 'Gallery uploads must be PNG, JPEG, or WebP images' }),
+        JSON.stringify({
+          error:
+            purpose === 'comps'
+              ? 'Comp image uploads must be PNG, JPEG, or WebP images'
+              : 'Gallery uploads must be PNG, JPEG, or WebP images',
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -132,15 +140,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const folder =
       purpose === 'gallery'
         ? 'gallery'
-        : purpose === 'original_sticker'
-          ? 'original_sticker'
-          : purpose === 'history_report'
-            ? 'history_report'
-            : purpose === 'kbb_report'
-              ? 'kbb_report'
-              : purpose === 'smog_certificate'
-                ? 'smog_certificate'
-                : 'documents';
+        : purpose === 'comps'
+          ? 'comps'
+          : purpose === 'original_sticker'
+            ? 'original_sticker'
+            : purpose === 'history_report'
+              ? 'history_report'
+              : purpose === 'kbb_report'
+                ? 'kbb_report'
+                : purpose === 'smog_certificate'
+                  ? 'smog_certificate'
+                  : 'documents';
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const url = await uploadVehicleFile({

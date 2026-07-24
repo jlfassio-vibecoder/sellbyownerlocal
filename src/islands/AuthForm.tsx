@@ -99,7 +99,11 @@ async function exchangeSessionAndRedirect(): Promise<void> {
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || 'Failed to establish session');
+    throw new Error(
+      typeof data.error === 'string'
+        ? data.error
+        : 'Could not complete sign-in. Please try again in a moment.'
+    );
   }
 
   window.location.href = resolvePostLoginPath();

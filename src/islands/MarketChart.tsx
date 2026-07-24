@@ -3,6 +3,7 @@ import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 
 import type { MarketComparable, MarketValuation } from '../schemas';
 import MarkdownText from '../components/MarkdownText';
 import { getAccent } from '../lib/accent-colors';
+import { formatSourceSiteLabel } from '../lib/source-site-label';
 
 interface MarketChartProps {
   price: number;
@@ -72,14 +73,6 @@ function formatComparableLabel(c: MarketComparable): string {
   return name + mileageSuffix;
 }
 
-function parseSourceHostname(url: string): string | undefined {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return undefined;
-  }
-}
-
 function ChartTooltipContent({
   active,
   payload,
@@ -141,6 +134,9 @@ function buildChartData(
       const differences = (point.differences ?? [])
         .map((d) => (typeof d === 'string' ? d.trim() : ''))
         .filter(Boolean);
+      const sourceHost = point.sourceUrl?.trim()
+        ? formatSourceSiteLabel(point.sourceUrl.trim())
+        : undefined;
       return {
         name: formatComparableLabel(point),
         value: point.price,
@@ -148,9 +144,7 @@ function buildChartData(
         fill: '#e2e8f0',
         matchLevel: point.matchLevel ?? 'exact',
         ...(differences.length > 0 ? { differences } : {}),
-        ...(point.sourceUrl?.trim()
-          ? { sourceHost: parseSourceHostname(point.sourceUrl.trim()) }
-          : {}),
+        ...(sourceHost ? { sourceHost } : {}),
       };
     });
 

@@ -15,6 +15,7 @@ import ImageCarousel from '../islands/ImageCarousel';
 import ChatWidget from '../islands/ChatWidget';
 import Gallery from '../islands/Gallery';
 import MarketChart from '../islands/MarketChart';
+import MarketCompsGrid from '../islands/MarketCompsGrid';
 import ContactForm from '../islands/ContactForm';
 import VehicleSectionNav from '../islands/VehicleSectionNav';
 import FavoriteButton from '../islands/buyer/FavoriteButton';
@@ -26,6 +27,8 @@ import ServiceTimeline from '../islands/ServiceTimeline';
 import AccentText from './AccentText';
 import ImageTrioGallery from './ImageTrioGallery.astro';
 import MarkdownText from './MarkdownText';
+import WalkaroundVideo from './WalkaroundVideo.astro';
+import { formatSourceSiteLabel } from '../lib/source-site-label';
 import { Check, Download } from 'lucide-react';
 
 interface BuyerContext {
@@ -69,10 +72,8 @@ const {
   showWindowStickerSection,
   showDocumentsSection,
   historyReportUrls,
-  walkaroundVideoUrl,
   walkaroundPosterUrl,
-  walkaroundYoutubeId,
-  walkaroundVimeoId,
+  walkaroundEmbed,
   sellersNote,
   pitchSubtitle,
   pitchIntro,
@@ -89,6 +90,10 @@ const accent = getAccent(vehicle.accentColor);
 const analyticsSectionIds = navSections.map((section) => section.id);
 const favoriteTitle =
   vehicle.listingTitle?.trim() || `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+const isDealerComp = vehicle.inventorySource === 'dealer_comp';
+const sourceSiteLabel = vehicle.externalSourceUrl
+  ? formatSourceSiteLabel(vehicle.externalSourceUrl)
+  : undefined;
 ---
 
 {
@@ -109,7 +114,7 @@ const favoriteTitle =
   accentColor={vehicle.accentColor}
   sections={navSections}
   saveVehicle={
-    buyerContext
+    buyerContext && !isDealerComp
       ? {
           vehicleId: vehicle.id,
           title: favoriteTitle,
@@ -156,7 +161,7 @@ const favoriteTitle =
           </p>
         </div>
 
-        {!isVehicleOwner && (
+        {!isVehicleOwner && !isDealerComp && (
           <div class="mt-4">
             <SecureCheckoutCTA
               client:load
@@ -167,6 +172,22 @@ const favoriteTitle =
             />
           </div>
         )}
+
+        {
+          isDealerComp && sourceSiteLabel && (
+            <div class="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                External dealer listing
+              </p>
+              <p class="text-sm font-medium text-slate-700">
+                {sourceSiteLabel}
+              </p>
+              <p class="mt-2 text-xs text-slate-500">
+                Source site is shown for reference and is not linked.
+              </p>
+            </div>
+          )
+        }
 
         <p class="max-w-lg text-sm leading-relaxed text-slate-500">
           <AccentText text={descriptionExcerpt} accentClass={accent.tailwindText} />
@@ -210,19 +231,23 @@ const favoriteTitle =
       </div>
 
       <div class="group relative h-80 w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 shadow-sm">
-        <div class="absolute top-3 right-3 z-20">
-          <FavoriteButton
-            client:load
-            itemId={vehicle.id}
-            title={favoriteTitle}
-            price={vehicle.price}
-            category="vehicle"
-            sellerId={vehicle.sellerId}
-            isLoggedIn={buyerContext?.isLoggedIn ?? false}
-            verificationTier={buyerContext?.verificationTier ?? 'anonymous'}
-            initialSaved={initialSaved}
-          />
-        </div>
+        {
+          !isDealerComp && (
+            <div class="absolute top-3 right-3 z-20">
+              <FavoriteButton
+                client:load
+                itemId={vehicle.id}
+                title={favoriteTitle}
+                price={vehicle.price}
+                category="vehicle"
+                sellerId={vehicle.sellerId}
+                isLoggedIn={buyerContext?.isLoggedIn ?? false}
+                verificationTier={buyerContext?.verificationTier ?? 'anonymous'}
+                initialSaved={initialSaved}
+              />
+            </div>
+          )
+        }
         {
           heroImage ? (
             <img
@@ -271,7 +296,7 @@ const favoriteTitle =
   />
 
   {
-    walkaroundVideoUrl && (
+    walkaroundEmbed && (
       <section id="walkaround" class="mb-16 pt-4">
         <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm md:p-8">
           <h2 class="mb-4 text-2xl font-bold text-slate-900">Detailed Walkaround</h2>
@@ -279,37 +304,11 @@ const favoriteTitle =
             Take a closer look at the exterior, interior, and engine bay in this comprehensive
             walkaround video.
           </p>
-          <div class="relative mx-auto aspect-video w-full max-w-4xl overflow-hidden rounded-xl border border-slate-200 bg-slate-900 shadow-lg">
-            {walkaroundYoutubeId ? (
-              <iframe
-                src={`https://www.youtube.com/embed/${walkaroundYoutubeId}`}
-                title="Vehicle walkaround video"
-                class="absolute top-0 left-0 h-full w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen
-                loading="lazy"
-              />
-            ) : walkaroundVimeoId ? (
-              <iframe
-                src={`https://player.vimeo.com/video/${walkaroundVimeoId}`}
-                title="Vehicle walkaround video"
-                class="absolute top-0 left-0 h-full w-full"
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowfullscreen
-                loading="lazy"
-              />
-            ) : (
-              <video
-                controls
-                preload="none"
-                poster={walkaroundPosterUrl}
-                class="h-full w-full object-cover"
-              >
-                <source src={walkaroundVideoUrl} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-            )}
-          </div>
+          <WalkaroundVideo
+            embed={walkaroundEmbed}
+            posterUrl={walkaroundPosterUrl}
+            title="Vehicle Walkaround Video"
+          />
         </div>
       </section>
     )
@@ -413,7 +412,7 @@ const favoriteTitle =
               </div>
 
               {
-                sellersNote?.ctaText && (
+                sellersNote?.ctaText && !isDealerComp && (
                   <div class="mt-12 rounded-xl border border-slate-200 bg-slate-50 p-6 text-center md:p-8">
                     <div class="mb-6 whitespace-pre-wrap text-slate-700">
                       {sellersNote.ctaText.split('\n\n').map((paragraph) => (
@@ -547,6 +546,16 @@ const favoriteTitle =
     )
   }
 
+  {
+    vehicle.marketValuation?.comparables &&
+      vehicle.marketValuation.comparables.length > 0 && (
+        <MarketCompsGrid
+          client:visible
+          comps={vehicle.marketValuation.comparables}
+        />
+      )
+  }
+
   <section id="features" class="mb-16 pt-8">
     <h2 class="mb-6 text-2xl font-bold text-slate-900">
       {vehicle.highlights?.length ? 'Vehicle Highlights & Utility' : 'Features & Equipment'}
@@ -612,14 +621,41 @@ const favoriteTitle =
     </div>
   </section>
 
-  <ContactForm
-    client:load
-    vehicleId={vehicle.id}
-    sellerId={vehicle.sellerId}
-    isLoggedIn={buyerContext?.isLoggedIn ?? false}
-    verificationTier={buyerContext?.verificationTier ?? 'anonymous'}
-    loginHref={buyerContext?.loginHref ?? '/login'}
-  />
+  {
+    isDealerComp ? (
+      <section id="external-source" class="mb-16 pt-8">
+        <h2 class="mb-4 text-2xl font-bold text-slate-900">External Dealer Listing</h2>
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          {
+            sourceSiteLabel ? (
+              <>
+                <p class="mb-2 text-sm text-slate-600">
+                  This marketplace entry is a dealer comparable. The original listing site is shown
+                  below for reference and is not linked.
+                </p>
+                <p class="text-sm font-medium text-slate-900">
+                  {sourceSiteLabel}
+                </p>
+              </>
+            ) : (
+              <p class="text-sm text-slate-600">
+                This marketplace entry is a dealer comparable. Contact and checkout are unavailable.
+              </p>
+            )
+          }
+        </div>
+      </section>
+    ) : (
+      <ContactForm
+        client:load
+        vehicleId={vehicle.id}
+        sellerId={vehicle.sellerId}
+        isLoggedIn={buyerContext?.isLoggedIn ?? false}
+        verificationTier={buyerContext?.verificationTier ?? 'anonymous'}
+        loginHref={buyerContext?.loginHref ?? '/login'}
+      />
+    )
+  }
 
   {
     showDocumentsSection ? (
@@ -852,7 +888,9 @@ const favoriteTitle =
     )
   }
 
-  <ChatWidget client:load vehicleId={vehicle.id} sellerName={vehicle.sellerName} />
+  {!isDealerComp && (
+    <ChatWidget client:load vehicleId={vehicle.id} sellerName={vehicle.sellerName} />
+  )}
 </main>
 
 <footer class="border-t border-slate-800 bg-slate-900 py-8 text-center">

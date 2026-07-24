@@ -80,7 +80,7 @@ const initialInquiries = inquirySnapshot.docs.flatMap((doc) => {
     <meta name="generator" content={Astro.generator} />
     <title>{vehicleTitle} · Seller Dashboard</title>
   </head>
-  <body>
+  <body class="h-dvh overflow-hidden">
     <SellerVehicleShell
       client:load
       vehicleId={vehicleId}

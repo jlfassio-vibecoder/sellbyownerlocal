@@ -108,6 +108,13 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       });
     }
 
+    if (vehicleParsed.data.inventorySource === 'dealer_comp') {
+      return new Response(
+        JSON.stringify({ error: 'Messaging is not available for dealer comparable listings' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (sender === 'seller') {
       try {
         const session = await requireSeller(request, cookies);

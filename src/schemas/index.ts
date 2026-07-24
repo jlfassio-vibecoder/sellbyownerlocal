@@ -341,8 +341,10 @@ export const MarketComparableSchema = z.object({
   drivetrain: z.string().optional(),
   color: z.string().optional(),
   sourceUrl: optionalComparableSourceUrl,
+  imageUrl: optionalComparableSourceUrl,
   matchLevel: z.enum(['exact', 'similar', 'base']).default('exact'),
   differences: z.array(z.string()).default([]),
+  promotedVehicleId: z.string().min(1).optional(),
 });
 
 export const VehicleDeductionsSchema = z.object({
@@ -366,6 +368,16 @@ export const MarketValuationSchema = z.object({
 
 export const GenerateMarketResearchRequestSchema = z.object({
   vehicleId: z.string().trim().min(1),
+});
+
+export const PromoteComparableRequestSchema = z.object({
+  parentVehicleId: z.string().trim().min(1),
+  comparableIndex: z.number().int().nonnegative(),
+});
+
+export const PromoteComparableResponseSchema = z.object({
+  vehicleId: z.string().min(1),
+  path: z.string().min(1),
 });
 
 export const GenerateMarketResearchResponseSchema = z.object({
@@ -780,6 +792,8 @@ export const BuyerConversationsResponseSchema = z.object({
   conversations: z.array(BuyerConversationSchema),
 });
 
+export const InventorySourceSchema = z.enum(['native', 'dealer_comp']);
+
 export const VehicleSchema = z.object({
   year: z.number().int().min(1900),
   make: z.string().min(1),
@@ -794,6 +808,9 @@ export const VehicleSchema = z.object({
   carouselImageUrls: z.array(httpHttpsUrl).optional().default([]),
   marketImageUrls: z.array(httpHttpsUrl).optional().default([]),
   status: VehicleStatusSchema,
+  inventorySource: InventorySourceSchema.default('native'),
+  externalSourceUrl: optionalComparableSourceUrl.optional(),
+  parentVehicleId: z.string().min(1).optional(),
   sellerId: z.string().min(1),
   sellerName: z.string().min(1),
   location: VehicleLocationSchema,
@@ -868,11 +885,14 @@ export type PopulateMonroneyFromStickerResponse = z.infer<typeof PopulateMonrone
 export type GenerateHeroImageRequest = z.infer<typeof GenerateHeroImageRequestSchema>;
 export type GenerateMarketResearchRequest = z.infer<typeof GenerateMarketResearchRequestSchema>;
 export type GenerateMarketResearchResponse = z.infer<typeof GenerateMarketResearchResponseSchema>;
+export type PromoteComparableRequest = z.infer<typeof PromoteComparableRequestSchema>;
+export type PromoteComparableResponse = z.infer<typeof PromoteComparableResponseSchema>;
 export type GenerateHighlightsRequest = z.infer<typeof GenerateHighlightsRequestSchema>;
 export type GenerateHighlightsResponse = z.infer<typeof GenerateHighlightsResponseSchema>;
 export type GalleryPhoto = z.infer<typeof GalleryPhotoSchema>;
 export type GalleryPhotoForm = z.infer<typeof GalleryPhotoFormSchema>;
 export type MarketComparable = z.infer<typeof MarketComparableSchema>;
+export type InventorySource = z.infer<typeof InventorySourceSchema>;
 export type VehicleDeductions = z.infer<typeof VehicleDeductionsSchema>;
 export type MarketValuation = z.infer<typeof MarketValuationSchema>;
 export type FormMarketValuation = z.infer<typeof FormMarketValuationSchema>;
