@@ -127,6 +127,7 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
     await db().collection('vehicles').doc(vehicleId).update(firestoreUpdate);
 
     // Best-effort: delete GCS objects removed from master images (never fail the PATCH).
+    // Copilot suggestion ignored: comps/docs Storage cleanup is out of Phase 3 scope (master images only).
     try {
       const previousImages = vehicle.images ?? [];
       const nextImages = new Set(patchParsed.data.images ?? []);
@@ -147,16 +148,16 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
     }
 
     const comparables = patchParsed.data.marketValuation?.comparables ?? [];
-    const syncWrites = await Promise.all(
+    await Promise.all(
       comparables.map(async (comparable) => {
         const promotedId = comparable.promotedVehicleId?.trim();
-        if (!promotedId) return null;
+        if (!promotedId) return;
 
         const promotedPatch = buildPromotedComparablePatch(comparable);
-        if (!promotedPatch) return null;
+        if (!promotedPatch) return;
 
         const promotedDoc = await db().collection('vehicles').doc(promotedId).get();
-        if (!promotedDoc.exists) return null;
+        if (!promotedDoc.exists) return;
 
         const promotedData = promotedDoc.data() as Record<string, unknown> | undefined;
         if (
@@ -164,14 +165,12 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
           promotedData?.parentVehicleId !== vehicleId ||
           promotedData?.sellerId !== vehicle.sellerId
         ) {
-          return null;
+          return;
         }
 
-        return db().collection('vehicles').doc(promotedId).update(promotedPatch);
+        await db().collection('vehicles').doc(promotedId).update(promotedPatch);
       })
     );
-
-    await Promise.all(syncWrites.filter(Boolean));
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

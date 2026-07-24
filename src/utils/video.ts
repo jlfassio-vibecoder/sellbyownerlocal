@@ -85,6 +85,25 @@ function isDirectMediaUrl(url: string): boolean {
   }
 }
 
+const EXT_TO_MIME: Record<string, string> = {
+  mp4: 'video/mp4',
+  m4v: 'video/mp4',
+  webm: 'video/webm',
+  ogg: 'video/ogg',
+  mov: 'video/quicktime',
+};
+
+/** MIME type for a direct media file URL, derived from the path extension. */
+export function directMediaMimeType(url: string): string | undefined {
+  try {
+    const pathname = new URL(url).pathname;
+    const ext = pathname.match(/\.([a-z0-9]+)(?:$|[?#])/i)?.[1]?.toLowerCase();
+    return ext ? EXT_TO_MIME[ext] : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Static YouTube thumbnail for click-to-load facades. */
 export function youtubePosterUrl(id: string): string {
   return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;

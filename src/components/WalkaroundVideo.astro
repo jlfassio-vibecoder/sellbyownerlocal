@@ -1,6 +1,6 @@
 ---
 import type { VideoEmbed } from '../utils/video';
-import { youtubePosterUrl } from '../utils/video';
+import { directMediaMimeType, youtubePosterUrl } from '../utils/video';
 
 interface Props {
   embed: VideoEmbed;
@@ -14,6 +14,9 @@ const facadePoster =
   embed.kind === 'youtube' && embed.id
     ? youtubePosterUrl(embed.id)
     : posterUrl;
+
+const fileMimeType =
+  embed.kind === 'file' ? directMediaMimeType(embed.embedUrl) : undefined;
 
 const allowAttr =
   'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
@@ -33,7 +36,7 @@ const allowAttr =
         class="absolute inset-0 h-full w-full border-0 object-cover"
         title={title}
       >
-        <source src={embed.embedUrl} type="video/mp4" />
+        <source src={embed.embedUrl} type={fileMimeType} />
         Your browser does not support the video tag.
       </video>
     ) : (

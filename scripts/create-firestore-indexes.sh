@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DB=sellbyowner-prod
-PROJECT=ai-workout-generator-hub
+# Match migrate-firestore-database.mjs: prefer env, fail fast if project is unset.
+DB="${FIRESTORE_DATABASE_ID:-sellbyowner-prod}"
+PROJECT="${GCLOUD_PROJECT:-${GOOGLE_CLOUD_PROJECT:-${FIREBASE_PROJECT_ID:-}}}"
+
+if [[ -z "$PROJECT" ]]; then
+  echo "error: set GCLOUD_PROJECT, GOOGLE_CLOUD_PROJECT, or FIREBASE_PROJECT_ID" >&2
+  exit 1
+fi
 
 create_idx() {
   local col="$1"
   shift
-  echo "Creating $col ..."
+  echo "Creating $col on $PROJECT / $DB ..."
   gcloud firestore indexes composite create \
     --database="$DB" \
     --project="$PROJECT" \
