@@ -98,6 +98,11 @@ export interface VehicleListingView {
   navSections: { id: string; label: string }[];
 }
 
+/** True when at least one market comparable should appear on the public Comparables section. */
+export function hasVisibleMarketComparables(vehicle: VehicleResponse): boolean {
+  return (vehicle.marketValuation?.comparables ?? []).some((c) => !c.highlighted);
+}
+
 export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListingView {
   const availableDocuments = documentItems.flatMap((item) => {
     const url = vehicle.documents?.[item.key];
@@ -170,6 +175,9 @@ export function buildVehicleListingView(vehicle: VehicleResponse): VehicleListin
   navSections.push({ id: 'maintenance', label: 'Maintenance' });
   if (vehicle.marketValuation) {
     navSections.push({ id: 'market', label: 'Market Value' });
+  }
+  if (hasVisibleMarketComparables(vehicle)) {
+    navSections.push({ id: 'comparables', label: 'Comparables' });
   }
   navSections.push({ id: 'features', label: 'Utility' });
   navSections.push({ id: 'specs', label: 'Specifications' });

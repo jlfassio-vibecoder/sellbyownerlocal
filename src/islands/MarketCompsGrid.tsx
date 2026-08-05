@@ -47,10 +47,14 @@ export default function MarketCompsGrid({ comps }: MarketCompsGridProps) {
   }
 
   return (
-    <section className="mb-16 pt-8" aria-labelledby="market-comps-heading">
+    <section
+      id="comparables"
+      className="mb-16 scroll-mt-16 pt-8"
+      aria-labelledby="comparables-heading"
+    >
       <div className="mb-8">
-        <h2 id="market-comps-heading" className="mb-2 text-2xl font-bold text-slate-900">
-          Market Comparables
+        <h2 id="comparables-heading" className="mb-2 text-2xl font-bold text-slate-900">
+          Comparables
         </h2>
         <p className="text-sm text-slate-500">
           External dealer listings for market context and price reference only.
