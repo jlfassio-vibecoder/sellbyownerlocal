@@ -12,6 +12,7 @@ import {
 } from '../../../../lib/clothing-api';
 import ClothingInventoryGrid from '../../../../islands/buyer/ClothingInventoryGrid';
 import ContactSellerFab from '../../../../islands/buyer/ContactSellerFab';
+import ApparelAnalytics from '../../../../islands/ApparelAnalytics';
 import {
   buildStorefrontSeoDescription,
   buildStorefrontSeoTitle,
@@ -84,6 +85,7 @@ const ogImage = heroUrl || resolveStorefrontOgImage(listings);
   ogType="website"
   bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
 >
+  <ApparelAnalytics client:load surface="apparel_storefront" sellerId={seller.id} />
   {
     isStorefrontOwner && (
       <div class="sticky top-0 z-50 border-b border-slate-800 bg-slate-900 text-white shadow-md">

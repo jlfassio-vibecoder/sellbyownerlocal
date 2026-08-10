@@ -624,24 +624,91 @@ export const ListingEventTypeSchema = z.enum([
   'impression',
   'page_leave',
   'save_vehicle',
+  'favorite_add',
+  'favorite_remove',
+  'quote_open',
+  'quote_submit',
 ]);
 
 export const ListingEventMetadataSchema = z.object({
   photoIndex: z.number().int().nonnegative().optional(),
   sectionId: z.string().min(1).max(50).optional(),
+  /** Photo / media surface (not page context). */
   surface: z.enum(['hero', 'carousel', 'gallery', 'search_grid']).optional(),
   rank: z.number().int().nonnegative().optional(),
   position: z.number().int().positive().optional(),
   durationSeconds: z.number().nonnegative().optional(),
+  favoriteCount: z.number().int().nonnegative().optional(),
+  clothingIds: z.array(z.string().min(1)).optional(),
+  leadId: z.string().min(1).optional(),
 });
 
-export const ListingEventCreateSchema = z.object({
-  vehicleId: z.string().min(1),
+/** Page-level context for listing_events (distinct from metadata.surface). */
+export const ListingEventSurfaceSchema = z.enum([
+  'vehicle_grid',
+  'vehicle_pdp',
+  'apparel_storefront',
+  'apparel_pdp',
+]);
+
+export const ListingEventActorSchema = z.object({
+  kind: z.enum(['anon', 'user', 'seller', 'admin']),
+  uid: z.string().min(1).optional(),
+  isInternal: z.boolean(),
+});
+
+const SELLER_SCOPED_EVENT_TYPES = new Set([
+  'favorite_add',
+  'favorite_remove',
+  'quote_open',
+  'quote_submit',
+]);
+
+export const ListingEventCreateSchema = z
+  .object({
+    vehicleId: z.string().min(1).optional(),
+    clothingId: z.string().min(1).optional(),
+    sellerId: z.string().min(1).optional(),
+    eventType: ListingEventTypeSchema,
+    /** Page context surface; server may default for vehicle events. */
+    surface: ListingEventSurfaceSchema.optional(),
+    metadata: ListingEventMetadataSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasVehicle = Boolean(data.vehicleId);
+    const hasClothing = Boolean(data.clothingId);
+    const isStorefront =
+      data.surface === 'apparel_storefront' && Boolean(data.sellerId);
+    const isSellerScoped =
+      SELLER_SCOPED_EVENT_TYPES.has(data.eventType) && Boolean(data.sellerId);
+
+    if (hasVehicle && hasClothing) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Provide vehicleId or clothingId, not both',
+        path: ['vehicleId'],
+      });
+      return;
+    }
+
+    if (!hasVehicle && !hasClothing && !isStorefront && !isSellerScoped) {
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'Provide vehicleId, clothingId, apparel_storefront with sellerId, or a seller-scoped funnel event with sellerId',
+        path: ['vehicleId'],
+      });
+    }
+  });
+
+export const ListingEventSchema = z.object({
+  vehicleId: z.string().min(1).optional(),
+  clothingId: z.string().min(1).optional(),
+  sellerId: z.string().min(1).optional(),
   eventType: ListingEventTypeSchema,
+  surface: ListingEventSurfaceSchema.optional(),
   metadata: ListingEventMetadataSchema.optional(),
-});
-
-export const ListingEventSchema = ListingEventCreateSchema.extend({
+  actor: ListingEventActorSchema.optional(),
   sessionId: z.string().min(1),
   timestamp: z.iso.datetime(),
 });
@@ -708,9 +775,14 @@ export const LeadCreateSchema = z.object({
   items: z.array(FavoriteItemSchema).optional(),
 });
 
+export const IntentTierSchema = z.enum(['HIGH', 'MEDIUM', 'LOW']);
+
 export const LeadRecordSchema = LeadCreateSchema.extend({
   id: z.string().min(1),
   createdAt: z.iso.datetime(),
+  intentScore: z.number().min(0).max(100).optional(),
+  intentTier: IntentTierSchema.optional(),
+  intentFactors: z.array(z.string()).optional(),
 });
 
 export const LeadCreateResponseSchema = z.object({
@@ -765,6 +837,59 @@ export const ListingAnalyticsResponseSchema = z.object({
   sections: z.array(ListingAnalyticsSectionSchema),
   daily: z.array(ListingAnalyticsDailySchema),
   photos: ListingAnalyticsPhotosSchema,
+});
+
+export const ApparelFunnelStageSchema = z.object({
+  id: z.enum(['views', 'favorites', 'quote_open', 'quote_submit']),
+  label: z.string(),
+  count: z.number().int().nonnegative(),
+  dropOffPercent: z.number().nonnegative().nullable(),
+});
+
+export const ApparelSkuAnalyticsRowSchema = z.object({
+  clothingId: z.string().min(1),
+  title: z.string(),
+  imageUrl: z.string().optional(),
+  impressions: z.number().int().nonnegative(),
+  pdpViews: z.number().int().nonnegative(),
+  favoriteAdds: z.number().int().nonnegative(),
+  quoteSubmits: z.number().int().nonnegative(),
+  conversionRate: z.number().nonnegative(),
+  needsOptimization: z.boolean(),
+});
+
+export const ApparelJourneyStepSchema = z.object({
+  label: z.string(),
+  eventType: ListingEventTypeSchema,
+  timestamp: z.iso.datetime(),
+});
+
+export const ApparelJourneySchema = z.object({
+  sessionId: z.string().min(1),
+  sessionShortId: z.string().min(1),
+  lastSeenAt: z.iso.datetime(),
+  steps: z.array(ApparelJourneyStepSchema),
+});
+
+export const ApparelEngagedBuyerSchema = z.object({
+  sessionId: z.string().min(1),
+  sessionShortId: z.string().min(1),
+  visitDays: z.number().int().nonnegative(),
+  favoriteCount: z.number().int().nonnegative(),
+  intentScore: z.number().min(0).max(100),
+  intentTier: IntentTierSchema,
+  lastSeenAt: z.iso.datetime(),
+});
+
+export const ApparelAnalyticsResponseSchema = z.object({
+  sellerId: z.string().min(1),
+  range: ListingAnalyticsRangeSchema,
+  since: z.iso.datetime(),
+  until: z.iso.datetime(),
+  funnel: z.array(ApparelFunnelStageSchema),
+  skus: z.array(ApparelSkuAnalyticsRowSchema),
+  topEngagedBuyers: z.array(ApparelEngagedBuyerSchema),
+  journeys: z.array(ApparelJourneySchema),
 });
 
 export const MessageSchema = z.object({
@@ -922,6 +1047,8 @@ export type VehicleDashboardUpdate = z.infer<typeof VehicleDashboardUpdateSchema
 export type UploadResponse = z.infer<typeof UploadResponseSchema>;
 export type ListingEventType = z.infer<typeof ListingEventTypeSchema>;
 export type ListingEventMetadata = z.infer<typeof ListingEventMetadataSchema>;
+export type ListingEventSurface = z.infer<typeof ListingEventSurfaceSchema>;
+export type ListingEventActor = z.infer<typeof ListingEventActorSchema>;
 export type ListingEventCreate = z.infer<typeof ListingEventCreateSchema>;
 export type ListingEvent = z.infer<typeof ListingEventSchema>;
 export type SavedVehicle = z.infer<typeof SavedVehicleSchema>;
@@ -934,6 +1061,7 @@ export type FavoriteCategory = z.infer<typeof FavoriteCategorySchema>;
 export type FavoriteItem = z.infer<typeof FavoriteItemSchema>;
 export type FavoritesListResponse = z.infer<typeof FavoritesListResponseSchema>;
 export type LeadCreate = z.infer<typeof LeadCreateSchema>;
+export type IntentTier = z.infer<typeof IntentTierSchema>;
 export type LeadRecord = z.infer<typeof LeadRecordSchema>;
 export type LeadCreateResponse = z.infer<typeof LeadCreateResponseSchema>;
 export type ListingAnalyticsRange = z.infer<typeof ListingAnalyticsRangeSchema>;
@@ -942,6 +1070,12 @@ export type ListingAnalyticsSection = z.infer<typeof ListingAnalyticsSectionSche
 export type ListingAnalyticsDaily = z.infer<typeof ListingAnalyticsDailySchema>;
 export type ListingAnalyticsPhotos = z.infer<typeof ListingAnalyticsPhotosSchema>;
 export type ListingAnalyticsResponse = z.infer<typeof ListingAnalyticsResponseSchema>;
+export type ApparelFunnelStage = z.infer<typeof ApparelFunnelStageSchema>;
+export type ApparelSkuAnalyticsRow = z.infer<typeof ApparelSkuAnalyticsRowSchema>;
+export type ApparelJourneyStep = z.infer<typeof ApparelJourneyStepSchema>;
+export type ApparelJourney = z.infer<typeof ApparelJourneySchema>;
+export type ApparelEngagedBuyer = z.infer<typeof ApparelEngagedBuyerSchema>;
+export type ApparelAnalyticsResponse = z.infer<typeof ApparelAnalyticsResponseSchema>;
 export type Message = z.infer<typeof MessageSchema>;
 export type Conversation = z.infer<typeof ConversationSchema>;
 export type MessageCreate = z.infer<typeof MessageCreateSchema>;

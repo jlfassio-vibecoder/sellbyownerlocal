@@ -1,6 +1,8 @@
+import { useEffect, useRef } from 'react';
 import type { ClothingListing } from '../../schemas';
 import type { BuyerSaveContext } from './VehicleCard';
 import FavoriteButton from '../../islands/buyer/FavoriteButton';
+import { trackApparelImpressionOnce } from '../../lib/listing-analytics-client';
 import { priceFormatter } from '../../utils/formatters';
 import { getClothingListingPath } from '../../utils/url-helpers';
 
@@ -10,6 +12,8 @@ interface ClothingCardProps {
   buyerContext?: BuyerSaveContext;
   /** When false, image/title are not links to the item PDP. */
   linkToDetails?: boolean;
+  rank?: number;
+  position?: number;
 }
 
 function hasSalePricing(listing: ClothingListing): boolean {
@@ -25,12 +29,46 @@ export default function ClothingCard({
   storefrontSegment,
   buyerContext,
   linkToDetails = true,
+  rank,
+  position,
 }: ClothingCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const listingPath = getClothingListingPath(listing.id, storefrontSegment);
   const showFeatured = Boolean(listing.isFeatured);
   // Copilot suggestion ignored: Sale badge uses isSale so bulk “Mark as Sale” remains visible before a salePrice is set; dual pricing still uses hasSalePricing.
   const showSale = Boolean(listing.isSale);
   const onSale = hasSalePricing(listing);
+
+  useEffect(() => {
+    const element = cardRef.current;
+    if (!element) return;
+
+    let visibilityTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            if (visibilityTimer) return;
+            visibilityTimer = setTimeout(() => {
+              trackApparelImpressionOnce(listing.id, { rank, position });
+            }, 1000);
+          } else if (visibilityTimer) {
+            clearTimeout(visibilityTimer);
+            visibilityTimer = null;
+          }
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+      if (visibilityTimer) clearTimeout(visibilityTimer);
+    };
+  }, [listing.id, rank, position]);
 
   const imageBlock = listing.galleryPhotos[0] ? (
     <div className="aspect-[4/3] w-full bg-slate-100">
@@ -81,8 +119,10 @@ export default function ClothingCard({
   );
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-lg">
-      <div className="relative">
+    <div
+      ref={cardRef}
+      className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-lg"
+    >      <div className="relative">
         {linkToDetails ? (
           <a href={listingPath} className="block">
             {imageBlock}

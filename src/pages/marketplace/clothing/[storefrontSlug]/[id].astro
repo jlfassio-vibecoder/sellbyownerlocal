@@ -23,6 +23,7 @@ import ContactForm from '../../../../islands/ContactForm';
 import DocumentViewer from '../../../../islands/DocumentViewer';
 import FavoriteButton from '../../../../islands/buyer/FavoriteButton';
 import ContactSellerFab from '../../../../islands/buyer/ContactSellerFab';
+import ApparelAnalytics from '../../../../islands/ApparelAnalytics';
 import { db } from '../../../../lib/firebase-admin';
 
 const { storefrontSlug: param, id } = Astro.params;
@@ -116,6 +117,7 @@ const storefrontTitle =
   ogType="product"
   bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
 >
+  <ApparelAnalytics client:load surface="apparel_pdp" clothingId={listing.id} />
   {
     isStorefrontOwner && (
       <div class="sticky top-0 z-50 border-b border-slate-800 bg-slate-900 text-white shadow-md">

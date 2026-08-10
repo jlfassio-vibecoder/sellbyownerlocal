@@ -1,5 +1,8 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
+import { recordListingEvent } from '../../lib/analytics';
+import { getOrCreateAnonSession } from '../../lib/analytics-session';
+import { getOptionalSession } from '../../lib/auth';
 import { getUserProfile } from '../../lib/buyer-profile';
 import { buildSellerScopedLeadMessage } from '../../lib/contact-message';
 import { db } from '../../lib/firebase-admin';
@@ -10,6 +13,7 @@ import {
   enrichFavoriteFromVehicleData,
   type LeadItemResolveResult,
 } from '../../lib/lead-items';
+import { calculateLeadIntentScore } from '../../lib/lead-intent';
 import { sendLeadNotification } from '../../lib/notifications';
 import { checkRateLimit, getClientIp } from '../../lib/rate-limit';
 import { LeadCreateResponseSchema, LeadCreateSchema, type FavoriteItem } from '../../schemas';
@@ -59,7 +63,7 @@ async function resolveActiveEnrichedItem(
   return { ok: false, failure: { kind: 'not_found_or_inactive' } };
 }
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   const clientIp = getClientIp(request, clientAddress);
   const rateLimit = checkRateLimit(`leads:${clientIp}`, LEAD_RATE_LIMIT);
 
@@ -156,6 +160,44 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       });
     } catch (notifyError) {
       console.error('sendLeadNotification failed', notifyError);
+    }
+
+    try {
+      const clothingIds = enrichedItems
+        .filter((item) => item.category === 'clothing')
+        .map((item) => item.id);
+
+      if (clothingIds.length > 0) {
+        const userSession = await getOptionalSession(request, cookies);
+        const sessionId = getOrCreateAnonSession(cookies);
+
+        await recordListingEvent({
+          sessionId,
+          sellerId,
+          eventType: 'quote_submit',
+          metadata: {
+            leadId: docRef.id,
+            clothingIds,
+            favoriteCount: clothingIds.length,
+          },
+          userSession: userSession
+            ? { uid: userSession.uid, email: userSession.email }
+            : null,
+        });
+
+        try {
+          const intent = await calculateLeadIntentScore(docRef.id, sessionId, sellerId);
+          await docRef.update({
+            intentScore: intent.score,
+            intentTier: intent.tier,
+            intentFactors: intent.factors,
+          });
+        } catch (intentError) {
+          console.error('lead intent scoring failed', intentError);
+        }
+      }
+    } catch (analyticsError) {
+      console.error('quote_submit analytics failed', analyticsError);
     }
 
     const response = LeadCreateResponseSchema.parse({ ok: true, id: docRef.id });

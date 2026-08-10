@@ -68,11 +68,27 @@
       ]
     },
     {
+      "collectionGroup": "listing_events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sellerId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "saved_vehicles",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "vehicleId", "order": "ASCENDING" },
         { "fieldPath": "savedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "saved_vehicles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "vehicleId", "order": "ASCENDING" },
+        { "fieldPath": "savedAt", "order": "ASCENDING" }
       ]
     },
     {

@@ -1,3 +1,4 @@
+import { isPublicListingEvent } from './analytics-actor';
 import { db } from './firebase-admin';
 import {
   ListingAnalyticsResponseSchema,
@@ -71,8 +72,12 @@ async function fetchListingEvents(vehicleId: string, since: string | null): Prom
       events.push({
         sessionId: data.sessionId,
         vehicleId: data.vehicleId,
+        clothingId: data.clothingId,
+        sellerId: data.sellerId,
         eventType: data.eventType,
+        surface: data.surface,
         metadata: data.metadata ?? undefined,
+        actor: data.actor ?? undefined,
         timestamp: data.timestamp,
       });
     }
@@ -100,17 +105,19 @@ async function fetchListingEvents(vehicleId: string, since: string | null): Prom
 }
 
 async function countActiveSaves(vehicleId: string, since: string | null): Promise<number> {
-  let query = db().collection('saved_vehicles').where('vehicleId', '==', vehicleId);
+  // Filter savedAt in memory: the deployed composite is vehicleId+savedAt DESC,
+  // while `savedAt >=` needs ASC. Per-vehicle save counts stay small.
+  const snapshot = await db()
+    .collection('saved_vehicles')
+    .where('vehicleId', '==', vehicleId)
+    .get();
 
-  if (since) {
-    query = db()
-      .collection('saved_vehicles')
-      .where('vehicleId', '==', vehicleId)
-      .where('savedAt', '>=', since);
-  }
+  if (!since) return snapshot.size;
 
-  const snapshot = await query.get();
-  return snapshot.size;
+  return snapshot.docs.filter((doc) => {
+    const savedAt = doc.data().savedAt;
+    return typeof savedAt === 'string' && savedAt >= since;
+  }).length;
 }
 
 async function countInquiries(vehicleId: string, since: string | null): Promise<number> {
@@ -134,11 +141,13 @@ export async function getListingAnalytics(
   const since = resolveSince(range);
   const until = new Date().toISOString();
 
-  const [events, activeSaves, inquiryCount] = await Promise.all([
+  const [rawEvents, activeSaves, inquiryCount] = await Promise.all([
     fetchListingEvents(vehicleId, since),
     countActiveSaves(vehicleId, since),
     countInquiries(vehicleId, since),
   ]);
+
+  const events = rawEvents.filter(isPublicListingEvent);
 
   let searchImpressions = 0;
   let totalPageViews = 0;

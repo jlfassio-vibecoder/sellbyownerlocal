@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { BarChart3, Lightbulb } from 'lucide-react';
 import type {
+  ListingAnalyticsDaily,
+  ListingAnalyticsPhotos,
   ListingAnalyticsRange,
   ListingAnalyticsResponse,
   ListingAnalyticsSummary,
@@ -63,6 +66,69 @@ function rangeButtonClass(isActive: boolean): string {
   return `rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
     isActive ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
   }`;
+}
+
+function formatDayLabel(date: string): string {
+  const [, month, day] = date.split('-');
+  return `${month}/${day}`;
+}
+
+function DailyTrendChart({ daily }: { daily: ListingAnalyticsDaily[] }) {
+  if (daily.length === 0) {
+    return (
+      <p className="text-sm text-slate-500">No daily volume yet for this range.</p>
+    );
+  }
+
+  const chartData = daily.map((row) => ({
+    ...row,
+    label: formatDayLabel(row.date),
+  }));
+
+  return (
+    <div className="h-56 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748b' }} />
+          <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} width={32} />
+          <Tooltip
+            contentStyle={{
+              borderRadius: 8,
+              border: '1px solid #e2e8f0',
+              fontSize: 12,
+            }}
+          />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
+          <Bar dataKey="impressions" name="Impressions" fill="#94a3b8" radius={[2, 2, 0, 0]} />
+          <Bar dataKey="pageViews" name="Page views" fill="#dc2626" radius={[2, 2, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function PhotoEngagementStats({ photos }: { photos: ListingAnalyticsPhotos }) {
+  const hasPhotoActivity =
+    photos.photoViews > 0 ||
+    photos.carouselSwipes > 0 ||
+    photos.bySurface.hero > 0 ||
+    photos.bySurface.carousel > 0 ||
+    photos.bySurface.gallery > 0;
+
+  if (!hasPhotoActivity) {
+    return <p className="text-sm text-slate-500">No photo engagement recorded yet.</p>;
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <MiniStat label="Photo views" value={photos.photoViews.toLocaleString()} />
+      <MiniStat label="Carousel swipes" value={photos.carouselSwipes.toLocaleString()} />
+      <MiniStat label="Hero" value={photos.bySurface.hero.toLocaleString()} />
+      <MiniStat label="Carousel" value={photos.bySurface.carousel.toLocaleString()} />
+      <MiniStat label="Gallery" value={photos.bySurface.gallery.toLocaleString()} />
+    </div>
+  );
 }
 
 export default function InsightsPanel({ vehicleId }: InsightsPanelProps) {
@@ -138,8 +204,8 @@ export default function InsightsPanel({ vehicleId }: InsightsPanelProps) {
 
         {isLoading ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, index) => (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+              {Array.from({ length: 7 }).map((_, index) => (
                 <div
                   key={index}
                   className="h-28 animate-pulse rounded-xl border border-slate-200 bg-white shadow-sm"
@@ -161,14 +227,21 @@ export default function InsightsPanel({ vehicleId }: InsightsPanelProps) {
               Share your listing link locally to start building traffic.
             </p>
           </div>
-        ) : summary ? (
+        ) : summary && data ? (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-              <StatCard label="Search Impressions" value={summary.searchImpressions.toLocaleString()} />
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+              <StatCard
+                label="Search Impressions"
+                value={summary.searchImpressions.toLocaleString()}
+              />
               <StatCard label="CTR" value={`${summary.clickThroughRate.toFixed(1)}%`} />
               <StatCard
                 label="Total Page Views"
                 value={summary.totalPageViews.toLocaleString()}
+              />
+              <StatCard
+                label="Unique Visitors"
+                value={summary.uniqueVisitors.toLocaleString()}
               />
               <StatCard
                 label="Avg Dwell Time"
@@ -193,6 +266,16 @@ export default function InsightsPanel({ vehicleId }: InsightsPanelProps) {
                   </p>
                 </div>
               </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-bold text-slate-900">Daily volume</h3>
+              <DailyTrendChart daily={data.daily} />
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-bold text-slate-900">Photo engagement</h3>
+              <PhotoEngagementStats photos={data.photos} />
             </div>
 
             {data.sections.length > 0 && (
@@ -222,8 +305,9 @@ export default function InsightsPanel({ vehicleId }: InsightsPanelProps) {
             )}
 
             <p className="text-xs text-slate-400">
-              Metrics reflect anonymous browsing sessions. Dwell time is averaged from tab-close
-              events and may undercount quick visits.
+              Metrics reflect public browsing sessions (owner and internal admin visits are
+              excluded). Dwell time is averaged from tab-close events and may undercount quick
+              visits.
             </p>
           </div>
         ) : null}
@@ -237,6 +321,15 @@ function StatCard({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-slate-900">{value}</p>
     </div>
   );
 }

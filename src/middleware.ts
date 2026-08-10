@@ -9,6 +9,8 @@ function shouldSetAnonSession(pathname: string): boolean {
   return (
     pathname === '/' ||
     pathname.startsWith('/vehicles/') ||
+    pathname === '/marketplace/clothing' ||
+    pathname.startsWith('/marketplace/clothing/') ||
     pathname === '/api/analytics/events'
   );
 }

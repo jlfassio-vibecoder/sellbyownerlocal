@@ -1,7 +1,11 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { AnalyticsVehicleNotFoundError, recordListingEvent } from '../../../lib/analytics';
+import {
+  AnalyticsEntityNotFoundError,
+  recordListingEvent,
+} from '../../../lib/analytics';
 import { getAnonSessionId } from '../../../lib/analytics-session';
+import { getOptionalSession } from '../../../lib/auth';
 import { checkRateLimit, getClientIp } from '../../../lib/rate-limit';
 import { ListingEventCreateSchema } from '../../../schemas';
 
@@ -24,6 +28,20 @@ const PAGE_LEAVE_RATE_LIMIT = {
   windowMs: 24 * 60 * 60 * 1000,
   max: 1,
 };
+
+function entityDedupeKey(data: {
+  vehicleId?: string;
+  clothingId?: string;
+  sellerId?: string;
+  surface?: string;
+}): string {
+  if (data.vehicleId) return `v:${data.vehicleId}`;
+  if (data.clothingId) return `c:${data.clothingId}`;
+  if (data.surface === 'apparel_storefront' && data.sellerId) {
+    return `s:${data.sellerId}`;
+  }
+  return 'unknown';
+}
 
 export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   try {
@@ -73,7 +91,8 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       );
     }
 
-    const { vehicleId, eventType, metadata } = parsed.data;
+    const { vehicleId, clothingId, sellerId, eventType, metadata, surface } = parsed.data;
+    const dedupeEntity = entityDedupeKey(parsed.data);
 
     if (eventType === 'save_vehicle') {
       return new Response(JSON.stringify({ error: 'Event type not allowed' }), {
@@ -84,7 +103,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
 
     if (eventType === 'page_view') {
       const pageViewLimit = checkRateLimit(
-        `analytics:pv:${sessionId}:${vehicleId}`,
+        `analytics:pv:${sessionId}:${dedupeEntity}`,
         PAGE_VIEW_RATE_LIMIT
       );
 
@@ -98,7 +117,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
 
     if (eventType === 'impression') {
       const impressionLimit = checkRateLimit(
-        `analytics:imp:${sessionId}:${vehicleId}`,
+        `analytics:imp:${sessionId}:${dedupeEntity}`,
         IMPRESSION_RATE_LIMIT
       );
 
@@ -112,7 +131,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
 
     if (eventType === 'page_leave') {
       const pageLeaveLimit = checkRateLimit(
-        `analytics:leave:${sessionId}:${vehicleId}`,
+        `analytics:leave:${sessionId}:${dedupeEntity}`,
         PAGE_LEAVE_RATE_LIMIT
       );
 
@@ -124,11 +143,19 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       }
     }
 
+    const userSession = await getOptionalSession(request, cookies);
+
     await recordListingEvent({
       sessionId,
       vehicleId,
+      clothingId,
+      sellerId,
       eventType,
       metadata,
+      surface,
+      userSession: userSession
+        ? { uid: userSession.uid, email: userSession.email }
+        : null,
     });
 
     return new Response(JSON.stringify({ ok: true }), {
@@ -136,8 +163,8 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    if (error instanceof AnalyticsVehicleNotFoundError) {
-      return new Response(JSON.stringify({ error: 'Vehicle not found' }), {
+    if (error instanceof AnalyticsEntityNotFoundError) {
+      return new Response(JSON.stringify({ error: error.message }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       });

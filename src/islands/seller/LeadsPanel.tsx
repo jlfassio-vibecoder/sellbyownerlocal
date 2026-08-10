@@ -37,6 +37,8 @@ export default function LeadsPanel({ leads }: LeadsPanelProps) {
                 message={lead.message}
                 createdAt={lead.createdAt}
                 items={lead.items ?? []}
+                intentTier={lead.intentTier}
+                intentFactors={lead.intentFactors}
               />
             ))}
           </div>
