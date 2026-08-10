@@ -2,6 +2,7 @@
 import Layout from '../../../../layouts/Layout.astro';
 import { getOptionalSession } from '../../../../lib/auth';
 import {
+  getUserProfile,
   resolveSellerByStorefrontParam,
 } from '../../../../lib/buyer-profile';
 import { getClothingListingById } from '../../../../lib/clothing-api';
@@ -47,10 +48,19 @@ if (listing.sellerId !== resolvedSeller.id) {
 
 const canonicalSegment = resolveStorefrontSegment(resolvedSeller);
 const canonicalPath = getClothingListingPath(listing.id, canonicalSegment);
+const storefrontPath = getStorefrontPath(canonicalSegment);
 
 // Previous slug / UID fallback → 301 to current canonical nested URL.
 if (param !== canonicalSegment) {
   return Astro.redirect(canonicalPath, 301);
+}
+
+const session = await getOptionalSession(Astro.request, Astro.cookies);
+const isStorefrontOwner = Boolean(session?.uid && session.uid === resolvedSeller.id);
+
+// Seller disabled item click-through: send buyers back to the storefront.
+if (resolvedSeller.hideItemDetails === true && !isStorefrontOwner) {
+  return Astro.redirect(storefrontPath, 302);
 }
 
 const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
@@ -72,9 +82,9 @@ const canonicalUrl = resolveAbsoluteUrl(canonicalPath, origin);
 const galleryImages = listing.galleryPhotos?.length ? listing.galleryPhotos : [];
 const heroImage = listing.galleryPhotos?.[0];
 const hasGalleryImages = galleryImages.length > 0;
-const session = await getOptionalSession(Astro.request, Astro.cookies);
-const isStorefrontOwner = Boolean(session?.uid && session.uid === resolvedSeller.id);
-const storefrontPath = getStorefrontPath(canonicalSegment);
+const buyerProfile = session ? await getUserProfile(session.uid) : null;
+const hideRequestQuoteFab = resolvedSeller.hideFab === true;
+const showRequestQuoteFab = !isStorefrontOwner && !hideRequestQuoteFab;
 
 let initialSaved = false;
 if (session) {
@@ -89,6 +99,9 @@ const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
   loginHref: `/login?next=${encodeURIComponent(`${canonicalPath}#contact`)}`,
+  buyerName: buyerProfile?.displayName,
+  buyerEmail: session?.email,
+  buyerPhone: buyerProfile?.phone,
 };
 
 const storefrontTitle =
@@ -269,7 +282,7 @@ const storefrontTitle =
             href="#contact"
             class="inline-flex w-max items-center justify-center rounded-lg bg-red-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-red-700"
           >
-            Contact Seller
+            Request a Quote
           </a>
         </div>
       </div>
@@ -296,18 +309,25 @@ const storefrontTitle =
       listingIdKey="clothingListingId"
       apiEndpoint="/api/clothing-inquiries"
       sellerId={listing.sellerId}
+      allowGuest
       isLoggedIn={buyerContext.isLoggedIn}
       verificationTier={buyerContext.verificationTier}
       loginHref={buyerContext.loginHref}
+      buyerName={buyerContext.buyerName}
+      buyerEmail={buyerContext.buyerEmail}
+      buyerPhone={buyerContext.buyerPhone}
     />
   </main>
 
   {
-    !isStorefrontOwner && (
+    showRequestQuoteFab && (
       <ContactSellerFab
         client:load
         isLoggedIn={buyerContext.isLoggedIn}
         verificationTier={buyerContext.verificationTier}
+        buyerName={buyerContext.buyerName}
+        buyerEmail={buyerContext.buyerEmail}
+        buyerPhone={buyerContext.buyerPhone}
         initialSavedIds={initialSaved ? [listing.id] : []}
       />
     )

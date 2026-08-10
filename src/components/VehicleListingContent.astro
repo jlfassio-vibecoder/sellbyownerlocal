@@ -3,6 +3,7 @@ import type { VehicleResponse, VerificationTier } from '../schemas';
 import {
   buildVehicleListingView,
   canEmbedPdf,
+  hasVisibleMarketComparables,
   isPdfUrl,
   mileageFormatter,
   priceFormatter,
@@ -44,6 +45,8 @@ interface Props {
   buyerContext?: BuyerContext;
   initialSaved?: boolean;
   isVehicleOwner?: boolean;
+  /** When false, hide the floating Owner Messaging chat widget. */
+  showChatWidget?: boolean;
 }
 
 const {
@@ -52,6 +55,7 @@ const {
   buyerContext,
   initialSaved = false,
   isVehicleOwner = false,
+  showChatWidget = true,
 } = Astro.props;
 const view = buildVehicleListingView(vehicle);
 const {
@@ -547,13 +551,12 @@ const sourceSiteLabel = vehicle.externalSourceUrl
   }
 
   {
-    vehicle.marketValuation?.comparables &&
-      vehicle.marketValuation.comparables.length > 0 && (
-        <MarketCompsGrid
-          client:visible
-          comps={vehicle.marketValuation.comparables}
-        />
-      )
+    hasVisibleMarketComparables(vehicle) && vehicle.marketValuation?.comparables && (
+      <MarketCompsGrid
+        client:visible
+        comps={vehicle.marketValuation.comparables}
+      />
+    )
   }
 
   <section id="features" class="mb-16 pt-8">
@@ -888,7 +891,7 @@ const sourceSiteLabel = vehicle.externalSourceUrl
     )
   }
 
-  {!isDealerComp && (
+  {!isDealerComp && showChatWidget && (
     <ChatWidget client:load vehicleId={vehicle.id} sellerName={vehicle.sellerName} />
   )}
 </main>

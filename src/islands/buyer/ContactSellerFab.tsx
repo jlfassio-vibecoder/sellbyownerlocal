@@ -1,6 +1,6 @@
 import { useContext, useState, type ReactNode } from 'react';
 import { MessageCircle } from 'lucide-react';
-import type { VerificationTier } from '../../schemas';
+import type { FavoriteItem, VerificationTier } from '../../schemas';
 import {
   FavoritesContext,
   FavoritesProvider,
@@ -12,6 +12,9 @@ interface ContactSellerFabProps {
   isLoggedIn: boolean;
   verificationTier?: VerificationTier;
   initialSavedIds?: string[];
+  buyerName?: string;
+  buyerEmail?: string;
+  buyerPhone?: string;
 }
 
 function OptionalFavoritesBoundary({
@@ -40,14 +43,22 @@ function OptionalFavoritesBoundary({
 }
 
 function ContactSellerFabInner({
-  isLoggedIn,
-  verificationTier,
+  buyerName,
+  buyerEmail,
+  buyerPhone,
 }: {
-  isLoggedIn: boolean;
-  verificationTier: VerificationTier;
+  buyerName?: string;
+  buyerEmail?: string;
+  buyerPhone?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { count, items, isLoading, refresh } = useFavorites();
+  const { count, items, isLoading, refresh, isFavorite, toggle } = useFavorites();
+
+  const handleClearQuotedItems = async (quotedItems: FavoriteItem[]) => {
+    await Promise.all(
+      quotedItems.filter((item) => isFavorite(item.id)).map((item) => toggle(item))
+    );
+  };
 
   return (
     <>
@@ -55,7 +66,7 @@ function ContactSellerFabInner({
         type="button"
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105 hover:bg-red-700"
-        aria-label="Contact seller"
+        aria-label="Request quote"
       >
         <MessageCircle size={20} />
         Request Quote
@@ -68,10 +79,12 @@ function ContactSellerFabInner({
 
       <ContactSellerModal
         isOpen={isOpen}
-        isLoggedIn={isLoggedIn}
-        verificationTier={verificationTier}
         favoriteItems={items}
         isLoadingFavorites={isLoading}
+        buyerName={buyerName}
+        buyerEmail={buyerEmail}
+        buyerPhone={buyerPhone}
+        onClearQuotedItems={handleClearQuotedItems}
         onClose={() => {
           setIsOpen(false);
           void refresh();
@@ -85,6 +98,9 @@ export default function ContactSellerFab({
   isLoggedIn,
   verificationTier = 'anonymous',
   initialSavedIds = [],
+  buyerName,
+  buyerEmail,
+  buyerPhone,
 }: ContactSellerFabProps) {
   return (
     <OptionalFavoritesBoundary
@@ -92,7 +108,11 @@ export default function ContactSellerFab({
       verificationTier={verificationTier}
       initialSavedIds={initialSavedIds}
     >
-      <ContactSellerFabInner isLoggedIn={isLoggedIn} verificationTier={verificationTier} />
+      <ContactSellerFabInner
+        buyerName={buyerName}
+        buyerEmail={buyerEmail}
+        buyerPhone={buyerPhone}
+      />
     </OptionalFavoritesBoundary>
   );
 }

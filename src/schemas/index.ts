@@ -60,6 +60,10 @@ export const UserSchema = z.object({
   storefrontName: z.string().trim().min(1).max(50).optional(),
   storefrontTagline: z.string().trim().min(1).max(150).optional(),
   storefrontHeroUrl: httpHttpsUrl.optional(),
+  /** When true, buyers do not see the Request Quote FAB on this seller's surfaces. */
+  hideFab: z.boolean().default(false),
+  /** When true, buyers cannot open individual apparel item detail pages. */
+  hideItemDetails: z.boolean().default(false),
 });
 
 export const PublicUserResponseSchema = z.object({
@@ -71,6 +75,8 @@ export const PublicUserResponseSchema = z.object({
   storefrontName: z.string().trim().min(1).max(50).optional(),
   storefrontTagline: z.string().trim().min(1).max(150).optional(),
   storefrontHeroUrl: httpHttpsUrl.optional(),
+  hideFab: z.boolean().default(false),
+  hideItemDetails: z.boolean().default(false),
 });
 
 export const UserProfileUpdateSchema = z.object({
@@ -79,6 +85,8 @@ export const UserProfileUpdateSchema = z.object({
   storefrontName: z.union([z.string().trim().min(1).max(50), z.literal('')]).optional(),
   storefrontTagline: z.union([z.string().trim().min(1).max(150), z.literal('')]).optional(),
   storefrontHeroUrl: z.union([httpHttpsUrl, z.literal('')]).optional(),
+  hideFab: z.boolean().optional(),
+  hideItemDetails: z.boolean().optional(),
 });
 
 export const PhoneVerifyRequestSchema = z.object({
@@ -675,6 +683,9 @@ export const FavoriteItemSchema = z.object({
   category: FavoriteCategorySchema,
   sellerId: z.string().min(1),
   imageUrl: httpHttpsUrl.optional(),
+  sizes: z.array(z.string().min(1)).optional(),
+  colors: z.array(z.string().min(1)).optional(),
+  listingPath: z.string().min(1).optional(),
   year: z.number().int().optional(),
   make: z.string().optional(),
   model: z.string().optional(),

@@ -5,9 +5,12 @@ import SellerLayout, { type SellerTab } from './SellerLayout';
 import DetailsEditor from './DetailsEditor';
 import InquiriesPanel from './InquiriesPanel';
 import InsightsPanel from './InsightsPanel';
+import SellerFabSettingsPanel from './SellerFabSettingsPanel';
 
 interface SellerVehicleShellProps {
   vehicleId: string;
+  sellerId: string;
+  initialHideFab?: boolean;
   publicListingPath: string;
   vehicleTitle: string;
   vehicleVin?: string;
@@ -19,6 +22,8 @@ interface SellerVehicleShellProps {
 
 export default function SellerVehicleShell({
   vehicleId,
+  sellerId,
+  initialHideFab = false,
   publicListingPath,
   vehicleTitle,
   vehicleVin,
@@ -39,15 +44,22 @@ export default function SellerVehicleShell({
     ) : activeTab === 'insights' ? (
       <InsightsPanel vehicleId={vehicleId} />
     ) : (
-      <DetailsEditor
-        vehicleId={vehicleId}
-        publicListingPath={publicListingPath}
-        vehicleVin={vehicleVin}
-        hasMonroney={hasMonroney}
-        onMonroneyUpdated={() => setHasMonroney(true)}
-        formState={formState}
-        onChange={setFormState}
-      />
+      <div className="flex h-full flex-col overflow-y-auto">
+        <div className="shrink-0 border-b border-slate-200 bg-[#f8f9fa] px-4 py-4 sm:px-6">
+          <div className="mx-auto max-w-6xl">
+            <SellerFabSettingsPanel userId={sellerId} initialHideFab={initialHideFab} />
+          </div>
+        </div>
+        <DetailsEditor
+          vehicleId={vehicleId}
+          publicListingPath={publicListingPath}
+          vehicleVin={vehicleVin}
+          hasMonroney={hasMonroney}
+          onMonroneyUpdated={() => setHasMonroney(true)}
+          formState={formState}
+          onChange={setFormState}
+        />
+      </div>
     );
 
   return (

@@ -12,6 +12,8 @@ interface ClothingInventoryGridProps {
   buyerContext?: BuyerSaveContext;
   showFab?: boolean;
   catalogPdfHref?: string;
+  /** When false, apparel cards are not linked to item PDPs. */
+  linkToDetails?: boolean;
 }
 
 interface ApparelBuyerFilters {
@@ -63,6 +65,7 @@ export default function ClothingInventoryGrid({
   buyerContext,
   showFab = true,
   catalogPdfHref,
+  linkToDetails = true,
 }: ClothingInventoryGridProps) {
   const [filters, setFilters] = useState<ApparelBuyerFilters>({ q: '', brand: '' });
 
@@ -102,6 +105,9 @@ export default function ClothingInventoryGrid({
     <BuyerMarketplaceShell
       isLoggedIn={buyerContext?.isLoggedIn ?? false}
       verificationTier={buyerContext?.verificationTier ?? 'anonymous'}
+      buyerName={buyerContext?.buyerName}
+      buyerEmail={buyerContext?.buyerEmail}
+      buyerPhone={buyerContext?.buyerPhone}
       showFab={showFab}
     >
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -155,6 +161,7 @@ export default function ClothingInventoryGrid({
                   storefrontSegmentsBySellerId[listing.sellerId] ?? listing.sellerId
                 }
                 buyerContext={buyerContext}
+                linkToDetails={linkToDetails}
               />
             ))}
           </div>

@@ -1,20 +1,28 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
-import type { FavoriteItem, VerificationTier } from '../../schemas';
+import type { FavoriteItem } from '../../schemas';
 import {
   buildContactHelperText,
   buildContactMessage,
   buildContactSubheadline,
+  buildSellerScopedLeadMessage,
   syncContactMessageName,
 } from '../../lib/contact-message';
 import { groupFavoritesBySeller } from '../../utils/favorites';
 
+type ToastState = {
+  message: string;
+  type: 'success' | 'warning' | 'error';
+};
+
 interface ContactSellerModalProps {
   isOpen: boolean;
-  isLoggedIn: boolean;
-  verificationTier?: VerificationTier;
   favoriteItems: FavoriteItem[];
   isLoadingFavorites?: boolean;
+  buyerName?: string;
+  buyerEmail?: string;
+  buyerPhone?: string;
+  onClearQuotedItems?: (items: FavoriteItem[]) => Promise<void>;
   onClose: () => void;
 }
 
@@ -22,6 +30,10 @@ export default function ContactSellerModal({
   isOpen,
   favoriteItems,
   isLoadingFavorites = false,
+  buyerName = '',
+  buyerEmail = '',
+  buyerPhone = '',
+  onClearQuotedItems,
   onClose,
 }: ContactSellerModalProps) {
   const [name, setName] = useState('');
@@ -30,7 +42,9 @@ export default function ContactSellerModal({
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
   const prefilledForOpenRef = useRef(false);
+  const closeTimeoutRef = useRef<number | null>(null);
 
   const availableItems = favoriteItems.filter(
     (item) => item.sellerId && item.sellerId !== 'unknown'
@@ -40,6 +54,10 @@ export default function ContactSellerModal({
   useEffect(() => {
     if (!isOpen) {
       prefilledForOpenRef.current = false;
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
       return;
     }
 
@@ -48,11 +66,21 @@ export default function ContactSellerModal({
     prefilledForOpenRef.current = true;
 
     setError(null);
-    setName('');
-    setEmail('');
-    setPhone('');
-    setMessage(buildContactMessage(availableItems, ''));
-  }, [isOpen, favoriteItems, availableItems, isLoadingFavorites]);
+    setToast(null);
+    const nextName = buyerName.trim();
+    setName(nextName);
+    setEmail(buyerEmail.trim());
+    setPhone(buyerPhone.trim());
+    setMessage(buildContactMessage(availableItems, nextName));
+  }, [
+    isOpen,
+    favoriteItems,
+    availableItems,
+    isLoadingFavorites,
+    buyerName,
+    buyerEmail,
+    buyerPhone,
+  ]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -65,6 +93,20 @@ export default function ContactSellerModal({
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleNameChange = (value: string) => {
     setName(value);
     setMessage((current) => syncContactMessageName(current, value));
@@ -73,6 +115,7 @@ export default function ContactSellerModal({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setToast(null);
     setIsSubmitting(true);
 
     try {
@@ -81,8 +124,11 @@ export default function ContactSellerModal({
         throw new Error('Save at least one available item before requesting a quote.');
       }
 
-      await Promise.all(
-        [...groups.entries()].map(async ([sellerId, items]) => {
+      const groupEntries = [...groups.entries()];
+      const draftMessage = message;
+
+      const settled = await Promise.allSettled(
+        groupEntries.map(async ([sellerId, items]) => {
           const res = await fetch('/api/leads', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -91,21 +137,73 @@ export default function ContactSellerModal({
               name,
               email,
               phone,
-              message,
+              message: buildSellerScopedLeadMessage(draftMessage, items, name),
               items,
             }),
           });
 
           if (!res.ok) {
             const data = await res.json().catch(() => ({}));
-            throw new Error(data.error || 'Failed to submit request');
+            throw new Error(
+              typeof data.error === 'string' ? data.error : 'Failed to submit request'
+            );
           }
+
+          return { sellerId, items };
         })
       );
 
-      onClose();
+      const succeeded: FavoriteItem[] = [];
+      let failedCount = 0;
+
+      settled.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          succeeded.push(...result.value.items);
+        } else {
+          failedCount += 1;
+          console.error(
+            `Lead submit failed for seller ${groupEntries[index]?.[0]}`,
+            result.reason
+          );
+        }
+      });
+
+      if (succeeded.length > 0 && onClearQuotedItems) {
+        await onClearQuotedItems(succeeded);
+      }
+
+      const remainingItems = availableItems.filter(
+        (item) => !succeeded.some((done) => done.id === item.id)
+      );
+
+      if (failedCount === 0) {
+        setToast({
+          message: 'Quote request sent successfully.',
+          type: 'success',
+        });
+        closeTimeoutRef.current = window.setTimeout(() => {
+          closeTimeoutRef.current = null;
+          onClose();
+        }, 1500);
+        return;
+      }
+
+      if (succeeded.length === 0) {
+        const messageText = 'Failed to send quote request. Please try again.';
+        setError(messageText);
+        setToast({ message: messageText, type: 'error' });
+        return;
+      }
+
+      setMessage(buildContactMessage(remainingItems, name));
+      setToast({
+        message: `Quotes sent to some sellers, but ${failedCount} failed. Please try again.`,
+        type: 'warning',
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit request');
+      const messageText = err instanceof Error ? err.message : 'Failed to submit request';
+      setError(messageText);
+      setToast({ message: messageText, type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -116,25 +214,32 @@ export default function ContactSellerModal({
   const helperText = buildContactHelperText(favoriteItems);
   const subheadline = buildContactSubheadline(favoriteItems);
 
+  const toastClass =
+    toast?.type === 'success'
+      ? 'bg-emerald-600'
+      : toast?.type === 'warning'
+        ? 'bg-amber-600'
+        : 'bg-red-600';
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
       <button
         type="button"
         className="absolute inset-0 bg-slate-900/50"
-        aria-label="Close contact seller dialog"
+        aria-label="Close request quote dialog"
         onClick={onClose}
       />
 
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="contact-seller-title"
+        aria-labelledby="request-quote-title"
         className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-xl"
       >
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-4">
           <div>
-            <h2 id="contact-seller-title" className="text-xl font-bold text-slate-900">
-              Contact Seller
+            <h2 id="request-quote-title" className="text-xl font-bold text-slate-900">
+              Request a Quote
             </h2>
             <p className="mt-1 text-sm text-slate-500">{subheadline}</p>
           </div>
@@ -227,11 +332,20 @@ export default function ContactSellerModal({
               disabled={isSubmitting || isLoadingFavorites || availableItems.length === 0}
               className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
             >
-              {isSubmitting ? 'Sending…' : 'Send Request'}
+              {isSubmitting ? 'Sending…' : 'Send Quote Request'}
             </button>
           </div>
         </form>
       </div>
+
+      {toast && (
+        <div
+          role="status"
+          className={`fixed bottom-6 left-1/2 z-[60] max-w-md -translate-x-1/2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${toastClass}`}
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }

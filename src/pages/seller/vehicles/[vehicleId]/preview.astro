@@ -21,6 +21,9 @@ if (!vehicleId) {
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
 
+// Owner preview matches public owner view: chat widget is never shown to the listing owner.
+const showChatWidget = false;
+
 const doc = await db().collection('vehicles').doc(vehicleId).get();
 
 if (!doc.exists) {
@@ -83,6 +86,7 @@ const inquiryCount = inquirySnapshot.docs.reduce((count, inquiryDoc) => {
         vehicle={listingVehicle}
         analyticsEnabled={false}
         isVehicleOwner={true}
+        showChatWidget={showChatWidget}
       />
     </div>
   </body>

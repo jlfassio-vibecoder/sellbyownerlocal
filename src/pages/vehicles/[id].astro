@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '../../lib/firebase-admin';
 import { VehicleResponseSchema } from '../../schemas';
 import { getOptionalSession } from '../../lib/auth';
+import { getSellerHideFab } from '../../lib/seller-settings';
 import { resolveVehicleDisplayMonroney } from '../../lib/resolve-display-monroney';
 import {
   buildVehicleSeoDescription,
@@ -79,6 +80,8 @@ const buyerContext = {
   saveLoginHref: `/login?next=${encodeURIComponent(canonicalUrl)}`,
 };
 const isVehicleOwner = Boolean(session?.uid && session.uid === vehicle.sellerId);
+const hideFab = await getSellerHideFab(vehicle.sellerId);
+const showChatWidget = !hideFab && !isVehicleOwner;
 ---
 
 <Layout
@@ -93,5 +96,6 @@ const isVehicleOwner = Boolean(session?.uid && session.uid === vehicle.sellerId)
     buyerContext={buyerContext}
     initialSaved={initialSaved}
     isVehicleOwner={isVehicleOwner}
+    showChatWidget={showChatWidget}
   />
 </Layout>
