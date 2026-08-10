@@ -55,11 +55,9 @@ function ContactSellerFabInner({
   const { count, items, isLoading, refresh, isFavorite, toggle } = useFavorites();
 
   const handleClearQuotedItems = async (quotedItems: FavoriteItem[]) => {
-    for (const item of quotedItems) {
-      if (isFavorite(item.id)) {
-        await toggle(item);
-      }
-    }
+    await Promise.all(
+      quotedItems.filter((item) => isFavorite(item.id)).map((item) => toggle(item))
+    );
   };
 
   return (
