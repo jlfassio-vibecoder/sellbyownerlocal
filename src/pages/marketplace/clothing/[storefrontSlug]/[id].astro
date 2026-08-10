@@ -76,6 +76,8 @@ const hasGalleryImages = galleryImages.length > 0;
 const session = await getOptionalSession(Astro.request, Astro.cookies);
 const buyerProfile = session ? await getUserProfile(session.uid) : null;
 const isStorefrontOwner = Boolean(session?.uid && session.uid === resolvedSeller.id);
+const hideRequestQuoteFab = resolvedSeller.hideFab === true;
+const showRequestQuoteFab = !isStorefrontOwner && !hideRequestQuoteFab;
 const storefrontPath = getStorefrontPath(canonicalSegment);
 
 let initialSaved = false;
@@ -312,7 +314,7 @@ const storefrontTitle =
   </main>
 
   {
-    !isStorefrontOwner && (
+    showRequestQuoteFab && (
       <ContactSellerFab
         client:load
         isLoggedIn={buyerContext.isLoggedIn}

@@ -95,7 +95,7 @@ export default function ContactForm({
     }
   };
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | TextAreaElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 

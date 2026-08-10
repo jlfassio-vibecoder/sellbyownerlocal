@@ -15,6 +15,7 @@ import {
   updateUserDisplayName,
   updateUserStorefrontBranding,
 } from '../../../lib/buyer-profile';
+import { updateSellerHideFab } from '../../../lib/seller-settings';
 import { auth, db } from '../../../lib/firebase-admin';
 import { PublicUserResponseSchema, UserProfileUpdateSchema } from '../../../schemas';
 
@@ -47,6 +48,7 @@ export const GET: APIRoute = async ({ params }) => {
       storefrontName: data.storefrontName,
       storefrontTagline: data.storefrontTagline,
       storefrontHeroUrl: data.storefrontHeroUrl,
+      hideFab: data.hideFab,
     });
 
     if (!parsed.success) {
@@ -127,6 +129,10 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
       storefrontHeroUrl: parsed.data.storefrontHeroUrl,
     });
 
+    if (parsed.data.hideFab !== undefined) {
+      await updateSellerHideFab(id, parsed.data.hideFab);
+    }
+
     const profile = await getUserProfile(id);
     if (!profile) {
       return new Response(JSON.stringify({ error: 'User not found' }), {
@@ -144,6 +150,7 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
       storefrontName: profile.storefrontName,
       storefrontTagline: profile.storefrontTagline,
       storefrontHeroUrl: profile.storefrontHeroUrl,
+      hideFab: profile.hideFab,
     });
 
     if (!response.success) {

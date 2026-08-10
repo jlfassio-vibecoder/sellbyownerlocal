@@ -5,6 +5,7 @@ import {
   ForbiddenError,
   requireSellerOrRedirect,
 } from '../../../lib/auth';
+import { getUserProfile } from '../../../lib/buyer-profile';
 import { mapInquiryDoc } from '../../../lib/inquiries';
 import { vehicleToFormState } from '../../../lib/vehicle-form-mapper';
 import { VehicleResponseSchema } from '../../../schemas';
@@ -20,6 +21,9 @@ if (!vehicleId) {
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
+
+const profile = await getUserProfile(seller.uid);
+const hideFab = profile?.hideFab === true;
 
 const doc = await db().collection('vehicles').doc(vehicleId).get();
 
@@ -84,6 +88,8 @@ const initialInquiries = inquirySnapshot.docs.flatMap((doc) => {
     <SellerVehicleShell
       client:load
       vehicleId={vehicleId}
+      sellerId={seller.uid}
+      initialHideFab={hideFab}
       publicListingPath={publicListingPath}
       vehicleTitle={vehicleTitle}
       vehicleVin={vehicle.vin}

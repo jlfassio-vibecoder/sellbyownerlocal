@@ -43,14 +43,10 @@ function OptionalFavoritesBoundary({
 }
 
 function ContactSellerFabInner({
-  isLoggedIn,
-  verificationTier,
   buyerName,
   buyerEmail,
   buyerPhone,
 }: {
-  isLoggedIn: boolean;
-  verificationTier: VerificationTier;
   buyerName?: string;
   buyerEmail?: string;
   buyerPhone?: string;
@@ -115,8 +111,6 @@ export default function ContactSellerFab({
       initialSavedIds={initialSavedIds}
     >
       <ContactSellerFabInner
-        isLoggedIn={isLoggedIn}
-        verificationTier={verificationTier}
         buyerName={buyerName}
         buyerEmail={buyerEmail}
         buyerPhone={buyerPhone}

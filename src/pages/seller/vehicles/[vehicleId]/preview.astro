@@ -5,6 +5,7 @@ import {
   ForbiddenError,
   requireSellerOrRedirect,
 } from '../../../../lib/auth';
+import { getUserProfile } from '../../../../lib/buyer-profile';
 import { mapInquiryDoc } from '../../../../lib/inquiries';
 import { resolveVehicleDisplayMonroney } from '../../../../lib/resolve-display-monroney';
 import { VehicleResponseSchema } from '../../../../schemas';
@@ -20,6 +21,9 @@ if (!vehicleId) {
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
+
+const profile = await getUserProfile(seller.uid);
+const showChatWidget = profile?.hideFab !== true;
 
 const doc = await db().collection('vehicles').doc(vehicleId).get();
 
@@ -83,6 +87,7 @@ const inquiryCount = inquirySnapshot.docs.reduce((count, inquiryDoc) => {
         vehicle={listingVehicle}
         analyticsEnabled={false}
         isVehicleOwner={true}
+        showChatWidget={showChatWidget}
       />
     </div>
   </body>

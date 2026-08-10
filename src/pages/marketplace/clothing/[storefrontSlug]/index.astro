@@ -53,6 +53,8 @@ const storefrontSegmentsBySellerId = { [seller.id]: canonicalSegment };
 const session = await getOptionalSellerSession(Astro.request, Astro.cookies);
 const buyerProfile = session ? await getUserProfile(session.uid) : null;
 const isStorefrontOwner = Boolean(session?.uid && session.uid === seller.id);
+const hideRequestQuoteFab = seller.hideFab === true;
+const showRequestQuoteFab = !isStorefrontOwner && !hideRequestQuoteFab;
 const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
@@ -133,7 +135,7 @@ const ogImage = heroUrl || resolveStorefrontOgImage(listings);
         storefrontSegmentsBySellerId={storefrontSegmentsBySellerId}
         buyerContext={buyerContext}
         catalogPdfHref={`/api/storefront/${encodeURIComponent(canonicalSegment)}/catalog.pdf`}
-        showFab={!isStorefrontOwner}
+        showFab={showRequestQuoteFab}
       />
     ) : (
       <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -148,7 +150,7 @@ const ogImage = heroUrl || resolveStorefrontOgImage(listings);
   }
 
   {
-    listings.length === 0 && !isStorefrontOwner && (
+    listings.length === 0 && showRequestQuoteFab && (
       <ContactSellerFab
         client:load
         isLoggedIn={buyerContext.isLoggedIn}

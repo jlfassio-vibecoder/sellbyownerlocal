@@ -45,6 +45,8 @@ interface Props {
   buyerContext?: BuyerContext;
   initialSaved?: boolean;
   isVehicleOwner?: boolean;
+  /** When false, hide the floating Owner Messaging chat widget. */
+  showChatWidget?: boolean;
 }
 
 const {
@@ -53,6 +55,7 @@ const {
   buyerContext,
   initialSaved = false,
   isVehicleOwner = false,
+  showChatWidget = true,
 } = Astro.props;
 const view = buildVehicleListingView(vehicle);
 const {
@@ -888,7 +891,7 @@ const sourceSiteLabel = vehicle.externalSourceUrl
     )
   }
 
-  {!isDealerComp && (
+  {!isDealerComp && showChatWidget && (
     <ChatWidget client:load vehicleId={vehicle.id} sellerName={vehicle.sellerName} />
   )}
 </main>
