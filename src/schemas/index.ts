@@ -62,6 +62,8 @@ export const UserSchema = z.object({
   storefrontHeroUrl: httpHttpsUrl.optional(),
   /** When true, buyers do not see the Request Quote FAB on this seller's surfaces. */
   hideFab: z.boolean().default(false),
+  /** When true, buyers cannot open individual apparel item detail pages. */
+  hideItemDetails: z.boolean().default(false),
 });
 
 export const PublicUserResponseSchema = z.object({
@@ -74,6 +76,7 @@ export const PublicUserResponseSchema = z.object({
   storefrontTagline: z.string().trim().min(1).max(150).optional(),
   storefrontHeroUrl: httpHttpsUrl.optional(),
   hideFab: z.boolean().default(false),
+  hideItemDetails: z.boolean().default(false),
 });
 
 export const UserProfileUpdateSchema = z.object({
@@ -83,6 +86,7 @@ export const UserProfileUpdateSchema = z.object({
   storefrontTagline: z.union([z.string().trim().min(1).max(150), z.literal('')]).optional(),
   storefrontHeroUrl: z.union([httpHttpsUrl, z.literal('')]).optional(),
   hideFab: z.boolean().optional(),
+  hideItemDetails: z.boolean().optional(),
 });
 
 export const PhoneVerifyRequestSchema = z.object({

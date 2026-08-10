@@ -12,6 +12,8 @@ interface ClothingInventoryGridProps {
   buyerContext?: BuyerSaveContext;
   showFab?: boolean;
   catalogPdfHref?: string;
+  /** When false, apparel cards are not linked to item PDPs. */
+  linkToDetails?: boolean;
 }
 
 interface ApparelBuyerFilters {
@@ -63,6 +65,7 @@ export default function ClothingInventoryGrid({
   buyerContext,
   showFab = true,
   catalogPdfHref,
+  linkToDetails = true,
 }: ClothingInventoryGridProps) {
   const [filters, setFilters] = useState<ApparelBuyerFilters>({ q: '', brand: '' });
 
@@ -158,6 +161,7 @@ export default function ClothingInventoryGrid({
                   storefrontSegmentsBySellerId[listing.sellerId] ?? listing.sellerId
                 }
                 buyerContext={buyerContext}
+                linkToDetails={linkToDetails}
               />
             ))}
           </div>

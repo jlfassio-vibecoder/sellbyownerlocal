@@ -55,6 +55,7 @@ const buyerProfile = session ? await getUserProfile(session.uid) : null;
 const isStorefrontOwner = Boolean(session?.uid && session.uid === seller.id);
 const hideRequestQuoteFab = seller.hideFab === true;
 const showRequestQuoteFab = !isStorefrontOwner && !hideRequestQuoteFab;
+const linkToDetails = isStorefrontOwner || seller.hideItemDetails !== true;
 const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
@@ -136,6 +137,7 @@ const ogImage = heroUrl || resolveStorefrontOgImage(listings);
         buyerContext={buyerContext}
         catalogPdfHref={`/api/storefront/${encodeURIComponent(canonicalSegment)}/catalog.pdf`}
         showFab={showRequestQuoteFab}
+        linkToDetails={linkToDetails}
       />
     ) : (
       <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

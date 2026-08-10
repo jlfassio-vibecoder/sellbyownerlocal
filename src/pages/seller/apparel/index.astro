@@ -5,7 +5,7 @@ import { getApparelCatalogForSeller } from '../../../lib/clothing-api';
 import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
 import ApparelCatalogSection from '../../../islands/seller/ApparelCatalogSection';
 import ShareCatalogButton from '../../../islands/seller/ShareCatalogButton';
-import SellerFabSettingsPanel from '../../../islands/seller/SellerFabSettingsPanel';
+import ApparelBuyerVisibilitySettings from '../../../islands/seller/ApparelBuyerVisibilitySettings';
 import type { ApparelFilterItem } from '../../../lib/apparel';
 import { resolveStorefrontSegment, getStorefrontPath } from '../../../utils/url-helpers';
 import '../../../styles/global.css';
@@ -22,6 +22,7 @@ const storefrontHref = getStorefrontPath(storefrontSegment);
 const storefrontUrl = new URL(storefrontHref, Astro.site?.href ?? Astro.url.origin).href;
 const catalog = await getApparelCatalogForSeller(seller.uid);
 const hideFab = profile?.hideFab === true;
+const hideItemDetails = profile?.hideItemDetails === true;
 
 const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
   id: item.id,
@@ -78,10 +79,11 @@ const initialItems: ApparelFilterItem[] = catalog.map((item) => ({
           </div>
 
           <div class="mb-6">
-            <SellerFabSettingsPanel
+            <ApparelBuyerVisibilitySettings
               client:load
               userId={seller.uid}
               initialHideFab={hideFab}
+              initialHideItemDetails={hideItemDetails}
             />
           </div>
 

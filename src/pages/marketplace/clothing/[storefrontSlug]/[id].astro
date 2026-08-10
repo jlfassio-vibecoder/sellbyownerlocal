@@ -48,10 +48,19 @@ if (listing.sellerId !== resolvedSeller.id) {
 
 const canonicalSegment = resolveStorefrontSegment(resolvedSeller);
 const canonicalPath = getClothingListingPath(listing.id, canonicalSegment);
+const storefrontPath = getStorefrontPath(canonicalSegment);
 
 // Previous slug / UID fallback → 301 to current canonical nested URL.
 if (param !== canonicalSegment) {
   return Astro.redirect(canonicalPath, 301);
+}
+
+const session = await getOptionalSession(Astro.request, Astro.cookies);
+const isStorefrontOwner = Boolean(session?.uid && session.uid === resolvedSeller.id);
+
+// Seller disabled item click-through: send buyers back to the storefront.
+if (resolvedSeller.hideItemDetails === true && !isStorefrontOwner) {
+  return Astro.redirect(storefrontPath, 302);
 }
 
 const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
@@ -73,12 +82,9 @@ const canonicalUrl = resolveAbsoluteUrl(canonicalPath, origin);
 const galleryImages = listing.galleryPhotos?.length ? listing.galleryPhotos : [];
 const heroImage = listing.galleryPhotos?.[0];
 const hasGalleryImages = galleryImages.length > 0;
-const session = await getOptionalSession(Astro.request, Astro.cookies);
 const buyerProfile = session ? await getUserProfile(session.uid) : null;
-const isStorefrontOwner = Boolean(session?.uid && session.uid === resolvedSeller.id);
 const hideRequestQuoteFab = resolvedSeller.hideFab === true;
 const showRequestQuoteFab = !isStorefrontOwner && !hideRequestQuoteFab;
-const storefrontPath = getStorefrontPath(canonicalSegment);
 
 let initialSaved = false;
 if (session) {

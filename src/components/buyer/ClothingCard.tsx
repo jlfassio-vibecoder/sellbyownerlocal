@@ -8,6 +8,8 @@ interface ClothingCardProps {
   listing: ClothingListing;
   storefrontSegment: string;
   buyerContext?: BuyerSaveContext;
+  /** When false, image/title are not links to the item PDP. */
+  linkToDetails?: boolean;
 }
 
 function hasSalePricing(listing: ClothingListing): boolean {
@@ -22,6 +24,7 @@ export default function ClothingCard({
   listing,
   storefrontSegment,
   buyerContext,
+  linkToDetails = true,
 }: ClothingCardProps) {
   const listingPath = getClothingListingPath(listing.id, storefrontSegment);
   const showFeatured = Boolean(listing.isFeatured);
@@ -29,25 +32,64 @@ export default function ClothingCard({
   const showSale = Boolean(listing.isSale);
   const onSale = hasSalePricing(listing);
 
+  const imageBlock = listing.galleryPhotos[0] ? (
+    <div className="aspect-[4/3] w-full bg-slate-100">
+      <img
+        src={listing.galleryPhotos[0]}
+        alt={listing.title}
+        className="h-full w-full object-contain"
+        loading="lazy"
+      />
+    </div>
+  ) : (
+    <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-100 text-sm text-slate-500">
+      No photo
+    </div>
+  );
+
+  const detailsBlock = (
+    <>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {listing.brand}
+      </p>
+      <h2 className="text-xl font-bold text-slate-900">{listing.title}</h2>
+      {onSale ? (
+        <p className="flex items-baseline gap-2 text-xl font-bold">
+          <span className="text-red-600 line-through">
+            {priceFormatter.format(listing.price)}
+          </span>
+          <span className="text-emerald-600">{priceFormatter.format(listing.salePrice!)}</span>
+        </p>
+      ) : (
+        <p className="text-xl font-bold text-slate-900">
+          {priceFormatter.format(listing.price)}
+        </p>
+      )}
+      {listing.sizes.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5">
+          {listing.sizes.map((size) => (
+            <li
+              key={size}
+              className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600"
+            >
+              {size}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-lg">
       <div className="relative">
-        <a href={listingPath} className="block">
-          {listing.galleryPhotos[0] ? (
-            <div className="aspect-[4/3] w-full bg-slate-100">
-              <img
-                src={listing.galleryPhotos[0]}
-                alt={listing.title}
-                className="h-full w-full object-contain"
-                loading="lazy"
-              />
-            </div>
-          ) : (
-            <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-100 text-sm text-slate-500">
-              No photo
-            </div>
-          )}
-        </a>
+        {linkToDetails ? (
+          <a href={listingPath} className="block">
+            {imageBlock}
+          </a>
+        ) : (
+          <div className="block">{imageBlock}</div>
+        )}
         {(showFeatured || showSale) && (
           <div className="absolute top-3 left-3 z-10 flex flex-col gap-1">
             {showFeatured && (
@@ -88,36 +130,13 @@ export default function ClothingCard({
         </div>
       </div>
 
-      <a href={listingPath} className="block space-y-3 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {listing.brand}
-        </p>
-        <h2 className="text-xl font-bold text-slate-900">{listing.title}</h2>
-        {onSale ? (
-          <p className="flex items-baseline gap-2 text-xl font-bold">
-            <span className="text-red-600 line-through">
-              {priceFormatter.format(listing.price)}
-            </span>
-            <span className="text-emerald-600">{priceFormatter.format(listing.salePrice!)}</span>
-          </p>
-        ) : (
-          <p className="text-xl font-bold text-slate-900">
-            {priceFormatter.format(listing.price)}
-          </p>
-        )}
-        {listing.sizes.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5">
-            {listing.sizes.map((size) => (
-              <li
-                key={size}
-                className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600"
-              >
-                {size}
-              </li>
-            ))}
-          </ul>
-        )}
-      </a>
+      {linkToDetails ? (
+        <a href={listingPath} className="block space-y-3 p-4">
+          {detailsBlock}
+        </a>
+      ) : (
+        <div className="block space-y-3 p-4">{detailsBlock}</div>
+      )}
     </div>
   );
 }
