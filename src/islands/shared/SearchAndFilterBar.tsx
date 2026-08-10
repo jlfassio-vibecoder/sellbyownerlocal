@@ -103,13 +103,12 @@ export default function SearchAndFilterBar({
       </div>
 
       {showStatusFilter && statusFilterMode === 'chips' && (
-        <div className="mt-4 flex flex-wrap gap-2" role="tablist" aria-label="Filter by status">
+        <div className="mt-4 flex flex-wrap gap-2" aria-label="Filter by status">
           {LISTING_STATUS_FILTER_CHIPS.map((chip) => (
             <button
               key={chip.value}
               type="button"
-              role="tab"
-              aria-selected={selectedStatus === chip.value}
+              aria-pressed={selectedStatus === chip.value}
               onClick={() => setSelectedStatus(chip.value)}
               className={statusChipClass(selectedStatus === chip.value)}
             >

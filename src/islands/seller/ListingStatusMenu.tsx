@@ -35,7 +35,7 @@ export default function ListingStatusMenu({
   const actions = getAvailableListingStatusActions(status);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open && !pendingStatus) return;
 
     const handlePointerDown = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
@@ -56,7 +56,7 @@ export default function ListingStatusMenu({
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open]);
+  }, [open, pendingStatus]);
 
   const applyStatus = async (next: ListingLifecycleStatus) => {
     if (isSubmitting || next === status) return;
@@ -89,7 +89,13 @@ export default function ListingStatusMenu({
         event.preventDefault();
         event.stopPropagation();
       }}
-      onKeyDown={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          setOpen(false);
+          setPendingStatus(null);
+        }
+        event.stopPropagation();
+      }}
     >
       <button
         type="button"

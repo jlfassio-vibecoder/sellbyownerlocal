@@ -1,4 +1,10 @@
-import type { Conversation, PopulateMonroneyFromStickerResponse, PopulateMonroneyFromVinResponse, VehicleFormState } from '../schemas';
+import type {
+  Conversation,
+  ListingLifecycleStatus,
+  PopulateMonroneyFromStickerResponse,
+  PopulateMonroneyFromVinResponse,
+  VehicleFormState,
+} from '../schemas';
 
 export class SellerApiError extends Error {
   readonly status: number;
@@ -33,7 +39,7 @@ export async function updateVehicle(
 
 export async function updateVehicleStatus(
   vehicleId: string,
-  status: string
+  status: ListingLifecycleStatus
 ): Promise<void> {
   const res = await fetch(
     `/api/seller/vehicles/${encodeURIComponent(vehicleId)}/status`,
@@ -51,7 +57,7 @@ export async function updateVehicleStatus(
 
 export async function updateApparelStatus(
   listingId: string,
-  status: string
+  status: ListingLifecycleStatus
 ): Promise<void> {
   const res = await fetch(`/api/seller/apparel/${encodeURIComponent(listingId)}/status`, {
     method: 'PATCH',

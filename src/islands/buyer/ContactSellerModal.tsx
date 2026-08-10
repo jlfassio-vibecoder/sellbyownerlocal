@@ -342,8 +342,8 @@ export default function ContactSellerModal({
 
           {skippedCount > 0 && (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              {skippedCount} saved listing{skippedCount === 1 ? ' is' : 's are'} pending, sold, or
-              unavailable and will be skipped from this quote.
+              {skippedCount} saved listing{skippedCount === 1 ? ' is' : 's are'} not eligible for a
+              quote (pending, sold, unavailable, or missing seller) and will be skipped.
             </p>
           )}
 

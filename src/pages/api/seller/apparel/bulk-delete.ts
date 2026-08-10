@@ -10,6 +10,7 @@ import {
 import { db } from '../../../../lib/firebase-admin';
 import {
   assertListingHardDeletable,
+  chunkForFirestoreBatch,
   deleteSavedFavoritesForListing,
   hardDeleteListingDocuments,
   ListingNotHardDeletableError,
@@ -74,11 +75,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
 
     let prunedSaveCount = 0;
-    for (const id of uniqueIds) {
-      prunedSaveCount += await deleteSavedFavoritesForListing({
-        category: 'clothing',
-        listingId: id,
-      });
+    const CASCADE_CONCURRENCY = 10;
+    for (const idChunk of chunkForFirestoreBatch(uniqueIds, CASCADE_CONCURRENCY)) {
+      const counts = await Promise.all(
+        idChunk.map((id) =>
+          deleteSavedFavoritesForListing({
+            category: 'clothing',
+            listingId: id,
+          })
+        )
+      );
+      prunedSaveCount += counts.reduce((sum, count) => sum + count, 0);
     }
 
     return new Response(
