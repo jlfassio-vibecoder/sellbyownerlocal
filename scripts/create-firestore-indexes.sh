@@ -66,6 +66,10 @@ create_idx saved_vehicles \
   --field-config=field-path=vehicleId,order=ascending \
   --field-config=field-path=savedAt,order=descending
 
+create_idx saved_vehicles \
+  --field-config=field-path=vehicleId,order=ascending \
+  --field-config=field-path=savedAt,order=ascending
+
 create_idx clothing_listings \
   --field-config=field-path=sellerId,order=ascending \
   --field-config=field-path=createdAt,order=descending

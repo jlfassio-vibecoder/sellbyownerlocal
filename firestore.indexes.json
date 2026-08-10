@@ -84,6 +84,14 @@
       ]
     },
     {
+      "collectionGroup": "saved_vehicles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "vehicleId", "order": "ASCENDING" },
+        { "fieldPath": "savedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "inquiries",
       "queryScope": "COLLECTION",
       "fields": [

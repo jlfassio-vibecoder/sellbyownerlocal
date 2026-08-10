@@ -105,17 +105,19 @@ async function fetchListingEvents(vehicleId: string, since: string | null): Prom
 }
 
 async function countActiveSaves(vehicleId: string, since: string | null): Promise<number> {
-  let query = db().collection('saved_vehicles').where('vehicleId', '==', vehicleId);
+  // Filter savedAt in memory: the deployed composite is vehicleId+savedAt DESC,
+  // while `savedAt >=` needs ASC. Per-vehicle save counts stay small.
+  const snapshot = await db()
+    .collection('saved_vehicles')
+    .where('vehicleId', '==', vehicleId)
+    .get();
 
-  if (since) {
-    query = db()
-      .collection('saved_vehicles')
-      .where('vehicleId', '==', vehicleId)
-      .where('savedAt', '>=', since);
-  }
+  if (!since) return snapshot.size;
 
-  const snapshot = await query.get();
-  return snapshot.size;
+  return snapshot.docs.filter((doc) => {
+    const savedAt = doc.data().savedAt;
+    return typeof savedAt === 'string' && savedAt >= since;
+  }).length;
 }
 
 async function countInquiries(vehicleId: string, since: string | null): Promise<number> {
