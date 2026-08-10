@@ -11,6 +11,7 @@ import {
 import { db } from '../../../lib/firebase-admin';
 import { checkRateLimit, getClientIp } from '../../../lib/rate-limit';
 import { InquirySchema } from '../../../schemas';
+import { isTransactionalListingStatus } from '../../../lib/listing-lifecycle';
 
 const INQUIRY_RATE_LIMIT = {
   windowMs: 15 * 60 * 1000,
@@ -83,6 +84,13 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
     if (vehicleData?.inventorySource === 'dealer_comp') {
       return new Response(
         JSON.stringify({ error: 'Inquiries are not available for dealer comparable listings' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!isTransactionalListingStatus(vehicleData?.status)) {
+      return new Response(
+        JSON.stringify({ error: 'Inquiries are only available for active listings' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }

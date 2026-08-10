@@ -1,4 +1,5 @@
 import { FavoriteItemSchema, type FavoriteItem } from '../schemas';
+import { isTransactionalListingStatus } from './listing-lifecycle';
 import {
   getClothingListingPath,
   getVehicleListingPath,
@@ -49,7 +50,7 @@ function firstHttpUrl(value: unknown): string | undefined {
 }
 
 export function isActiveListingStatus(status: unknown): boolean {
-  return status === 'active';
+  return isTransactionalListingStatus(status);
 }
 
 export function enrichFavoriteFromClothingData(

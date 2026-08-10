@@ -11,6 +11,7 @@ import {
 import { generateBrokerCheckoutUrl } from '../../../lib/broker-checkout';
 import { auth, db } from '../../../lib/firebase-admin';
 import { VehicleResponseSchema } from '../../../schemas';
+import { isTransactionalListingStatus } from '../../../lib/listing-lifecycle';
 
 const HandoffBodySchema = z.object({
   vehicleId: z
@@ -94,6 +95,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (vehicle.inventorySource === 'dealer_comp') {
       return jsonError('Checkout is not available for dealer comparable listings', 403);
+    }
+
+    if (!isTransactionalListingStatus(vehicle.status)) {
+      return jsonError('Checkout is only available for active listings', 403);
     }
 
     if (session.uid === vehicle.sellerId) {

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import type { ListingLifecycleStatus } from '../../schemas';
 import DocumentViewer from '../DocumentViewer';
 import BasicMultiUploader from './BasicMultiUploader';
 import LineSheetPdfUploader from './LineSheetPdfUploader';
@@ -22,7 +23,7 @@ export interface ApparelEditorInitialData {
   pdfLineSheetUrl?: string;
   pdfDefaultPage?: number | null;
   galleryPhotos: string[];
-  status: 'draft' | 'active' | 'archived';
+  status: ListingLifecycleStatus;
   isFeatured?: boolean;
   isSale?: boolean;
   salePrice?: number;

@@ -5,7 +5,10 @@ import {
   getUserProfile,
   resolveSellerByStorefrontParam,
 } from '../../../../lib/buyer-profile';
-import { getClothingListingById } from '../../../../lib/clothing-api';
+import { getPublicClothingListingById } from '../../../../lib/clothing-api';
+import {
+  isBuyerCtaEnabledStatus,
+} from '../../../../lib/listing-lifecycle';
 import {
   buildClothingSeoDescription,
   buildClothingSeoTitle,
@@ -37,7 +40,7 @@ if (!resolvedSeller) {
   return Astro.rewrite('/404');
 }
 
-const listing = await getClothingListingById(id);
+const listing = await getPublicClothingListingById(id);
 if (!listing) {
   return Astro.rewrite('/404');
 }
@@ -85,7 +88,10 @@ const heroImage = listing.galleryPhotos?.[0];
 const hasGalleryImages = galleryImages.length > 0;
 const buyerProfile = session ? await getUserProfile(session.uid) : null;
 const hideRequestQuoteFab = resolvedSeller.hideFab === true;
-const showRequestQuoteFab = !isStorefrontOwner && !hideRequestQuoteFab;
+const buyerCtasEnabled = isBuyerCtaEnabledStatus(listing.status);
+const showRequestQuoteFab = !isStorefrontOwner && !hideRequestQuoteFab && buyerCtasEnabled;
+const isPending = listing.status === 'pending';
+const isSold = listing.status === 'sold';
 
 let initialSaved = false;
 if (session) {
@@ -219,8 +225,7 @@ const storefrontTitle =
             <div class="space-y-2">
               <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{listing.brand}</p>
               {
-                // Copilot suggestion ignored: Sale badge uses isSale so bulk “Mark as Sale” remains visible before a salePrice is set; dual pricing still uses hasSalePricing.
-                (listing.isFeatured || listing.isSale) && (
+                (listing.isFeatured || listing.isSale || isPending || isSold) && (
                   <div class="flex flex-wrap gap-1.5">
                     {
                       listing.isFeatured && (
@@ -236,21 +241,39 @@ const storefrontTitle =
                         </span>
                       )
                     }
+                    {
+                      isPending && (
+                        <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                          Pending
+                        </span>
+                      )
+                    }
+                    {
+                      isSold && (
+                        <span class="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800">
+                          Sold
+                        </span>
+                      )
+                    }
                   </div>
                 )
               }
             </div>
-            <FavoriteButton
-              client:load
-              itemId={listing.id}
-              title={listing.title}
-              price={hasSalePricing ? listing.salePrice! : listing.price}
-              category="clothing"
-              sellerId={listing.sellerId}
-              isLoggedIn={buyerContext.isLoggedIn}
-              verificationTier={buyerContext.verificationTier}
-              initialSaved={initialSaved}
-            />
+            {
+              buyerCtasEnabled && (
+                <FavoriteButton
+                  client:load
+                  itemId={listing.id}
+                  title={listing.title}
+                  price={hasSalePricing ? listing.salePrice! : listing.price}
+                  category="clothing"
+                  sellerId={listing.sellerId}
+                  isLoggedIn={buyerContext.isLoggedIn}
+                  verificationTier={buyerContext.verificationTier}
+                  initialSaved={initialSaved}
+                />
+              )
+            }
           </div>
           <h1 class="text-4xl leading-tight font-bold text-slate-900 md:text-5xl">
             {listing.title}
@@ -280,12 +303,27 @@ const storefrontTitle =
 
           <p class="text-lg leading-relaxed text-slate-600">{listing.description}</p>
 
-          <a
-            href="#contact"
-            class="inline-flex w-max items-center justify-center rounded-lg bg-red-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-red-700"
-          >
-            Request a Quote
-          </a>
+          {
+            buyerCtasEnabled ? (
+              <a
+                href="#contact"
+                class="inline-flex w-max items-center justify-center rounded-lg bg-red-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-red-700"
+              >
+                Request a Quote
+              </a>
+            ) : (
+              <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p class="text-sm font-semibold text-slate-900">
+                  {isSold ? 'Sold' : 'Pending'}
+                </p>
+                <p class="mt-1 text-xs text-slate-500">
+                  {isSold
+                    ? 'This item has been marked sold. Quote requests are closed.'
+                    : 'This item is pending. Quote requests are temporarily closed.'}
+                </p>
+              </div>
+            )
+          }
         </div>
       </div>
     </section>
@@ -305,20 +343,24 @@ const storefrontTitle =
       )
     }
 
-    <ContactForm
-      client:load
-      vehicleId={listing.id}
-      listingIdKey="clothingListingId"
-      apiEndpoint="/api/clothing-inquiries"
-      sellerId={listing.sellerId}
-      allowGuest
-      isLoggedIn={buyerContext.isLoggedIn}
-      verificationTier={buyerContext.verificationTier}
-      loginHref={buyerContext.loginHref}
-      buyerName={buyerContext.buyerName}
-      buyerEmail={buyerContext.buyerEmail}
-      buyerPhone={buyerContext.buyerPhone}
-    />
+    {
+      buyerCtasEnabled && (
+        <ContactForm
+          client:load
+          vehicleId={listing.id}
+          listingIdKey="clothingListingId"
+          apiEndpoint="/api/clothing-inquiries"
+          sellerId={listing.sellerId}
+          allowGuest
+          isLoggedIn={buyerContext.isLoggedIn}
+          verificationTier={buyerContext.verificationTier}
+          loginHref={buyerContext.loginHref}
+          buyerName={buyerContext.buyerName}
+          buyerEmail={buyerContext.buyerEmail}
+          buyerPhone={buyerContext.buyerPhone}
+        />
+      )
+    }
   </main>
 
   {

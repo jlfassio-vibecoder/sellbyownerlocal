@@ -1,6 +1,7 @@
 import { db } from './firebase-admin';
 import { z } from 'zod';
 import { ClothingListingSchema, type ClothingListing } from '../schemas';
+import { isPubliclyViewableListingStatus } from './listing-lifecycle';
 
 function toCreatedAt(value: unknown): Date | undefined {
   if (value instanceof Date) return value;
@@ -51,6 +52,32 @@ export async function getClothingListingById(id: string): Promise<ClothingListin
   }
 
   if (parsed.data.status !== 'active') {
+    return null;
+  }
+
+  return parsed.data;
+}
+
+/** Public PDP loader: active, pending, or sold. Draft/archived return null. */
+export async function getPublicClothingListingById(
+  id: string
+): Promise<ClothingListing | null> {
+  const snapshot = await db().collection('clothing_listings').doc(id).get();
+
+  if (!snapshot.exists) {
+    return null;
+  }
+
+  const parsed = mapClothingDoc(snapshot.id, snapshot.data() as Record<string, unknown>);
+
+  if (!parsed.success) {
+    if (import.meta.env.DEV) {
+      console.error(`Clothing ${id} failed validation:`, z.flattenError(parsed.error));
+    }
+    return null;
+  }
+
+  if (!isPubliclyViewableListingStatus(parsed.data.status)) {
     return null;
   }
 

@@ -6,6 +6,8 @@ const INPUT_CLASS =
 const STATUS_OPTIONS: { value: ApparelFilterStatus; label: string }[] = [
   { value: 'draft', label: 'Draft' },
   { value: 'active', label: 'Active' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'sold', label: 'Sold' },
   { value: 'archived', label: 'Archived' },
 ];
 

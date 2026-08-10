@@ -98,7 +98,22 @@ export const VehicleLocationSchema = z.object({
   city: z.string().min(1),
 });
 
-export const VehicleStatusSchema = z.enum(['draft', 'active', 'pending', 'sold']);
+export const ListingLifecycleStatusSchema = z.enum([
+  'draft',
+  'active',
+  'pending',
+  'sold',
+  'archived',
+]);
+
+export const VehicleStatusSchema = ListingLifecycleStatusSchema;
+
+export const ListingStatusUpdateSchema = z.object({
+  status: ListingLifecycleStatusSchema,
+});
+
+export type ListingLifecycleStatus = z.infer<typeof ListingLifecycleStatusSchema>;
+export type ListingStatusUpdate = z.infer<typeof ListingStatusUpdateSchema>;
 
 export const VehicleSpecsSchema = z.object({
   exteriorColor: z.string().min(1),
@@ -1084,7 +1099,7 @@ export type BuyerConversationsResponse = z.infer<typeof BuyerConversationsRespon
 export type UserResponse = z.infer<typeof UserResponseSchema>;
 export type VehicleResponse = z.infer<typeof VehicleResponseSchema>;
 
-export const ClothingListingStatusSchema = z.enum(['draft', 'active', 'archived']);
+export const ClothingListingStatusSchema = ListingLifecycleStatusSchema;
 
 const lineSheetUrl = z.string().refine((value) => {
   if (value.startsWith('gs://')) return true;

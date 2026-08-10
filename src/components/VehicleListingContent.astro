@@ -95,6 +95,9 @@ const analyticsSectionIds = navSections.map((section) => section.id);
 const favoriteTitle =
   vehicle.listingTitle?.trim() || `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
 const isDealerComp = vehicle.inventorySource === 'dealer_comp';
+const isPending = vehicle.status === 'pending';
+const isSold = vehicle.status === 'sold';
+const buyerCtasDisabled = isDealerComp || isPending || isSold;
 const sourceSiteLabel = vehicle.externalSourceUrl
   ? formatSourceSiteLabel(vehicle.externalSourceUrl)
   : undefined;
@@ -118,7 +121,7 @@ const sourceSiteLabel = vehicle.externalSourceUrl
   accentColor={vehicle.accentColor}
   sections={navSections}
   saveVehicle={
-    buyerContext && !isDealerComp
+    buyerContext && !buyerCtasDisabled
       ? {
           vehicleId: vehicle.id,
           title: favoriteTitle,
@@ -165,7 +168,7 @@ const sourceSiteLabel = vehicle.externalSourceUrl
           </p>
         </div>
 
-        {!isVehicleOwner && !isDealerComp && (
+        {!isVehicleOwner && !buyerCtasDisabled && (
           <div class="mt-4">
             <SecureCheckoutCTA
               client:load
@@ -176,6 +179,24 @@ const sourceSiteLabel = vehicle.externalSourceUrl
             />
           </div>
         )}
+
+        {
+          (isPending || isSold) && (
+            <div class="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p class="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                Listing status
+              </p>
+              <p class="text-sm font-semibold text-slate-900">
+                {isSold ? 'Sold' : 'Pending'}
+              </p>
+              <p class="mt-2 text-xs text-slate-500">
+                {isSold
+                  ? 'This vehicle has been marked sold. Contact and checkout are unavailable.'
+                  : 'This vehicle is pending. Contact and checkout are temporarily unavailable.'}
+              </p>
+            </div>
+          )
+        }
 
         {
           isDealerComp && sourceSiteLabel && (
@@ -236,7 +257,7 @@ const sourceSiteLabel = vehicle.externalSourceUrl
 
       <div class="group relative h-80 w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 shadow-sm">
         {
-          !isDealerComp && (
+          !buyerCtasDisabled && (
             <div class="absolute top-3 right-3 z-20">
               <FavoriteButton
                 client:load
@@ -416,7 +437,7 @@ const sourceSiteLabel = vehicle.externalSourceUrl
               </div>
 
               {
-                sellersNote?.ctaText && !isDealerComp && (
+                sellersNote?.ctaText && !buyerCtasDisabled && (
                   <div class="mt-12 rounded-xl border border-slate-200 bg-slate-50 p-6 text-center md:p-8">
                     <div class="mb-6 whitespace-pre-wrap text-slate-700">
                       {sellersNote.ctaText.split('\n\n').map((paragraph) => (
@@ -625,12 +646,20 @@ const sourceSiteLabel = vehicle.externalSourceUrl
   </section>
 
   {
-    isDealerComp ? (
+    buyerCtasDisabled ? (
       <section id="external-source" class="mb-16 pt-8">
-        <h2 class="mb-4 text-2xl font-bold text-slate-900">External Dealer Listing</h2>
+        <h2 class="mb-4 text-2xl font-bold text-slate-900">
+          {isPending || isSold ? 'Listing Unavailable for Contact' : 'External Dealer Listing'}
+        </h2>
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           {
-            sourceSiteLabel ? (
+            isPending || isSold ? (
+              <p class="text-sm text-slate-600">
+                {isSold
+                  ? 'This vehicle has been marked sold. Inquiries and checkout are closed.'
+                  : 'This vehicle is pending. Inquiries and checkout are temporarily closed.'}
+              </p>
+            ) : sourceSiteLabel ? (
               <>
                 <p class="mb-2 text-sm text-slate-600">
                   This marketplace entry is a dealer comparable. The original listing site is shown
@@ -891,7 +920,7 @@ const sourceSiteLabel = vehicle.externalSourceUrl
     )
   }
 
-  {!isDealerComp && showChatWidget && (
+  {!buyerCtasDisabled && showChatWidget && (
     <ChatWidget client:load vehicleId={vehicle.id} sellerName={vehicle.sellerName} />
   )}
 </main>

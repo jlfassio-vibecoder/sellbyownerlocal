@@ -9,6 +9,11 @@ import {
   unauthorizedResponse,
 } from '../../../../lib/auth';
 import { db } from '../../../../lib/firebase-admin';
+import {
+  assertListingStatusTransition,
+  InvalidListingStatusTransitionError,
+  parseListingLifecycleStatus,
+} from '../../../../lib/listing-lifecycle';
 import { ClothingListingStatusSchema } from '../../../../schemas';
 
 const UpdateItemUpdatesSchema = z
@@ -96,6 +101,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     const firestoreUpdate: Record<string, unknown> = { ...updates };
+    if (updates.status !== undefined) {
+      const fromStatus = parseListingLifecycleStatus(existing.status);
+      const toStatus = parseListingLifecycleStatus(updates.status);
+      if (!fromStatus || !toStatus) {
+        return new Response(JSON.stringify({ error: 'Listing has invalid status' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      assertListingStatusTransition(fromStatus, toStatus);
+      firestoreUpdate.previousStatus = fromStatus;
+      firestoreUpdate.statusChangedAt = new Date().toISOString();
+    }
     if (updates.isSale === false || updates.salePrice === null) {
       firestoreUpdate.salePrice = FieldValue.delete();
     }
@@ -107,6 +125,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    if (error instanceof InvalidListingStatusTransitionError) {
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid status transition',
+          from: error.from,
+          to: error.to,
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
     if (error instanceof AuthError) {
       return unauthorizedResponse(error.message);
     }
