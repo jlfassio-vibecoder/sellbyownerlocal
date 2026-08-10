@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { signOut } from 'firebase/auth';
 import {
+  BarChart3,
   Globe,
   LayoutGrid,
   LogOut,
@@ -12,7 +13,7 @@ import {
 import { auth } from '../../lib/firebase-client';
 import MobileDrawer from '../MobileDrawer';
 
-export type ApparelNav = 'catalog' | 'inquiries';
+export type ApparelNav = 'catalog' | 'inquiries' | 'insights';
 
 interface ApparelSellerLayoutProps {
   activeNav: ApparelNav;
@@ -77,6 +78,10 @@ export default function ApparelSellerLayout({
         <Users size={16} />
         Quote Requests
         {inquiryBadge}
+      </a>
+      <a href="/seller/apparel/insights" className={navLinkClass(activeNav === 'insights')}>
+        <BarChart3 size={16} />
+        Insights
       </a>
     </>
   );
@@ -157,6 +162,14 @@ export default function ApparelSellerLayout({
             <Users size={16} />
             Quote Requests
             {inquiryBadge}
+          </a>
+          <a
+            href="/seller/apparel/insights"
+            className={`w-full text-left ${navLinkClass(activeNav === 'insights')}`}
+            onClick={() => setIsDrawerOpen(false)}
+          >
+            <BarChart3 size={16} />
+            Insights
           </a>
         </div>
 

@@ -20,6 +20,13 @@ export class AnalyticsEntityNotFoundError extends Error {
   }
 }
 
+const SELLER_SCOPED_EVENT_TYPES = new Set<ListingEventType>([
+  'favorite_add',
+  'favorite_remove',
+  'quote_open',
+  'quote_submit',
+]);
+
 export interface RecordListingEventInput {
   sessionId: string;
   eventType: ListingEventType;
@@ -84,8 +91,15 @@ export async function recordListingEvent(input: RecordListingEventInput): Promis
       throw new AnalyticsEntityNotFoundError('Clothing listing not found');
     }
     sellerId = listing.sellerId;
-    surface = surface ?? 'apparel_pdp';
-  } else if (surface === 'apparel_storefront' && sellerId) {
+    if (eventType === 'impression') {
+      surface = surface ?? 'apparel_storefront';
+    } else if (!SELLER_SCOPED_EVENT_TYPES.has(eventType)) {
+      surface = surface ?? 'apparel_pdp';
+    }
+  } else if (
+    (surface === 'apparel_storefront' || SELLER_SCOPED_EVENT_TYPES.has(eventType)) &&
+    sellerId
+  ) {
     const profile = await getUserProfile(sellerId);
     if (!profile) {
       throw new AnalyticsEntityNotFoundError('Storefront seller not found');
@@ -104,7 +118,7 @@ export async function recordListingEvent(input: RecordListingEventInput): Promis
     sessionId: input.sessionId,
     eventType,
     metadata: metadata ?? null,
-    surface,
+    surface: surface ?? null,
     sellerId,
     actor,
     timestamp: new Date().toISOString(),

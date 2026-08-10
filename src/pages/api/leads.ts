@@ -1,5 +1,8 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
+import { recordListingEvent } from '../../lib/analytics';
+import { getAnonSessionId, createAnonSessionId } from '../../lib/analytics-session';
+import { getOptionalSession } from '../../lib/auth';
 import { getUserProfile } from '../../lib/buyer-profile';
 import { buildSellerScopedLeadMessage } from '../../lib/contact-message';
 import { db } from '../../lib/firebase-admin';
@@ -59,7 +62,7 @@ async function resolveActiveEnrichedItem(
   return { ok: false, failure: { kind: 'not_found_or_inactive' } };
 }
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   const clientIp = getClientIp(request, clientAddress);
   const rateLimit = checkRateLimit(`leads:${clientIp}`, LEAD_RATE_LIMIT);
 
@@ -156,6 +159,30 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       });
     } catch (notifyError) {
       console.error('sendLeadNotification failed', notifyError);
+    }
+
+    try {
+      const clothingIds = enrichedItems
+        .filter((item) => item.category === 'clothing')
+        .map((item) => item.id);
+      const userSession = await getOptionalSession(request, cookies);
+      const sessionId = getAnonSessionId(cookies) ?? createAnonSessionId();
+
+      await recordListingEvent({
+        sessionId,
+        sellerId,
+        eventType: 'quote_submit',
+        metadata: {
+          leadId: docRef.id,
+          clothingIds,
+          favoriteCount: enrichedItems.length,
+        },
+        userSession: userSession
+          ? { uid: userSession.uid, email: userSession.email }
+          : null,
+      });
+    } catch (analyticsError) {
+      console.error('quote_submit analytics failed', analyticsError);
     }
 
     const response = LeadCreateResponseSchema.parse({ ok: true, id: docRef.id });

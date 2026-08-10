@@ -7,6 +7,7 @@ import {
   FavoritesContext,
 } from '../../context/FavoritesContext';
 import type { FavoriteCategory } from '../../utils/favorites';
+import { trackFavoriteToggle } from '../../lib/listing-analytics-client';
 
 interface FavoriteButtonProps {
   itemId: string;
@@ -39,8 +40,16 @@ function FavoriteButtonInner({
 
     void (async () => {
       setIsToggling(true);
+      const wasSaved = saved;
       try {
         await toggle({ id: itemId, title, price, category, sellerId });
+        if (category === 'clothing') {
+          trackFavoriteToggle({
+            clothingId: itemId,
+            sellerId,
+            added: !wasSaved,
+          });
+        }
       } finally {
         setIsToggling(false);
       }

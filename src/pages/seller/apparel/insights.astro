@@ -1,0 +1,43 @@
+---
+import { requireSellerOrRedirect } from '../../../lib/auth';
+import { getUserProfile } from '../../../lib/buyer-profile';
+import { getSellerLeads } from '../../../lib/leads';
+import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
+import ApparelInsightsPanel from '../../../islands/seller/ApparelInsightsPanel';
+import { getStorefrontPath, resolveStorefrontSegment } from '../../../utils/url-helpers';
+import '../../../styles/global.css';
+
+const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
+if (seller instanceof Response) return seller;
+
+const profile = await getUserProfile(seller.uid);
+const storefrontHref = getStorefrontPath(
+  resolveStorefrontSegment({
+    id: seller.uid,
+    storefrontSlug: profile?.storefrontSlug,
+  })
+);
+const leads = await getSellerLeads(seller.uid);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Insights · Apparel Dashboard · Sell By Owner Local</title>
+  </head>
+  <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
+    <ApparelSellerLayout
+      client:load
+      activeNav="insights"
+      inquiryCount={leads.length}
+      storefrontHref={storefrontHref}
+    >
+      <ApparelInsightsPanel client:load />
+    </ApparelSellerLayout>
+  </body>
+</html>

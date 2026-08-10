@@ -8,7 +8,7 @@ const API_PATH = '/api/analytics/events';
 
 type TrackTarget =
   | { vehicleId: string; clothingId?: never; sellerId?: never }
-  | { clothingId: string; vehicleId?: never; sellerId?: never }
+  | { clothingId: string; vehicleId?: never; sellerId?: string }
   | { sellerId: string; vehicleId?: never; clothingId?: never };
 
 function buildPayload(
@@ -204,5 +204,59 @@ export function trackApparelPdpViewOnce(clothingId: string): void {
   sessionStorage.setItem(key, '1');
   postAnalyticsPayload(
     buildPayload({ clothingId }, 'page_view', { surface: 'apparel_pdp' })
+  );
+}
+
+/** Apparel grid card impression (once per tab session per clothing id). */
+export function trackApparelImpressionOnce(
+  clothingId: string,
+  options: { rank?: number; position?: number } = {}
+): void {
+  if (typeof sessionStorage === 'undefined') return;
+
+  const key = sessionStorageKey('apparel-imp', clothingId);
+  if (sessionStorage.getItem(key)) return;
+
+  sessionStorage.setItem(key, '1');
+  postAnalyticsPayload(
+    buildPayload(
+      { clothingId },
+      'impression',
+      {
+        surface: 'apparel_storefront',
+        metadata: {
+          ...(options.rank !== undefined ? { rank: options.rank } : {}),
+          ...(options.position !== undefined ? { position: options.position } : {}),
+        },
+      }
+    )
+  );
+}
+
+/** Clothing favorite add/remove for apparel funnel analytics. */
+export function trackFavoriteToggle(options: {
+  clothingId: string;
+  sellerId: string;
+  added: boolean;
+}): void {
+  postAnalyticsPayload(
+    buildPayload(
+      { clothingId: options.clothingId, sellerId: options.sellerId },
+      options.added ? 'favorite_add' : 'favorite_remove'
+    )
+  );
+}
+
+/** Quote modal opened — emit once per seller represented in the modal. */
+export function trackQuoteOpen(options: {
+  sellerId: string;
+  favoriteCount: number;
+}): void {
+  postAnalyticsPayload(
+    buildPayload(
+      { sellerId: options.sellerId },
+      'quote_open',
+      { metadata: { favoriteCount: options.favoriteCount } }
+    )
   );
 }

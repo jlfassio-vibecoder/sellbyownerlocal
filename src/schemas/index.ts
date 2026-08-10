@@ -624,6 +624,10 @@ export const ListingEventTypeSchema = z.enum([
   'impression',
   'page_leave',
   'save_vehicle',
+  'favorite_add',
+  'favorite_remove',
+  'quote_open',
+  'quote_submit',
 ]);
 
 export const ListingEventMetadataSchema = z.object({
@@ -634,6 +638,9 @@ export const ListingEventMetadataSchema = z.object({
   rank: z.number().int().nonnegative().optional(),
   position: z.number().int().positive().optional(),
   durationSeconds: z.number().nonnegative().optional(),
+  favoriteCount: z.number().int().nonnegative().optional(),
+  clothingIds: z.array(z.string().min(1)).optional(),
+  leadId: z.string().min(1).optional(),
 });
 
 /** Page-level context for listing_events (distinct from metadata.surface). */
@@ -650,6 +657,13 @@ export const ListingEventActorSchema = z.object({
   isInternal: z.boolean(),
 });
 
+const SELLER_SCOPED_EVENT_TYPES = new Set([
+  'favorite_add',
+  'favorite_remove',
+  'quote_open',
+  'quote_submit',
+]);
+
 export const ListingEventCreateSchema = z
   .object({
     vehicleId: z.string().min(1).optional(),
@@ -665,6 +679,8 @@ export const ListingEventCreateSchema = z
     const hasClothing = Boolean(data.clothingId);
     const isStorefront =
       data.surface === 'apparel_storefront' && Boolean(data.sellerId);
+    const isSellerScoped =
+      SELLER_SCOPED_EVENT_TYPES.has(data.eventType) && Boolean(data.sellerId);
 
     if (hasVehicle && hasClothing) {
       ctx.addIssue({
@@ -675,11 +691,11 @@ export const ListingEventCreateSchema = z
       return;
     }
 
-    if (!hasVehicle && !hasClothing && !isStorefront) {
+    if (!hasVehicle && !hasClothing && !isStorefront && !isSellerScoped) {
       ctx.addIssue({
         code: 'custom',
         message:
-          'Provide vehicleId, clothingId, or apparel_storefront with sellerId',
+          'Provide vehicleId, clothingId, apparel_storefront with sellerId, or a seller-scoped funnel event with sellerId',
         path: ['vehicleId'],
       });
     }
@@ -816,6 +832,48 @@ export const ListingAnalyticsResponseSchema = z.object({
   sections: z.array(ListingAnalyticsSectionSchema),
   daily: z.array(ListingAnalyticsDailySchema),
   photos: ListingAnalyticsPhotosSchema,
+});
+
+export const ApparelFunnelStageSchema = z.object({
+  id: z.enum(['views', 'favorites', 'quote_open', 'quote_submit']),
+  label: z.string(),
+  count: z.number().int().nonnegative(),
+  dropOffPercent: z.number().nonnegative().nullable(),
+});
+
+export const ApparelSkuAnalyticsRowSchema = z.object({
+  clothingId: z.string().min(1),
+  title: z.string(),
+  imageUrl: z.string().optional(),
+  impressions: z.number().int().nonnegative(),
+  pdpViews: z.number().int().nonnegative(),
+  favoriteAdds: z.number().int().nonnegative(),
+  quoteSubmits: z.number().int().nonnegative(),
+  conversionRate: z.number().nonnegative(),
+  needsOptimization: z.boolean(),
+});
+
+export const ApparelJourneyStepSchema = z.object({
+  label: z.string(),
+  eventType: ListingEventTypeSchema,
+  timestamp: z.iso.datetime(),
+});
+
+export const ApparelJourneySchema = z.object({
+  sessionId: z.string().min(1),
+  sessionShortId: z.string().min(1),
+  lastSeenAt: z.iso.datetime(),
+  steps: z.array(ApparelJourneyStepSchema),
+});
+
+export const ApparelAnalyticsResponseSchema = z.object({
+  sellerId: z.string().min(1),
+  range: ListingAnalyticsRangeSchema,
+  since: z.iso.datetime(),
+  until: z.iso.datetime(),
+  funnel: z.array(ApparelFunnelStageSchema),
+  skus: z.array(ApparelSkuAnalyticsRowSchema),
+  journeys: z.array(ApparelJourneySchema),
 });
 
 export const MessageSchema = z.object({
@@ -995,6 +1053,11 @@ export type ListingAnalyticsSection = z.infer<typeof ListingAnalyticsSectionSche
 export type ListingAnalyticsDaily = z.infer<typeof ListingAnalyticsDailySchema>;
 export type ListingAnalyticsPhotos = z.infer<typeof ListingAnalyticsPhotosSchema>;
 export type ListingAnalyticsResponse = z.infer<typeof ListingAnalyticsResponseSchema>;
+export type ApparelFunnelStage = z.infer<typeof ApparelFunnelStageSchema>;
+export type ApparelSkuAnalyticsRow = z.infer<typeof ApparelSkuAnalyticsRowSchema>;
+export type ApparelJourneyStep = z.infer<typeof ApparelJourneyStepSchema>;
+export type ApparelJourney = z.infer<typeof ApparelJourneySchema>;
+export type ApparelAnalyticsResponse = z.infer<typeof ApparelAnalyticsResponseSchema>;
 export type Message = z.infer<typeof MessageSchema>;
 export type Conversation = z.infer<typeof ConversationSchema>;
 export type MessageCreate = z.infer<typeof MessageCreateSchema>;
