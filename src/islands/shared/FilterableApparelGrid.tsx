@@ -271,6 +271,9 @@ export default function FilterableApparelGrid({
     [items, selectedIds]
   );
 
+  const canPermanentDelete =
+    selectedItems.length > 0 && selectedItems.every((item) => item.status === 'archived');
+
   const clearDragState = () => {
     dragItem.current = null;
     dragOverItem.current = null;
@@ -1163,7 +1166,17 @@ export default function FilterableApparelGrid({
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                disabled={selectedIds.size === 0 || isBulkUpdating || isDeleting}
+                disabled={
+                  selectedIds.size === 0 ||
+                  isBulkUpdating ||
+                  isDeleting ||
+                  !canPermanentDelete
+                }
+                title={
+                  canPermanentDelete
+                    ? undefined
+                    : 'Archive listings before permanently deleting them'
+                }
                 className="shrink-0 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Delete
@@ -1188,7 +1201,8 @@ export default function FilterableApparelGrid({
                 Are you sure you want to delete these {selectedIds.size} items?
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                This action cannot be undone. Remove items you want to keep before confirming.
+                This permanently removes archived listings and cannot be undone. Buyer favorites
+                for these items will be cleaned up; leads and analytics are kept.
               </p>
             </div>
 
@@ -1222,7 +1236,7 @@ export default function FilterableApparelGrid({
               <button
                 type="button"
                 onClick={handlePermanentDelete}
-                disabled={isDeleting || selectedIds.size === 0}
+                disabled={isDeleting || selectedIds.size === 0 || !canPermanentDelete}
                 className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50"
               >
                 {isDeleting ? 'Deleting…' : 'Permanently Delete'}

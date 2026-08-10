@@ -64,6 +64,17 @@ export async function updateApparelStatus(
   }
 }
 
+export async function hardDeleteVehicle(vehicleId: string): Promise<void> {
+  const res = await fetch(
+    `/api/seller/vehicles/${encodeURIComponent(vehicleId)}/hard-delete`,
+    { method: 'DELETE' }
+  );
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
+}
+
 export async function uploadDocument(
   vehicleId: string,
   file: File,

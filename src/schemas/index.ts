@@ -758,6 +758,8 @@ export const SavedClothingStatusResponseSchema = z.object({
 
 export const FavoriteCategorySchema = z.enum(['vehicle', 'clothing']);
 
+export const FavoriteAvailabilitySchema = z.enum(['available', 'unavailable']);
+
 export const FavoriteItemSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
@@ -775,6 +777,8 @@ export const FavoriteItemSchema = z.object({
   engine: z.string().optional(),
   drivetrain: z.string().optional(),
   highlights: z.array(z.string()).optional(),
+  listingStatus: ListingLifecycleStatusSchema.optional(),
+  availability: FavoriteAvailabilitySchema.optional(),
 });
 
 export const FavoritesListResponseSchema = z.object({

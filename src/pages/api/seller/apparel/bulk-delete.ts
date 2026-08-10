@@ -8,6 +8,12 @@ import {
   unauthorizedResponse,
 } from '../../../../lib/auth';
 import { db } from '../../../../lib/firebase-admin';
+import {
+  assertListingHardDeletable,
+  deleteSavedFavoritesForListing,
+  hardDeleteListingDocuments,
+  ListingNotHardDeletableError,
+} from '../../../../lib/listing-hard-delete';
 
 const BulkDeleteSchema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(500),
@@ -42,12 +48,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const uniqueIds = [...new Set(parsed.data.ids)];
     const refs = uniqueIds.map((id) => db().collection('clothing_listings').doc(id));
     const docs = await Promise.all(refs.map((ref) => ref.get()));
-    const batch = db().batch();
-    let deletedCount = 0;
 
     for (let i = 0; i < uniqueIds.length; i++) {
       const doc = docs[i];
-      const ref = refs[i];
 
       if (!doc.exists) {
         return new Response(JSON.stringify({ error: 'Listing not found' }), {
@@ -56,22 +59,42 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         });
       }
 
-      const existingSellerId = doc.data()?.sellerId;
+      const data = doc.data();
+      const existingSellerId = data?.sellerId;
       if (existingSellerId !== session.uid) {
         return forbiddenResponse();
       }
 
-      batch.delete(ref);
-      deletedCount += 1;
+      assertListingHardDeletable(data?.status);
     }
 
-    await batch.commit();
-
-    return new Response(JSON.stringify({ success: true, deletedCount }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
+    const deletedCount = await hardDeleteListingDocuments({
+      category: 'clothing',
+      listingIds: uniqueIds,
     });
+
+    let prunedSaveCount = 0;
+    for (const id of uniqueIds) {
+      prunedSaveCount += await deleteSavedFavoritesForListing({
+        category: 'clothing',
+        listingId: id,
+      });
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, deletedCount, prunedSaveCount }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   } catch (error) {
+    if (error instanceof ListingNotHardDeletableError) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     if (error instanceof AuthError) {
       return unauthorizedResponse(error.message);
     }

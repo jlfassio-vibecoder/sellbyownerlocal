@@ -1,5 +1,9 @@
 import { mapClothingDoc } from './clothing-api';
 import { db } from './firebase-admin';
+import {
+  resolveFavoriteAvailability,
+  resolveFavoriteListingStatus,
+} from './favorites-availability';
 import { mapVehicleDoc } from './inventory-api';
 import { resolveHeroImageUrls } from './resolve-display-media';
 import {
@@ -41,8 +45,18 @@ async function loadDocFromCollections(
   return null;
 }
 
-function mapVehicleFavorite(id: string, data: Record<string, unknown>): FavoriteItem {
+function statusFields(data: Record<string, unknown>) {
+  const listingStatus = resolveFavoriteListingStatus(data.status);
+  const availability = resolveFavoriteAvailability(data.status);
+  return {
+    ...(listingStatus ? { listingStatus } : {}),
+    availability,
+  };
+}
+
+export function mapVehicleFavorite(id: string, data: Record<string, unknown>): FavoriteItem {
   const sellerId = asString(data.sellerId, 'unknown');
+  const status = statusFields(data);
   const parsed = mapVehicleDoc(id, data);
 
   if (parsed.success) {
@@ -62,6 +76,7 @@ function mapVehicleFavorite(id: string, data: Record<string, unknown>): Favorite
       engine: vehicle.specs.engine,
       drivetrain: vehicle.specs.drivetrain,
       highlights: (vehicle.highlights ?? []).slice(0, 3).map((h) => h.title),
+      ...status,
     });
   }
 
@@ -90,11 +105,13 @@ function mapVehicleFavorite(id: string, data: Record<string, unknown>): Favorite
     mileage: asNumber(data.mileage, 0) || undefined,
     engine: asString(specs.engine, '') || undefined,
     drivetrain: asString(specs.drivetrain, '') || undefined,
+    ...status,
   });
 }
 
-function mapClothingFavorite(id: string, data: Record<string, unknown>): FavoriteItem {
+export function mapClothingFavorite(id: string, data: Record<string, unknown>): FavoriteItem {
   const sellerId = asString(data.sellerId, 'unknown');
+  const status = statusFields(data);
   const parsed = mapClothingDoc(id, data);
 
   if (parsed.success) {
@@ -105,6 +122,7 @@ function mapClothingFavorite(id: string, data: Record<string, unknown>): Favorit
       price: asNumber(listing.price, 0),
       category: 'clothing',
       sellerId: listing.sellerId || sellerId,
+      ...status,
     });
   }
 
@@ -114,16 +132,18 @@ function mapClothingFavorite(id: string, data: Record<string, unknown>): Favorit
     price: asNumber(data.price, 0),
     category: 'clothing',
     sellerId,
+    ...status,
   });
 }
 
-function mapMissingFavorite(id: string, category: 'vehicle' | 'clothing'): FavoriteItem {
+export function mapMissingFavorite(id: string, category: 'vehicle' | 'clothing'): FavoriteItem {
   return FavoriteItemSchema.parse({
     id,
     title: 'Listing unavailable',
     price: 0,
     category,
     sellerId: 'unknown',
+    availability: 'unavailable',
   });
 }
 

@@ -98,6 +98,9 @@ function ContactSellerFabInner({
         buyerEmail={buyerEmail}
         buyerPhone={buyerPhone}
         onClearQuotedItems={handleClearQuotedItems}
+        onRemoveFavorite={async (item) => {
+          await toggle(item);
+        }}
         onClose={() => {
           setIsOpen(false);
           void refresh();

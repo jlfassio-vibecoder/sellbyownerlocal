@@ -5,7 +5,7 @@ import {
   LISTING_STATUS_BADGE_STYLES,
   LISTING_STATUS_FILTER_CHIPS,
 } from '../../lib/listing-status-ui';
-import { updateVehicleStatus } from '../../lib/seller-api';
+import { hardDeleteVehicle, updateVehicleStatus } from '../../lib/seller-api';
 import type { ListingLifecycleStatus } from '../../schemas';
 
 export interface SellerVehicleInventoryItem {
@@ -44,6 +44,8 @@ export default function SellerVehicleInventoryGrid({
   const [vehicles, setVehicles] = useState(initialVehicles);
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(
     null
   );
@@ -62,6 +64,10 @@ export default function SellerVehicleInventoryGrid({
     if (selectedStatus === 'All') return vehicles;
     return vehicles.filter((vehicle) => vehicle.status === selectedStatus);
   }, [vehicles, selectedStatus]);
+
+  const confirmVehicle = confirmDeleteId
+    ? vehicles.find((vehicle) => vehicle.id === confirmDeleteId)
+    : null;
 
   const handleStatusChange = async (id: string, next: ListingLifecycleStatus) => {
     const previous = vehicles.find((vehicle) => vehicle.id === id);
@@ -90,6 +96,28 @@ export default function SellerVehicleInventoryGrid({
       });
     } finally {
       setStatusUpdatingId(null);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!confirmDeleteId || !confirmVehicle || confirmVehicle.status !== 'archived') return;
+
+    setDeletingId(confirmDeleteId);
+    try {
+      await hardDeleteVehicle(confirmDeleteId);
+      setVehicles((prev) => prev.filter((vehicle) => vehicle.id !== confirmDeleteId));
+      setConfirmDeleteId(null);
+      setToast({
+        type: 'success',
+        message: 'Listing permanently deleted.',
+      });
+    } catch (error) {
+      setToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to delete listing.',
+      });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -180,7 +208,9 @@ export default function SellerVehicleInventoryGrid({
                     )}
                     <ListingStatusMenu
                       status={vehicle.status}
-                      disabled={statusUpdatingId === vehicle.id}
+                      disabled={
+                        statusUpdatingId === vehicle.id || deletingId === vehicle.id
+                      }
                       badgeLabels={LISTING_STATUS_BADGE_LABELS}
                       badgeStyles={LISTING_STATUS_BADGE_STYLES}
                       onSelect={(next) => handleStatusChange(vehicle.id, next)}
@@ -191,9 +221,59 @@ export default function SellerVehicleInventoryGrid({
                   {priceFormatter.format(vehicle.price)}
                 </p>
                 <p className="text-sm text-slate-500">{vehicle.city}</p>
+                {vehicle.status === 'archived' && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteId(vehicle.id)}
+                    disabled={deletingId === vehicle.id}
+                    className="text-sm font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
+                  >
+                    Permanently Delete
+                  </button>
+                )}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {confirmVehicle && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="vehicle-hard-delete-title"
+        >
+          <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-xl">
+            <div className="border-b border-slate-200 px-6 py-4">
+              <h2 id="vehicle-hard-delete-title" className="text-lg font-bold text-slate-900">
+                Permanently delete this listing?
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {confirmVehicle.year} {confirmVehicle.make} {confirmVehicle.model} will be
+                removed. Buyer favorites are cleaned up; leads and analytics are kept. This
+                cannot be undone.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-end gap-3 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteId(null)}
+                disabled={deletingId !== null}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handlePermanentDelete}
+                disabled={deletingId !== null}
+                className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                {deletingId ? 'Deleting…' : 'Permanently Delete'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

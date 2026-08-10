@@ -8,6 +8,7 @@ import {
   buildSellerScopedLeadMessage,
   syncContactMessageName,
 } from '../../lib/contact-message';
+import { isFavoriteQuotable } from '../../lib/favorites-availability';
 import { groupFavoritesBySeller } from '../../utils/favorites';
 
 type ToastState = {
@@ -23,7 +24,30 @@ interface ContactSellerModalProps {
   buyerEmail?: string;
   buyerPhone?: string;
   onClearQuotedItems?: (items: FavoriteItem[]) => Promise<void>;
+  onRemoveFavorite?: (item: FavoriteItem) => Promise<void>;
   onClose: () => void;
+}
+
+function favoriteStatusBadge(item: FavoriteItem): { label: string; className: string } | null {
+  if (item.availability === 'unavailable') {
+    return {
+      label: 'Unavailable',
+      className: 'bg-amber-100 text-amber-900',
+    };
+  }
+  if (item.listingStatus === 'pending') {
+    return {
+      label: 'Pending',
+      className: 'bg-amber-100 text-amber-800',
+    };
+  }
+  if (item.listingStatus === 'sold') {
+    return {
+      label: 'Sold',
+      className: 'bg-slate-800 text-white',
+    };
+  }
+  return null;
 }
 
 export default function ContactSellerModal({
@@ -34,6 +58,7 @@ export default function ContactSellerModal({
   buyerEmail = '',
   buyerPhone = '',
   onClearQuotedItems,
+  onRemoveFavorite,
   onClose,
 }: ContactSellerModalProps) {
   const [name, setName] = useState('');
@@ -41,15 +66,14 @@ export default function ContactSellerModal({
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const prefilledForOpenRef = useRef(false);
   const closeTimeoutRef = useRef<number | null>(null);
 
-  const availableItems = favoriteItems.filter(
-    (item) => item.sellerId && item.sellerId !== 'unknown'
-  );
-  const unavailableCount = favoriteItems.length - availableItems.length;
+  const availableItems = favoriteItems.filter(isFavoriteQuotable);
+  const skippedCount = favoriteItems.length - availableItems.length;
 
   useEffect(() => {
     if (!isOpen) {
@@ -110,6 +134,21 @@ export default function ContactSellerModal({
   const handleNameChange = (value: string) => {
     setName(value);
     setMessage((current) => syncContactMessageName(current, value));
+  };
+
+  const handleRemoveFavorite = async (item: FavoriteItem) => {
+    if (!onRemoveFavorite) return;
+    setRemovingId(item.id);
+    try {
+      await onRemoveFavorite(item);
+    } catch {
+      setToast({
+        message: 'Could not remove saved item. Please try again.',
+        type: 'error',
+      });
+    } finally {
+      setRemovingId(null);
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -211,8 +250,8 @@ export default function ContactSellerModal({
 
   if (!isOpen) return null;
 
-  const helperText = buildContactHelperText(favoriteItems);
-  const subheadline = buildContactSubheadline(favoriteItems);
+  const helperText = buildContactHelperText(availableItems);
+  const subheadline = buildContactSubheadline(availableItems);
 
   const toastClass =
     toast?.type === 'success'
@@ -254,10 +293,57 @@ export default function ContactSellerModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
-          {unavailableCount > 0 && (
+          {favoriteItems.length > 0 && (
+            <ul className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-3">
+              {favoriteItems.map((item) => {
+                const badge = favoriteStatusBadge(item);
+                const quotable = isFavoriteQuotable(item);
+                return (
+                  <li
+                    key={`${item.category}-${item.id}`}
+                    className="flex items-start justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <p
+                        className={`truncate text-sm font-medium ${
+                          quotable ? 'text-slate-900' : 'text-slate-500'
+                        }`}
+                      >
+                        {item.title}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        {badge && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge.className}`}
+                          >
+                            {badge.label}
+                          </span>
+                        )}
+                        {!quotable && item.availability !== 'unavailable' && (
+                          <span className="text-xs text-slate-500">Skipped from quote</span>
+                        )}
+                      </div>
+                    </div>
+                    {item.availability === 'unavailable' && onRemoveFavorite && (
+                      <button
+                        type="button"
+                        onClick={() => void handleRemoveFavorite(item)}
+                        disabled={removingId === item.id}
+                        className="shrink-0 text-xs font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
+                      >
+                        {removingId === item.id ? 'Removing…' : 'Remove from Saved'}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {skippedCount > 0 && (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              {unavailableCount} saved listing{unavailableCount === 1 ? ' is' : 's are'} no longer
-              available and will be skipped.
+              {skippedCount} saved listing{skippedCount === 1 ? ' is' : 's are'} pending, sold, or
+              unavailable and will be skipped from this quote.
             </p>
           )}
 

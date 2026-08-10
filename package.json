@@ -10,7 +10,7 @@
     "build": "astro build",
     "check": "astro check",
     "preview": "astro preview",
-    "test": "tsx --test src/lib/favorites-client.test.ts src/lib/contact-message.test.ts src/lib/lead-items.test.ts src/lib/analytics-actor.test.ts src/lib/apparel-analytics.test.ts src/lib/lead-intent.test.ts src/lib/listing-lifecycle.test.ts",
+    "test": "tsx --test src/lib/favorites-client.test.ts src/lib/favorites-availability.test.ts src/lib/contact-message.test.ts src/lib/lead-items.test.ts src/lib/analytics-actor.test.ts src/lib/apparel-analytics.test.ts src/lib/lead-intent.test.ts src/lib/listing-lifecycle.test.ts src/lib/listing-hard-delete.test.ts",
     "verify:firebase": "node --env-file=.env scripts/verify-firebase-cli.mjs",
     "astro": "astro"
   },
