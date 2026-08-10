@@ -31,6 +31,39 @@ export async function updateVehicle(
   }
 }
 
+export async function updateVehicleStatus(
+  vehicleId: string,
+  status: string
+): Promise<void> {
+  const res = await fetch(
+    `/api/seller/vehicles/${encodeURIComponent(vehicleId)}/status`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
+}
+
+export async function updateApparelStatus(
+  listingId: string,
+  status: string
+): Promise<void> {
+  const res = await fetch(`/api/seller/apparel/${encodeURIComponent(listingId)}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
+}
+
 export async function uploadDocument(
   vehicleId: string,
   file: File,

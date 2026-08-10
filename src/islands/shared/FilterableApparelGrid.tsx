@@ -2,6 +2,7 @@ import { Copy, GripVertical, Pencil } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import SearchAndFilterBar from './SearchAndFilterBar';
 import ApparelListingImage from '../../components/apparel/ApparelListingImage';
+import ListingStatusMenu from '../seller/ListingStatusMenu';
 import {
   APPAREL_SELLER_STATUS_LABELS,
   APPAREL_STATUS_STYLES,
@@ -16,6 +17,8 @@ import {
   sortFeaturedFirst,
   splitCommaList,
 } from '../../lib/apparel';
+import { updateApparelStatus } from '../../lib/seller-api';
+import type { ListingLifecycleStatus } from '../../schemas';
 import { getClothingListingPath } from '../../utils/url-helpers';
 
 type DragSection = 'featured' | 'full';
@@ -86,7 +89,17 @@ function matchesSearch(item: ApparelFilterItem, query: string): boolean {
   return haystack.includes(query);
 }
 
-function ApparelCardContent({ item, isSellerView }: { item: ApparelFilterItem; isSellerView: boolean }) {
+function ApparelCardContent({
+  item,
+  isSellerView,
+  onStatusChange,
+  isStatusUpdating = false,
+}: {
+  item: ApparelFilterItem;
+  isSellerView: boolean;
+  onStatusChange?: (id: string, next: ListingLifecycleStatus) => Promise<void>;
+  isStatusUpdating?: boolean;
+}) {
   const showFeatured = Boolean(item.isFeatured);
   const showSale = Boolean(item.isSale);
 
@@ -125,12 +138,14 @@ function ApparelCardContent({ item, isSellerView }: { item: ApparelFilterItem; i
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.brand}</p>
             <h3 className="text-lg font-bold text-slate-900">{item.title}</h3>
           </div>
-          {isSellerView && (
-            <span
-              className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${APPAREL_STATUS_STYLES[item.status]}`}
-            >
-              {APPAREL_SELLER_STATUS_LABELS[item.status]}
-            </span>
+          {isSellerView && onStatusChange && (
+            <ListingStatusMenu
+              status={item.status}
+              disabled={isStatusUpdating}
+              badgeLabels={APPAREL_SELLER_STATUS_LABELS}
+              badgeStyles={APPAREL_STATUS_STYLES}
+              onSelect={(next) => onStatusChange(item.id, next)}
+            />
           )}
         </div>
         {hasSalePricing(item) ? (
@@ -174,6 +189,7 @@ export default function FilterableApparelGrid({
   const [isSaving, setIsSaving] = useState(false);
   const [dragging, setDragging] = useState<DragTarget | null>(null);
   const [dragOver, setDragOver] = useState<DragTarget | null>(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const dragItem = useRef<DragTarget | null>(null);
   const dragOverItem = useRef<DragTarget | null>(null);
 
@@ -260,6 +276,34 @@ export default function FilterableApparelGrid({
     dragOverItem.current = null;
     setDragging(null);
     setDragOver(null);
+  };
+
+  const handleStatusChange = async (id: string, next: ListingLifecycleStatus) => {
+    const previous = items.find((item) => item.id === id);
+    if (!previous || previous.status === next) return;
+
+    setStatusUpdatingId(id);
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: next } : item))
+    );
+
+    try {
+      await updateApparelStatus(id, next);
+      setToast({
+        type: 'success',
+        message: `Status updated to ${APPAREL_SELLER_STATUS_LABELS[next]}.`,
+      });
+    } catch (error) {
+      setItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, status: previous.status } : item))
+      );
+      setToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to update status.',
+      });
+    } finally {
+      setStatusUpdatingId(null);
+    }
   };
 
   const handleReorderEnd = async () => {
@@ -651,7 +695,12 @@ export default function FilterableApparelGrid({
                 ✓
               </span>
             </div>
-            <ApparelCardContent item={item} isSellerView={true} />
+            <ApparelCardContent
+              item={item}
+              isSellerView={true}
+              onStatusChange={handleStatusChange}
+              isStatusUpdating={statusUpdatingId === item.id}
+            />
           </div>
         </button>
       );
@@ -679,7 +728,12 @@ export default function FilterableApparelGrid({
       >
         <div className="relative">
           <a href={href} className="block">
-            <ApparelCardContent item={item} isSellerView={true} />
+            <ApparelCardContent
+              item={item}
+              isSellerView={true}
+              onStatusChange={handleStatusChange}
+              isStatusUpdating={statusUpdatingId === item.id}
+            />
           </a>
           <div className="absolute left-3 top-3 z-20 flex flex-wrap gap-2">
             <button
@@ -821,6 +875,7 @@ export default function FilterableApparelGrid({
         setSelectedStatus={setSelectedStatus}
         brands={brands}
         showStatusFilter={isSellerView}
+        statusFilterMode={isSellerView ? 'chips' : 'select'}
       />
 
       {filteredItems.length === 0 ? (
@@ -886,7 +941,12 @@ export default function FilterableApparelGrid({
               href={getClothingListingPath(item.id, storefrontSegment)}
               className="block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 hover:shadow-md"
             >
-              <ApparelCardContent item={item} isSellerView={isSellerView} />
+              <ApparelCardContent
+                item={item}
+                isSellerView={isSellerView}
+                onStatusChange={isSellerView ? handleStatusChange : undefined}
+                isStatusUpdating={statusUpdatingId === item.id}
+              />
             </a>
           ))}
         </div>
