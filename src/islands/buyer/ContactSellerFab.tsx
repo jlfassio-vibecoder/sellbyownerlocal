@@ -1,6 +1,6 @@
 import { useContext, useState, type ReactNode } from 'react';
 import { MessageCircle } from 'lucide-react';
-import type { VerificationTier } from '../../schemas';
+import type { FavoriteItem, VerificationTier } from '../../schemas';
 import {
   FavoritesContext,
   FavoritesProvider,
@@ -47,7 +47,15 @@ function ContactSellerFabInner({
   verificationTier: VerificationTier;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const { count, items, isLoading, refresh } = useFavorites();
+  const { count, items, isLoading, refresh, isFavorite, toggle } = useFavorites();
+
+  const handleClearQuotedItems = async (quotedItems: FavoriteItem[]) => {
+    for (const item of quotedItems) {
+      if (isFavorite(item.id)) {
+        await toggle(item);
+      }
+    }
+  };
 
   return (
     <>
@@ -72,6 +80,7 @@ function ContactSellerFabInner({
         verificationTier={verificationTier}
         favoriteItems={items}
         isLoadingFavorites={isLoading}
+        onClearQuotedItems={handleClearQuotedItems}
         onClose={() => {
           setIsOpen(false);
           void refresh();

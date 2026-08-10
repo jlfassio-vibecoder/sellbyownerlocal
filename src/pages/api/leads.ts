@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
+import { buildSellerScopedLeadMessage } from '../../lib/contact-message';
 import { db } from '../../lib/firebase-admin';
 import { checkRateLimit, getClientIp } from '../../lib/rate-limit';
 import { LeadCreateResponseSchema, LeadCreateSchema } from '../../schemas';
@@ -92,13 +93,15 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     }
 
     const createdAt = new Date().toISOString();
+    // Defense-in-depth: rebuild message from validated leadItems only.
+    const scopedMessage = buildSellerScopedLeadMessage(message, leadItems, name);
 
     const docRef = await db().collection('leads').add({
       sellerId,
       name,
       email,
       phone,
-      message,
+      message: scopedMessage,
       items: leadItems,
       createdAt,
     });
