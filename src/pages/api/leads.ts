@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { recordListingEvent } from '../../lib/analytics';
-import { getAnonSessionId, createAnonSessionId } from '../../lib/analytics-session';
+import { getOrCreateAnonSession } from '../../lib/analytics-session';
 import { getOptionalSession } from '../../lib/auth';
 import { getUserProfile } from '../../lib/buyer-profile';
 import { buildSellerScopedLeadMessage } from '../../lib/contact-message';
@@ -13,6 +13,7 @@ import {
   enrichFavoriteFromVehicleData,
   type LeadItemResolveResult,
 } from '../../lib/lead-items';
+import { calculateLeadIntentScore } from '../../lib/lead-intent';
 import { sendLeadNotification } from '../../lib/notifications';
 import { checkRateLimit, getClientIp } from '../../lib/rate-limit';
 import { LeadCreateResponseSchema, LeadCreateSchema, type FavoriteItem } from '../../schemas';
@@ -166,7 +167,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
         .filter((item) => item.category === 'clothing')
         .map((item) => item.id);
       const userSession = await getOptionalSession(request, cookies);
-      const sessionId = getAnonSessionId(cookies) ?? createAnonSessionId();
+      const sessionId = getOrCreateAnonSession(cookies);
 
       await recordListingEvent({
         sessionId,
@@ -181,6 +182,17 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
           ? { uid: userSession.uid, email: userSession.email }
           : null,
       });
+
+      try {
+        const intent = await calculateLeadIntentScore(docRef.id, sessionId, sellerId);
+        await docRef.update({
+          intentScore: intent.score,
+          intentTier: intent.tier,
+          intentFactors: intent.factors,
+        });
+      } catch (intentError) {
+        console.error('lead intent scoring failed', intentError);
+      }
     } catch (analyticsError) {
       console.error('quote_submit analytics failed', analyticsError);
     }

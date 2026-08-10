@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { BarChart3, Lightbulb } from 'lucide-react';
 import type {
   ApparelAnalyticsResponse,
+  ApparelEngagedBuyer,
   ApparelFunnelStage,
   ApparelJourney,
   ApparelSkuAnalyticsRow,
+  IntentTier,
   ListingAnalyticsRange,
 } from '../../schemas';
 
@@ -18,6 +20,17 @@ function rangeButtonClass(isActive: boolean): string {
   return `rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
     isActive ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
   }`;
+}
+
+function intentTierBadgeClass(tier: IntentTier): string {
+  switch (tier) {
+    case 'HIGH':
+      return 'bg-emerald-100 text-emerald-800';
+    case 'MEDIUM':
+      return 'bg-amber-100 text-amber-800';
+    case 'LOW':
+      return 'bg-slate-100 text-slate-600';
+  }
 }
 
 function FunnelSection({ funnel }: { funnel: ApparelFunnelStage[] }) {
@@ -122,6 +135,55 @@ function SkuLeaderboard({ skus }: { skus: ApparelSkuAnalyticsRow[] }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function TopEngagedBuyersSection({ buyers }: { buyers: ApparelEngagedBuyer[] }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h3 className="mb-4 text-lg font-bold text-slate-900">Top Engaged Buyers</h3>
+      {buyers.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          No engaged visitor sessions yet for this range.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                <th className="py-2 pr-3 font-medium">Visitor</th>
+                <th className="px-2 py-2 font-medium">Visit days</th>
+                <th className="px-2 py-2 font-medium">Favorites</th>
+                <th className="px-2 py-2 font-medium">Intent</th>
+                <th className="px-2 py-2 font-medium">Last seen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {buyers.map((buyer) => (
+                <tr key={buyer.sessionId} className="border-b border-slate-100">
+                  <td className="py-3 pr-3 font-mono text-slate-800">
+                    {buyer.sessionShortId}
+                  </td>
+                  <td className="px-2 py-3 text-slate-700">{buyer.visitDays}</td>
+                  <td className="px-2 py-3 text-slate-700">{buyer.favoriteCount}</td>
+                  <td className="px-2 py-3">
+                    <span
+                      className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold ${intentTierBadgeClass(buyer.intentTier)}`}
+                    >
+                      {buyer.intentScore}
+                      <span className="font-medium opacity-80">{buyer.intentTier}</span>
+                    </span>
+                  </td>
+                  <td className="px-2 py-3 text-slate-500">
+                    {new Date(buyer.lastSeenAt).toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -249,6 +311,7 @@ export default function ApparelInsightsPanel() {
           <div className="space-y-6">
             <FunnelSection funnel={data.funnel} />
             <SkuLeaderboard skus={data.skus} />
+            <TopEngagedBuyersSection buyers={data.topEngagedBuyers ?? []} />
             <JourneysSection journeys={data.journeys} />
             <p className="text-xs text-slate-400">
               Owner and internal admin visits are excluded. Funnel stages use unique visitor

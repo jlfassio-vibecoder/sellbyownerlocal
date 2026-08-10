@@ -177,6 +177,43 @@ export function sendPageLeaveBeacon(vehicleId: string, durationSeconds: number):
   trackPageLeave(vehicleId, durationSeconds);
 }
 
+export function trackApparelPageLeave(
+  clothingId: string,
+  durationSeconds: number
+): void {
+  postAnalyticsPayload(
+    buildPayload(
+      { clothingId },
+      'page_leave',
+      { surface: 'apparel_pdp', metadata: { durationSeconds } }
+    )
+  );
+}
+
+export function sendApparelPageLeaveBeacon(
+  clothingId: string,
+  durationSeconds: number
+): void {
+  const payload = buildPayload(
+    { clothingId },
+    'page_leave',
+    { surface: 'apparel_pdp', metadata: { durationSeconds } }
+  );
+
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const blob = new Blob([payload], { type: 'application/json' });
+      if (navigator.sendBeacon(API_PATH, blob)) {
+        return;
+      }
+    }
+  } catch {
+    // Fall through to fetch
+  }
+
+  trackApparelPageLeave(clothingId, durationSeconds);
+}
+
 /** Apparel storefront catalog page_view (once per tab session per seller). */
 export function trackApparelStorefrontViewOnce(sellerId: string): void {
   if (typeof sessionStorage === 'undefined') return;

@@ -23,6 +23,9 @@ export function mapLeadDoc(id: string, data: Record<string, unknown>) {
     message: data.message,
     items: data.items ?? [],
     createdAt: toIsoTimestamp(data.createdAt),
+    intentScore: data.intentScore,
+    intentTier: data.intentTier,
+    intentFactors: data.intentFactors,
   });
 
   if (parsed.success) {
@@ -38,6 +41,16 @@ export function mapLeadDoc(id: string, data: Record<string, unknown>) {
     message: asString(data.message, ''),
     items: Array.isArray(data.items) ? data.items : [],
     createdAt: toIsoTimestamp(data.createdAt) ?? new Date().toISOString(),
+    intentScore: typeof data.intentScore === 'number' ? data.intentScore : undefined,
+    intentTier:
+      data.intentTier === 'HIGH' ||
+      data.intentTier === 'MEDIUM' ||
+      data.intentTier === 'LOW'
+        ? data.intentTier
+        : undefined,
+    intentFactors: Array.isArray(data.intentFactors)
+      ? data.intentFactors.filter((factor): factor is string => typeof factor === 'string')
+      : undefined,
   });
 }
 

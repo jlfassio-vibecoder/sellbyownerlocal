@@ -2,8 +2,13 @@ import { isPublicListingEvent } from './analytics-actor';
 import { getActiveApparelForSeller } from './clothing-api';
 import { db } from './firebase-admin';
 import {
+  buildPriceByClothingId,
+  scoreSessionEngagement,
+} from './lead-intent';
+import {
   ApparelAnalyticsResponseSchema,
   type ApparelAnalyticsResponse,
+  type ApparelEngagedBuyer,
   type ApparelFunnelStage,
   type ApparelJourney,
   type ApparelSkuAnalyticsRow,
@@ -16,6 +21,7 @@ const MAX_EVENTS = 10_000;
 const PAGE_SIZE = 500;
 const MAX_JOURNEYS = 15;
 const MAX_STEPS_PER_JOURNEY = 20;
+const MAX_ENGAGED_BUYERS = 10;
 
 export function resolveAnalyticsSince(range: ListingAnalyticsRange): string | null {
   if (range === 'all') return null;
@@ -286,6 +292,27 @@ export async function getApparelSellerAnalytics(
     bySession.get(event.sessionId)!.push(event);
   }
 
+  const priceByClothingId = buildPriceByClothingId(catalog);
+  const topEngagedBuyers: ApparelEngagedBuyer[] = [...bySession.entries()]
+    .map(([sessionId, sessionEvents]) => {
+      const engagement = scoreSessionEngagement(sessionEvents, priceByClothingId);
+      return {
+        sessionId,
+        sessionShortId: sessionId.slice(0, 8),
+        visitDays: engagement.visitDays,
+        favoriteCount: engagement.favoriteCount,
+        intentScore: engagement.score,
+        intentTier: engagement.tier,
+        lastSeenAt: engagement.lastSeenAt,
+      };
+    })
+    .filter((buyer) => buyer.intentScore > 0 || buyer.visitDays > 0 || buyer.favoriteCount > 0)
+    .sort((a, b) => {
+      if (b.intentScore !== a.intentScore) return b.intentScore - a.intentScore;
+      return b.lastSeenAt.localeCompare(a.lastSeenAt);
+    })
+    .slice(0, MAX_ENGAGED_BUYERS);
+
   const journeys: ApparelJourney[] = [...bySession.entries()]
     .map(([sessionId, sessionEvents]) => {
       const ordered = [...sessionEvents].sort((a, b) =>
@@ -315,6 +342,7 @@ export async function getApparelSellerAnalytics(
     until,
     funnel,
     skus,
+    topEngagedBuyers,
     journeys,
   });
 }

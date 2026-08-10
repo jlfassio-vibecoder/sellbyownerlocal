@@ -775,9 +775,14 @@ export const LeadCreateSchema = z.object({
   items: z.array(FavoriteItemSchema).optional(),
 });
 
+export const IntentTierSchema = z.enum(['HIGH', 'MEDIUM', 'LOW']);
+
 export const LeadRecordSchema = LeadCreateSchema.extend({
   id: z.string().min(1),
   createdAt: z.iso.datetime(),
+  intentScore: z.number().min(0).max(100).optional(),
+  intentTier: IntentTierSchema.optional(),
+  intentFactors: z.array(z.string()).optional(),
 });
 
 export const LeadCreateResponseSchema = z.object({
@@ -866,6 +871,16 @@ export const ApparelJourneySchema = z.object({
   steps: z.array(ApparelJourneyStepSchema),
 });
 
+export const ApparelEngagedBuyerSchema = z.object({
+  sessionId: z.string().min(1),
+  sessionShortId: z.string().min(1),
+  visitDays: z.number().int().nonnegative(),
+  favoriteCount: z.number().int().nonnegative(),
+  intentScore: z.number().min(0).max(100),
+  intentTier: IntentTierSchema,
+  lastSeenAt: z.iso.datetime(),
+});
+
 export const ApparelAnalyticsResponseSchema = z.object({
   sellerId: z.string().min(1),
   range: ListingAnalyticsRangeSchema,
@@ -873,6 +888,7 @@ export const ApparelAnalyticsResponseSchema = z.object({
   until: z.iso.datetime(),
   funnel: z.array(ApparelFunnelStageSchema),
   skus: z.array(ApparelSkuAnalyticsRowSchema),
+  topEngagedBuyers: z.array(ApparelEngagedBuyerSchema),
   journeys: z.array(ApparelJourneySchema),
 });
 
@@ -1045,6 +1061,7 @@ export type FavoriteCategory = z.infer<typeof FavoriteCategorySchema>;
 export type FavoriteItem = z.infer<typeof FavoriteItemSchema>;
 export type FavoritesListResponse = z.infer<typeof FavoritesListResponseSchema>;
 export type LeadCreate = z.infer<typeof LeadCreateSchema>;
+export type IntentTier = z.infer<typeof IntentTierSchema>;
 export type LeadRecord = z.infer<typeof LeadRecordSchema>;
 export type LeadCreateResponse = z.infer<typeof LeadCreateResponseSchema>;
 export type ListingAnalyticsRange = z.infer<typeof ListingAnalyticsRangeSchema>;
@@ -1057,6 +1074,7 @@ export type ApparelFunnelStage = z.infer<typeof ApparelFunnelStageSchema>;
 export type ApparelSkuAnalyticsRow = z.infer<typeof ApparelSkuAnalyticsRowSchema>;
 export type ApparelJourneyStep = z.infer<typeof ApparelJourneyStepSchema>;
 export type ApparelJourney = z.infer<typeof ApparelJourneySchema>;
+export type ApparelEngagedBuyer = z.infer<typeof ApparelEngagedBuyerSchema>;
 export type ApparelAnalyticsResponse = z.infer<typeof ApparelAnalyticsResponseSchema>;
 export type Message = z.infer<typeof MessageSchema>;
 export type Conversation = z.infer<typeof ConversationSchema>;

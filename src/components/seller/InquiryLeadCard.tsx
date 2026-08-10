@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { Mail, Phone } from 'lucide-react';
-import type { FavoriteItem } from '../../schemas';
+import type { FavoriteItem, IntentTier } from '../../schemas';
 import { priceFormatter } from '../../utils/formatters';
 
 export interface InquiryLeadCardProps {
@@ -11,6 +11,8 @@ export interface InquiryLeadCardProps {
   message?: string;
   createdAt: string;
   items?: FavoriteItem[];
+  intentTier?: IntentTier;
+  intentFactors?: string[];
 }
 
 function variantLabel(item: FavoriteItem): string | null {
@@ -20,6 +22,28 @@ function variantLabel(item: FavoriteItem): string | null {
   return parts.length > 0 ? parts.join(' · ') : null;
 }
 
+function intentBadgeClass(tier: IntentTier): string {
+  switch (tier) {
+    case 'HIGH':
+      return 'bg-emerald-100 text-emerald-800';
+    case 'MEDIUM':
+      return 'bg-amber-100 text-amber-800';
+    case 'LOW':
+      return 'bg-slate-100 text-slate-600';
+  }
+}
+
+function intentBadgeLabel(tier: IntentTier): string {
+  switch (tier) {
+    case 'HIGH':
+      return 'High Intent';
+    case 'MEDIUM':
+      return 'Medium Intent';
+    case 'LOW':
+      return 'Low Intent';
+  }
+}
+
 export default function InquiryLeadCard({
   name,
   email,
@@ -27,6 +51,8 @@ export default function InquiryLeadCard({
   message,
   createdAt,
   items = [],
+  intentTier,
+  intentFactors,
 }: InquiryLeadCardProps) {
   const phoneHref = phone.replace(/[^\d+]/g, '');
 
@@ -52,9 +78,23 @@ export default function InquiryLeadCard({
             </a>
           </div>
         </div>
-        <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-400">
-          {format(new Date(createdAt), 'MMM d, yyyy • h:mm a')}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          {intentTier && (
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${intentBadgeClass(intentTier)}`}
+            >
+              {intentBadgeLabel(intentTier)}
+            </span>
+          )}
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-400">
+            {format(new Date(createdAt), 'MMM d, yyyy • h:mm a')}
+          </span>
+          {intentFactors && intentFactors.length > 0 && (
+            <p className="max-w-[16rem] text-right text-xs text-slate-500">
+              {intentFactors.join(' • ')}
+            </p>
+          )}
+        </div>
       </div>
 
       {items.length > 0 && (
