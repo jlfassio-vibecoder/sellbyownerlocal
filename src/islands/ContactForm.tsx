@@ -9,6 +9,11 @@ interface ContactFormProps {
   loginHref?: string;
   apiEndpoint?: string;
   listingIdKey?: 'vehicleId' | 'clothingListingId';
+  /** When true, guests can submit without login/phone verification (apparel PDP). */
+  allowGuest?: boolean;
+  buyerName?: string;
+  buyerEmail?: string;
+  buyerPhone?: string;
 }
 
 export default function ContactForm({
@@ -19,13 +24,31 @@ export default function ContactForm({
   loginHref = '/login',
   apiEndpoint = '/api/inquiries',
   listingIdKey = 'vehicleId',
+  allowGuest = false,
+  buyerName = '',
+  buyerEmail = '',
+  buyerPhone = '',
 }: ContactFormProps) {
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', message: '' });
+  const [formData, setFormData] = useState({
+    name: buyerName.trim(),
+    email: buyerEmail.trim(),
+    phone: buyerPhone.trim(),
+    message: '',
+  });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const canSubmit = isLoggedIn && verificationTier !== 'anonymous';
+  const canSubmit = allowGuest || (isLoggedIn && verificationTier !== 'anonymous');
+  const isApparelQuote = allowGuest || listingIdKey === 'clothingListingId';
+  const heading = isApparelQuote ? 'Request a Quote' : 'Contact Seller';
+  const subcopy = isApparelQuote
+    ? 'Ask about volume pricing, sizes, or shipping.'
+    : 'Express your interest and schedule a viewing.';
+  const messagePlaceholder = isApparelQuote
+    ? "I'm interested in this item and would like to..."
+    : "I'm interested in this vehicle and would like to...";
+  const submitLabel = isApparelQuote ? 'Send Quote Request' : 'Send Message';
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -54,7 +77,12 @@ export default function ContactForm({
       }
 
       setIsSubmitted(true);
-      setFormData({ name: '', email: '', phone: '', message: '' });
+      setFormData({
+        name: buyerName.trim(),
+        email: buyerEmail.trim(),
+        phone: buyerPhone.trim(),
+        message: '',
+      });
 
       setTimeout(() => {
         setIsSubmitted(false);
@@ -67,18 +95,16 @@ export default function ContactForm({
     }
   };
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | TextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  if (!isLoggedIn) {
+  if (!allowGuest && !isLoggedIn) {
     return (
       <section id="contact" className="mb-16 pt-8">
         <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm md:p-10">
-          <h2 className="mb-2 text-center text-2xl font-bold text-slate-900">Contact Seller</h2>
-          <p className="mb-8 text-center text-slate-500">
-            Express your interest and schedule a viewing.
-          </p>
+          <h2 className="mb-2 text-center text-2xl font-bold text-slate-900">{heading}</h2>
+          <p className="mb-8 text-center text-slate-500">{subcopy}</p>
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-6 py-10 text-center">
             <p className="mb-4 text-slate-700">
               Create a free account to contact the seller.
@@ -98,14 +124,14 @@ export default function ContactForm({
   return (
     <section id="contact" className="mb-16 pt-8">
       <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm md:p-10">
-        <h2 className="mb-2 text-center text-2xl font-bold text-slate-900">Contact Seller</h2>
-        <p className="mb-8 text-center text-slate-500">
-          Express your interest and schedule a viewing.
-        </p>
+        <h2 className="mb-2 text-center text-2xl font-bold text-slate-900">{heading}</h2>
+        <p className="mb-8 text-center text-slate-500">{subcopy}</p>
 
         {isSubmitted ? (
           <div className="rounded-xl border border-green-200 bg-green-50 px-6 py-8 text-center text-green-700">
-            <h3 className="mb-2 text-lg font-bold">Message Sent!</h3>
+            <h3 className="mb-2 text-lg font-bold">
+              {isApparelQuote ? 'Quote Request Sent!' : 'Message Sent!'}
+            </h3>
             <p className="text-sm">
               Thank you for your interest. The seller will get back to you shortly.
             </p>
@@ -201,7 +227,7 @@ export default function ContactForm({
                   onChange={handleChange}
                   disabled={!canSubmit}
                   className="w-full resize-none rounded-lg border border-slate-300 px-4 py-2 outline-none transition-all placeholder:text-slate-400 focus:border-red-600 focus:ring-2 focus:ring-red-600 disabled:bg-slate-50"
-                  placeholder="I'm interested in this vehicle and would like to..."
+                  placeholder={messagePlaceholder}
                 />
               </div>
 
@@ -210,7 +236,7 @@ export default function ContactForm({
                 disabled={isSubmitting || !canSubmit}
                 className="w-full rounded-lg bg-red-600 px-6 py-3 font-bold text-white shadow-sm transition-colors outline-none hover:bg-red-700 focus:ring-2 focus:ring-red-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? 'Sending...' : 'Send Message'}
+                {isSubmitting ? 'Sending...' : submitLabel}
               </button>
             </form>
           </div>

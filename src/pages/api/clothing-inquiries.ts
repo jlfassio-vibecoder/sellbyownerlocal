@@ -1,13 +1,6 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import {
-  AuthError,
-  requireSeller,
-  requireVerificationTier,
-  unauthorizedResponse,
-  verificationRequiredResponse,
-  VerificationRequiredError,
-} from '../../lib/auth';
+import { getOptionalSession } from '../../lib/auth';
 import { db } from '../../lib/firebase-admin';
 import { checkRateLimit, getClientIp } from '../../lib/rate-limit';
 import { ClothingInquirySchema } from '../../schemas';
@@ -19,9 +12,6 @@ const INQUIRY_RATE_LIMIT = {
 
 export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   try {
-    const session = await requireSeller(request, cookies);
-    requireVerificationTier(session, 'phone_verified');
-
     const clientIp = getClientIp(request, clientAddress);
     const rateLimit = checkRateLimit(`clothing-inquiries:${clientIp}`, INQUIRY_RATE_LIMIT);
 
@@ -82,6 +72,8 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       });
     }
 
+    const session = await getOptionalSession(request, cookies);
+
     await db().collection('clothing_inquiries').add({
       clothingListingId,
       sellerId,
@@ -89,8 +81,9 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       phone,
       email,
       message: message || '',
-      buyerUid: session.uid,
-      verificationTier: session.verificationTier,
+      ...(session
+        ? { buyerUid: session.uid, verificationTier: session.verificationTier }
+        : { verificationTier: 'anonymous' }),
       timestamp: new Date().toISOString(),
     });
 
@@ -99,12 +92,6 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return unauthorizedResponse(error.message);
-    }
-    if (error instanceof VerificationRequiredError) {
-      return verificationRequiredResponse(error);
-    }
     console.error('POST /api/clothing-inquiries failed', error);
     return new Response(JSON.stringify({ error: 'Failed to submit inquiry' }), {
       status: 500,

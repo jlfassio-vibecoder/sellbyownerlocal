@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
-import type { FavoriteItem, VerificationTier } from '../../schemas';
+import type { FavoriteItem } from '../../schemas';
 import {
   buildContactHelperText,
   buildContactMessage,
@@ -17,8 +17,6 @@ type ToastState = {
 
 interface ContactSellerModalProps {
   isOpen: boolean;
-  isLoggedIn: boolean;
-  verificationTier?: VerificationTier;
   favoriteItems: FavoriteItem[];
   isLoadingFavorites?: boolean;
   buyerName?: string;
@@ -228,20 +226,20 @@ export default function ContactSellerModal({
       <button
         type="button"
         className="absolute inset-0 bg-slate-900/50"
-        aria-label="Close contact seller dialog"
+        aria-label="Close request quote dialog"
         onClick={onClose}
       />
 
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="contact-seller-title"
+        aria-labelledby="request-quote-title"
         className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-xl"
       >
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-4">
           <div>
-            <h2 id="contact-seller-title" className="text-xl font-bold text-slate-900">
-              Contact Seller
+            <h2 id="request-quote-title" className="text-xl font-bold text-slate-900">
+              Request a Quote
             </h2>
             <p className="mt-1 text-sm text-slate-500">{subheadline}</p>
           </div>
@@ -334,7 +332,7 @@ export default function ContactSellerModal({
               disabled={isSubmitting || isLoadingFavorites || availableItems.length === 0}
               className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
             >
-              {isSubmitting ? 'Sending…' : 'Send Request'}
+              {isSubmitting ? 'Sending…' : 'Send Quote Request'}
             </button>
           </div>
         </form>

@@ -59,7 +59,7 @@ export default function ApparelSellerLayout({
       </div>
       <div className="min-w-0">
         <h1 className="truncate text-lg font-bold leading-tight">Apparel Dashboard</h1>
-        <p className="truncate text-xs text-slate-400">Manage catalog &amp; inquiries</p>
+        <p className="truncate text-xs text-slate-400">Manage catalog &amp; quote requests</p>
       </div>
     </div>
   );
@@ -75,7 +75,7 @@ export default function ApparelSellerLayout({
       </a>
       <a href="/seller/apparel/inquiries" className={navLinkClass(activeNav === 'inquiries')}>
         <Users size={16} />
-        Inquiries
+        Quote Requests
         {inquiryBadge}
       </a>
     </>
@@ -155,7 +155,7 @@ export default function ApparelSellerLayout({
             onClick={() => setIsDrawerOpen(false)}
           >
             <Users size={16} />
-            Inquiries
+            Quote Requests
             {inquiryBadge}
           </a>
         </div>

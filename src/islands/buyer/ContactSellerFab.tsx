@@ -72,7 +72,7 @@ function ContactSellerFabInner({
         type="button"
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105 hover:bg-red-700"
-        aria-label="Contact seller"
+        aria-label="Request quote"
       >
         <MessageCircle size={20} />
         Request Quote
@@ -85,8 +85,6 @@ function ContactSellerFabInner({
 
       <ContactSellerModal
         isOpen={isOpen}
-        isLoggedIn={isLoggedIn}
-        verificationTier={verificationTier}
         favoriteItems={items}
         isLoadingFavorites={isLoading}
         buyerName={buyerName}
