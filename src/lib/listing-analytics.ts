@@ -1,3 +1,4 @@
+import { isPublicListingEvent } from './analytics-actor';
 import { db } from './firebase-admin';
 import {
   ListingAnalyticsResponseSchema,
@@ -71,8 +72,12 @@ async function fetchListingEvents(vehicleId: string, since: string | null): Prom
       events.push({
         sessionId: data.sessionId,
         vehicleId: data.vehicleId,
+        clothingId: data.clothingId,
+        sellerId: data.sellerId,
         eventType: data.eventType,
+        surface: data.surface,
         metadata: data.metadata ?? undefined,
+        actor: data.actor ?? undefined,
         timestamp: data.timestamp,
       });
     }
@@ -134,11 +139,13 @@ export async function getListingAnalytics(
   const since = resolveSince(range);
   const until = new Date().toISOString();
 
-  const [events, activeSaves, inquiryCount] = await Promise.all([
+  const [rawEvents, activeSaves, inquiryCount] = await Promise.all([
     fetchListingEvents(vehicleId, since),
     countActiveSaves(vehicleId, since),
     countInquiries(vehicleId, since),
   ]);
+
+  const events = rawEvents.filter(isPublicListingEvent);
 
   let searchImpressions = 0;
   let totalPageViews = 0;

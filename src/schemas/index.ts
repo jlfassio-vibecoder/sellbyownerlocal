@@ -629,19 +629,70 @@ export const ListingEventTypeSchema = z.enum([
 export const ListingEventMetadataSchema = z.object({
   photoIndex: z.number().int().nonnegative().optional(),
   sectionId: z.string().min(1).max(50).optional(),
+  /** Photo / media surface (not page context). */
   surface: z.enum(['hero', 'carousel', 'gallery', 'search_grid']).optional(),
   rank: z.number().int().nonnegative().optional(),
   position: z.number().int().positive().optional(),
   durationSeconds: z.number().nonnegative().optional(),
 });
 
-export const ListingEventCreateSchema = z.object({
-  vehicleId: z.string().min(1),
-  eventType: ListingEventTypeSchema,
-  metadata: ListingEventMetadataSchema.optional(),
+/** Page-level context for listing_events (distinct from metadata.surface). */
+export const ListingEventSurfaceSchema = z.enum([
+  'vehicle_grid',
+  'vehicle_pdp',
+  'apparel_storefront',
+  'apparel_pdp',
+]);
+
+export const ListingEventActorSchema = z.object({
+  kind: z.enum(['anon', 'user', 'seller', 'admin']),
+  uid: z.string().min(1).optional(),
+  isInternal: z.boolean(),
 });
 
-export const ListingEventSchema = ListingEventCreateSchema.extend({
+export const ListingEventCreateSchema = z
+  .object({
+    vehicleId: z.string().min(1).optional(),
+    clothingId: z.string().min(1).optional(),
+    sellerId: z.string().min(1).optional(),
+    eventType: ListingEventTypeSchema,
+    /** Page context surface; server may default for vehicle events. */
+    surface: ListingEventSurfaceSchema.optional(),
+    metadata: ListingEventMetadataSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasVehicle = Boolean(data.vehicleId);
+    const hasClothing = Boolean(data.clothingId);
+    const isStorefront =
+      data.surface === 'apparel_storefront' && Boolean(data.sellerId);
+
+    if (hasVehicle && hasClothing) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Provide vehicleId or clothingId, not both',
+        path: ['vehicleId'],
+      });
+      return;
+    }
+
+    if (!hasVehicle && !hasClothing && !isStorefront) {
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'Provide vehicleId, clothingId, or apparel_storefront with sellerId',
+        path: ['vehicleId'],
+      });
+    }
+  });
+
+export const ListingEventSchema = z.object({
+  vehicleId: z.string().min(1).optional(),
+  clothingId: z.string().min(1).optional(),
+  sellerId: z.string().min(1).optional(),
+  eventType: ListingEventTypeSchema,
+  surface: ListingEventSurfaceSchema.optional(),
+  metadata: ListingEventMetadataSchema.optional(),
+  actor: ListingEventActorSchema.optional(),
   sessionId: z.string().min(1),
   timestamp: z.iso.datetime(),
 });
@@ -922,6 +973,8 @@ export type VehicleDashboardUpdate = z.infer<typeof VehicleDashboardUpdateSchema
 export type UploadResponse = z.infer<typeof UploadResponseSchema>;
 export type ListingEventType = z.infer<typeof ListingEventTypeSchema>;
 export type ListingEventMetadata = z.infer<typeof ListingEventMetadataSchema>;
+export type ListingEventSurface = z.infer<typeof ListingEventSurfaceSchema>;
+export type ListingEventActor = z.infer<typeof ListingEventActorSchema>;
 export type ListingEventCreate = z.infer<typeof ListingEventCreateSchema>;
 export type ListingEvent = z.infer<typeof ListingEventSchema>;
 export type SavedVehicle = z.infer<typeof SavedVehicleSchema>;
