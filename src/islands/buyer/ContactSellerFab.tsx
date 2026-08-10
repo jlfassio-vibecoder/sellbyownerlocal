@@ -65,7 +65,7 @@ function ContactSellerFabInner({
     setIsOpen(true);
     const bySeller = new Map<string, number>();
     for (const item of items) {
-      if (!item.sellerId) continue;
+      if (!item.sellerId || item.category !== 'clothing') continue;
       bySeller.set(item.sellerId, (bySeller.get(item.sellerId) ?? 0) + 1);
     }
     for (const [sellerId, favoriteCount] of bySeller) {

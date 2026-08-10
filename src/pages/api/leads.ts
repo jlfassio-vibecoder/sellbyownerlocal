@@ -166,32 +166,35 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       const clothingIds = enrichedItems
         .filter((item) => item.category === 'clothing')
         .map((item) => item.id);
-      const userSession = await getOptionalSession(request, cookies);
-      const sessionId = getOrCreateAnonSession(cookies);
 
-      await recordListingEvent({
-        sessionId,
-        sellerId,
-        eventType: 'quote_submit',
-        metadata: {
-          leadId: docRef.id,
-          clothingIds,
-          favoriteCount: enrichedItems.length,
-        },
-        userSession: userSession
-          ? { uid: userSession.uid, email: userSession.email }
-          : null,
-      });
+      if (clothingIds.length > 0) {
+        const userSession = await getOptionalSession(request, cookies);
+        const sessionId = getOrCreateAnonSession(cookies);
 
-      try {
-        const intent = await calculateLeadIntentScore(docRef.id, sessionId, sellerId);
-        await docRef.update({
-          intentScore: intent.score,
-          intentTier: intent.tier,
-          intentFactors: intent.factors,
+        await recordListingEvent({
+          sessionId,
+          sellerId,
+          eventType: 'quote_submit',
+          metadata: {
+            leadId: docRef.id,
+            clothingIds,
+            favoriteCount: clothingIds.length,
+          },
+          userSession: userSession
+            ? { uid: userSession.uid, email: userSession.email }
+            : null,
         });
-      } catch (intentError) {
-        console.error('lead intent scoring failed', intentError);
+
+        try {
+          const intent = await calculateLeadIntentScore(docRef.id, sessionId, sellerId);
+          await docRef.update({
+            intentScore: intent.score,
+            intentTier: intent.tier,
+            intentFactors: intent.factors,
+          });
+        } catch (intentError) {
+          console.error('lead intent scoring failed', intentError);
+        }
       }
     } catch (analyticsError) {
       console.error('quote_submit analytics failed', analyticsError);
