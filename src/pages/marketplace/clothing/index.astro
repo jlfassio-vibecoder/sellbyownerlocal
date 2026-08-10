@@ -1,12 +1,16 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
 import { getOptionalSellerSession } from '../../../lib/auth';
-import { resolveStorefrontSegmentsForSellerIds } from '../../../lib/buyer-profile';
+import {
+  getUserProfile,
+  resolveStorefrontSegmentsForSellerIds,
+} from '../../../lib/buyer-profile';
 import { getClothingInventory } from '../../../lib/clothing-api';
 import ClothingInventoryGrid from '../../../islands/buyer/ClothingInventoryGrid';
 import ContactSellerFab from '../../../islands/buyer/ContactSellerFab';
 
 const session = await getOptionalSellerSession(Astro.request, Astro.cookies);
+const profile = session ? await getUserProfile(session.uid) : null;
 const listings = await getClothingInventory();
 const storefrontSegmentsBySellerId = await resolveStorefrontSegmentsForSellerIds(
   listings.map((listing) => listing.sellerId)
@@ -14,6 +18,9 @@ const storefrontSegmentsBySellerId = await resolveStorefrontSegmentsForSellerIds
 const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
+  buyerName: profile?.displayName,
+  buyerEmail: session?.email,
+  buyerPhone: profile?.phone,
 };
 ---
 
@@ -69,6 +76,9 @@ const buyerContext = {
         client:load
         isLoggedIn={buyerContext.isLoggedIn}
         verificationTier={buyerContext.verificationTier}
+        buyerName={buyerContext.buyerName}
+        buyerEmail={buyerContext.buyerEmail}
+        buyerPhone={buyerContext.buyerPhone}
       />
     )
   }

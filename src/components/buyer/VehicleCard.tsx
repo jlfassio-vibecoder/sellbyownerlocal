@@ -9,6 +9,9 @@ import { getVehicleListingPath } from '../../utils/url-helpers';
 export interface BuyerSaveContext {
   isLoggedIn: boolean;
   verificationTier: VerificationTier;
+  buyerName?: string;
+  buyerEmail?: string;
+  buyerPhone?: string;
 }
 
 interface VehicleCardProps {

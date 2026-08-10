@@ -12,6 +12,9 @@ interface ContactSellerFabProps {
   isLoggedIn: boolean;
   verificationTier?: VerificationTier;
   initialSavedIds?: string[];
+  buyerName?: string;
+  buyerEmail?: string;
+  buyerPhone?: string;
 }
 
 function OptionalFavoritesBoundary({
@@ -42,9 +45,15 @@ function OptionalFavoritesBoundary({
 function ContactSellerFabInner({
   isLoggedIn,
   verificationTier,
+  buyerName,
+  buyerEmail,
+  buyerPhone,
 }: {
   isLoggedIn: boolean;
   verificationTier: VerificationTier;
+  buyerName?: string;
+  buyerEmail?: string;
+  buyerPhone?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const { count, items, isLoading, refresh, isFavorite, toggle } = useFavorites();
@@ -80,6 +89,9 @@ function ContactSellerFabInner({
         verificationTier={verificationTier}
         favoriteItems={items}
         isLoadingFavorites={isLoading}
+        buyerName={buyerName}
+        buyerEmail={buyerEmail}
+        buyerPhone={buyerPhone}
         onClearQuotedItems={handleClearQuotedItems}
         onClose={() => {
           setIsOpen(false);
@@ -94,6 +106,9 @@ export default function ContactSellerFab({
   isLoggedIn,
   verificationTier = 'anonymous',
   initialSavedIds = [],
+  buyerName,
+  buyerEmail,
+  buyerPhone,
 }: ContactSellerFabProps) {
   return (
     <OptionalFavoritesBoundary
@@ -101,7 +116,13 @@ export default function ContactSellerFab({
       verificationTier={verificationTier}
       initialSavedIds={initialSavedIds}
     >
-      <ContactSellerFabInner isLoggedIn={isLoggedIn} verificationTier={verificationTier} />
+      <ContactSellerFabInner
+        isLoggedIn={isLoggedIn}
+        verificationTier={verificationTier}
+        buyerName={buyerName}
+        buyerEmail={buyerEmail}
+        buyerPhone={buyerPhone}
+      />
     </OptionalFavoritesBoundary>
   );
 }

@@ -36,6 +36,7 @@ export default function LeadsPanel({ leads }: LeadsPanelProps) {
                 phone={lead.phone}
                 message={lead.message}
                 createdAt={lead.createdAt}
+                items={lead.items ?? []}
               />
             ))}
           </div>

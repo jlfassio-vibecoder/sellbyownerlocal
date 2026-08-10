@@ -1,5 +1,7 @@
 import { format } from 'date-fns';
 import { Mail, Phone } from 'lucide-react';
+import type { FavoriteItem } from '../../schemas';
+import { priceFormatter } from '../../utils/formatters';
 
 export interface InquiryLeadCardProps {
   id: string;
@@ -8,6 +10,14 @@ export interface InquiryLeadCardProps {
   phone: string;
   message?: string;
   createdAt: string;
+  items?: FavoriteItem[];
+}
+
+function variantLabel(item: FavoriteItem): string | null {
+  const parts: string[] = [];
+  if (item.sizes?.length) parts.push(`Sizes: ${item.sizes.join(', ')}`);
+  if (item.colors?.length) parts.push(`Colors: ${item.colors.join(', ')}`);
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 export default function InquiryLeadCard({
@@ -16,6 +26,7 @@ export default function InquiryLeadCard({
   phone,
   message,
   createdAt,
+  items = [],
 }: InquiryLeadCardProps) {
   const phoneHref = phone.replace(/[^\d+]/g, '');
 
@@ -45,6 +56,51 @@ export default function InquiryLeadCard({
           {format(new Date(createdAt), 'MMM d, yyyy • h:mm a')}
         </span>
       </div>
+
+      {items.length > 0 && (
+        <ul className="space-y-3">
+          {items.map((item) => {
+            const variants = variantLabel(item);
+            return (
+              <li
+                key={item.id}
+                className="flex gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3"
+              >
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-slate-200">
+                  {item.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
+                      No image
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  {item.listingPath ? (
+                    <a
+                      href={item.listingPath}
+                      className="text-sm font-semibold text-slate-900 hover:text-red-700"
+                    >
+                      {item.title}
+                    </a>
+                  ) : (
+                    <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                  )}
+                  <p className="mt-0.5 text-sm text-slate-600">
+                    {priceFormatter.format(item.price)}
+                  </p>
+                  {variants && <p className="mt-1 text-xs text-slate-500">{variants}</p>}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
       {message && (
         <div className="rounded-lg border-l-4 border-red-600 bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap">
           {message}

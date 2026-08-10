@@ -7,6 +7,9 @@ export interface BuyerMarketplaceShellProps {
   isLoggedIn: boolean;
   verificationTier?: VerificationTier;
   initialSavedIds?: string[];
+  buyerName?: string;
+  buyerEmail?: string;
+  buyerPhone?: string;
   /** When true, also render the Request Quote FAB. */
   showFab?: boolean;
   children?: ReactNode;
@@ -25,6 +28,9 @@ export default function BuyerMarketplaceShell({
   isLoggedIn,
   verificationTier = 'anonymous',
   initialSavedIds = [],
+  buyerName,
+  buyerEmail,
+  buyerPhone,
   showFab = true,
   children,
 }: BuyerMarketplaceShellProps) {
@@ -40,6 +46,9 @@ export default function BuyerMarketplaceShell({
           isLoggedIn={isLoggedIn}
           verificationTier={verificationTier}
           initialSavedIds={initialSavedIds}
+          buyerName={buyerName}
+          buyerEmail={buyerEmail}
+          buyerPhone={buyerPhone}
         />
       ) : null}
     </FavoritesProvider>

@@ -21,6 +21,9 @@ interface ContactSellerModalProps {
   verificationTier?: VerificationTier;
   favoriteItems: FavoriteItem[];
   isLoadingFavorites?: boolean;
+  buyerName?: string;
+  buyerEmail?: string;
+  buyerPhone?: string;
   onClearQuotedItems?: (items: FavoriteItem[]) => Promise<void>;
   onClose: () => void;
 }
@@ -29,6 +32,9 @@ export default function ContactSellerModal({
   isOpen,
   favoriteItems,
   isLoadingFavorites = false,
+  buyerName = '',
+  buyerEmail = '',
+  buyerPhone = '',
   onClearQuotedItems,
   onClose,
 }: ContactSellerModalProps) {
@@ -63,11 +69,20 @@ export default function ContactSellerModal({
 
     setError(null);
     setToast(null);
-    setName('');
-    setEmail('');
-    setPhone('');
-    setMessage(buildContactMessage(availableItems, ''));
-  }, [isOpen, favoriteItems, availableItems, isLoadingFavorites]);
+    const nextName = buyerName.trim();
+    setName(nextName);
+    setEmail(buyerEmail.trim());
+    setPhone(buyerPhone.trim());
+    setMessage(buildContactMessage(availableItems, nextName));
+  }, [
+    isOpen,
+    favoriteItems,
+    availableItems,
+    isLoadingFavorites,
+    buyerName,
+    buyerEmail,
+    buyerPhone,
+  ]);
 
   useEffect(() => {
     if (!isOpen) return;

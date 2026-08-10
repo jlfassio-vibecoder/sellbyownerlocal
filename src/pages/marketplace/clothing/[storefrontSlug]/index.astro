@@ -3,6 +3,7 @@ import Layout from '../../../../layouts/Layout.astro';
 import { getOptionalSellerSession } from '../../../../lib/auth';
 import {
   getStorefrontSegmentForSeller,
+  getUserProfile,
   resolveSellerByStorefrontParam,
 } from '../../../../lib/buyer-profile';
 import {
@@ -50,10 +51,14 @@ const listings = await getActiveApparelForSeller(seller.id);
 const storefrontSegmentsBySellerId = { [seller.id]: canonicalSegment };
 
 const session = await getOptionalSellerSession(Astro.request, Astro.cookies);
+const buyerProfile = session ? await getUserProfile(session.uid) : null;
 const isStorefrontOwner = Boolean(session?.uid && session.uid === seller.id);
 const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
+  buyerName: buyerProfile?.displayName,
+  buyerEmail: session?.email,
+  buyerPhone: buyerProfile?.phone,
 };
 
 const origin = Astro.site?.href ?? Astro.url.origin;
@@ -148,6 +153,9 @@ const ogImage = heroUrl || resolveStorefrontOgImage(listings);
         client:load
         isLoggedIn={buyerContext.isLoggedIn}
         verificationTier={buyerContext.verificationTier}
+        buyerName={buyerContext.buyerName}
+        buyerEmail={buyerContext.buyerEmail}
+        buyerPhone={buyerContext.buyerPhone}
       />
     )
   }

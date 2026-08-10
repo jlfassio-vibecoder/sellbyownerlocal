@@ -2,6 +2,7 @@
 import Layout from '../../../../layouts/Layout.astro';
 import { getOptionalSession } from '../../../../lib/auth';
 import {
+  getUserProfile,
   resolveSellerByStorefrontParam,
 } from '../../../../lib/buyer-profile';
 import { getClothingListingById } from '../../../../lib/clothing-api';
@@ -73,6 +74,7 @@ const galleryImages = listing.galleryPhotos?.length ? listing.galleryPhotos : []
 const heroImage = listing.galleryPhotos?.[0];
 const hasGalleryImages = galleryImages.length > 0;
 const session = await getOptionalSession(Astro.request, Astro.cookies);
+const buyerProfile = session ? await getUserProfile(session.uid) : null;
 const isStorefrontOwner = Boolean(session?.uid && session.uid === resolvedSeller.id);
 const storefrontPath = getStorefrontPath(canonicalSegment);
 
@@ -89,6 +91,9 @@ const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
   loginHref: `/login?next=${encodeURIComponent(`${canonicalPath}#contact`)}`,
+  buyerName: buyerProfile?.displayName,
+  buyerEmail: session?.email,
+  buyerPhone: buyerProfile?.phone,
 };
 
 const storefrontTitle =
@@ -308,6 +313,9 @@ const storefrontTitle =
         client:load
         isLoggedIn={buyerContext.isLoggedIn}
         verificationTier={buyerContext.verificationTier}
+        buyerName={buyerContext.buyerName}
+        buyerEmail={buyerContext.buyerEmail}
+        buyerPhone={buyerContext.buyerPhone}
         initialSavedIds={initialSaved ? [listing.id] : []}
       />
     )
