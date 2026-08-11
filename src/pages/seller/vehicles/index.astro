@@ -13,6 +13,7 @@ if (seller instanceof Response) return seller;
 
 const profile = await getUserProfile(seller.uid);
 const hideFab = profile?.hideFab === true;
+const hideListingsBackLink = profile?.hideListingsBackLink === true;
 
 const snapshot = await db().collection('vehicles').where('sellerId', '==', seller.uid).get();
 
@@ -92,6 +93,7 @@ const inventoryItems = vehicles.map((vehicle) => ({
           client:load
           userId={seller.uid}
           initialHideFab={hideFab}
+          initialHideListingsBackLink={hideListingsBackLink}
         />
       </div>
 

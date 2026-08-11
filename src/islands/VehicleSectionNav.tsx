@@ -27,6 +27,8 @@ interface VehicleSectionNavProps {
   vin?: string;
   locationCity?: string;
   backHref?: string;
+  /** When true, hide desktop All Listings and mobile ← Back links. */
+  hideBackLink?: boolean;
   accentColor?: string;
   sections: NavSection[];
   saveVehicle?: SaveVehicleProps;
@@ -39,6 +41,7 @@ export default function VehicleSectionNav({
   vin,
   locationCity,
   backHref = '/',
+  hideBackLink = false,
   accentColor,
   sections,
   saveVehicle,
@@ -97,19 +100,21 @@ export default function VehicleSectionNav({
       <nav className="sticky top-0 z-40 flex h-16 flex-shrink-0 items-center justify-between bg-slate-900 pr-4 pl-0 text-white shadow-sm sm:pr-6 lg:pr-8">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between pr-4 pl-0 sm:pr-6 lg:pr-8">
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
-            <a
-              href={backHref}
-              className="hidden shrink-0 items-center gap-1.5 pl-3 text-slate-400 transition-colors hover:text-white sm:pl-4 md:flex"
-            >
-              <span className="text-base leading-none" aria-hidden="true">
-                ←
-              </span>
-              <span className="flex flex-col text-[11px] leading-tight font-medium uppercase tracking-wide">
-                <span>All</span>
-                <span>Listings</span>
-              </span>
-            </a>
-            <div className="flex min-w-0 flex-col">
+            {!hideBackLink && (
+              <a
+                href={backHref}
+                className="hidden shrink-0 items-center gap-1.5 pl-3 text-slate-400 transition-colors hover:text-white sm:pl-4 md:flex"
+              >
+                <span className="text-base leading-none" aria-hidden="true">
+                  ←
+                </span>
+                <span className="flex flex-col text-[11px] leading-tight font-medium uppercase tracking-wide">
+                  <span>All</span>
+                  <span>Listings</span>
+                </span>
+              </a>
+            )}
+            <div className={`flex min-w-0 flex-col ${hideBackLink ? 'pl-3 sm:pl-4' : ''}`}>
               <span className="truncate text-xl font-bold tracking-tight">
                 <AccentText text={pageTitle} accentClass={accent.tailwindText} />
               </span>
@@ -168,9 +173,11 @@ export default function VehicleSectionNav({
                 initialSaved={saveVehicle.initialSaved}
               />
             )}
-            <a href={backHref} className="text-sm text-slate-400 transition-colors hover:text-white">
-              ← Back
-            </a>
+            {!hideBackLink && (
+              <a href={backHref} className="text-sm text-slate-400 transition-colors hover:text-white">
+                ← Back
+              </a>
+            )}
             <button
               type="button"
               onClick={() => setIsDrawerOpen(true)}

@@ -24,6 +24,7 @@ if (seller instanceof Response) return seller;
 
 const profile = await getUserProfile(seller.uid);
 const hideFab = profile?.hideFab === true;
+const hideListingsBackLink = profile?.hideListingsBackLink === true;
 
 const doc = await db().collection('vehicles').doc(vehicleId).get();
 
@@ -90,6 +91,7 @@ const initialInquiries = inquirySnapshot.docs.flatMap((doc) => {
       vehicleId={vehicleId}
       sellerId={seller.uid}
       initialHideFab={hideFab}
+      initialHideListingsBackLink={hideListingsBackLink}
       publicListingPath={publicListingPath}
       vehicleTitle={vehicleTitle}
       vehicleVin={vehicle.vin}

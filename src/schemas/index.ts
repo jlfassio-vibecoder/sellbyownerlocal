@@ -64,6 +64,8 @@ export const UserSchema = z.object({
   hideFab: z.boolean().default(false),
   /** When true, buyers cannot open individual apparel item detail pages. */
   hideItemDetails: z.boolean().default(false),
+  /** When true, hide the All Listings / Back link on public vehicle listing pages. */
+  hideListingsBackLink: z.boolean().default(false),
 });
 
 export const PublicUserResponseSchema = z.object({
@@ -77,6 +79,7 @@ export const PublicUserResponseSchema = z.object({
   storefrontHeroUrl: httpHttpsUrl.optional(),
   hideFab: z.boolean().default(false),
   hideItemDetails: z.boolean().default(false),
+  hideListingsBackLink: z.boolean().default(false),
 });
 
 export const UserProfileUpdateSchema = z.object({
@@ -87,6 +90,7 @@ export const UserProfileUpdateSchema = z.object({
   storefrontHeroUrl: z.union([httpHttpsUrl, z.literal('')]).optional(),
   hideFab: z.boolean().optional(),
   hideItemDetails: z.boolean().optional(),
+  hideListingsBackLink: z.boolean().optional(),
 });
 
 export const PhoneVerifyRequestSchema = z.object({

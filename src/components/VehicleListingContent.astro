@@ -47,6 +47,8 @@ interface Props {
   isVehicleOwner?: boolean;
   /** When false, hide the floating Owner Messaging chat widget. */
   showChatWidget?: boolean;
+  /** When true, hide All Listings / Back navigation on the listing nav. */
+  hideListingsBackLink?: boolean;
 }
 
 const {
@@ -56,6 +58,7 @@ const {
   initialSaved = false,
   isVehicleOwner = false,
   showChatWidget = true,
+  hideListingsBackLink = false,
 } = Astro.props;
 const view = buildVehicleListingView(vehicle);
 const {
@@ -119,6 +122,7 @@ const sourceSiteLabel = vehicle.externalSourceUrl
   vin={vehicle.vin}
   locationCity={vehicle.location.city}
   accentColor={vehicle.accentColor}
+  hideBackLink={hideListingsBackLink}
   sections={navSections}
   saveVehicle={
     buyerContext && !buyerCtasDisabled

@@ -17,6 +17,7 @@ interface SellerVehicleShellProps {
   vehicleId: string;
   sellerId: string;
   initialHideFab?: boolean;
+  initialHideListingsBackLink?: boolean;
   publicListingPath: string;
   vehicleTitle: string;
   vehicleVin?: string;
@@ -31,6 +32,7 @@ export default function SellerVehicleShell({
   vehicleId,
   sellerId,
   initialHideFab = false,
+  initialHideListingsBackLink = false,
   publicListingPath,
   vehicleTitle,
   vehicleVin,
@@ -106,7 +108,11 @@ export default function SellerVehicleShell({
       <div className="flex h-full flex-col overflow-y-auto">
         <div className="shrink-0 border-b border-slate-200 bg-[#f8f9fa] px-4 py-4 sm:px-6">
           <div className="mx-auto max-w-6xl">
-            <SellerFabSettingsPanel userId={sellerId} initialHideFab={initialHideFab} />
+            <SellerFabSettingsPanel
+              userId={sellerId}
+              initialHideFab={initialHideFab}
+              initialHideListingsBackLink={initialHideListingsBackLink}
+            />
           </div>
         </div>
         <DetailsEditor
