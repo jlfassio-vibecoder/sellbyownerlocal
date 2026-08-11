@@ -1,4 +1,5 @@
 import type { ApparelFilterStatus } from '../../lib/apparel';
+import { LISTING_STATUS_FILTER_CHIPS } from '../../lib/listing-status-ui';
 
 const INPUT_CLASS =
   'w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition-colors focus:border-red-600 focus:ring-2 focus:ring-red-600';
@@ -6,6 +7,8 @@ const INPUT_CLASS =
 const STATUS_OPTIONS: { value: ApparelFilterStatus; label: string }[] = [
   { value: 'draft', label: 'Draft' },
   { value: 'active', label: 'Active' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'sold', label: 'Sold' },
   { value: 'archived', label: 'Archived' },
 ];
 
@@ -18,6 +21,16 @@ interface SearchAndFilterBarProps {
   setSelectedStatus: (value: string) => void;
   brands: string[];
   showStatusFilter: boolean;
+  /** Seller catalog uses chips; default select for other surfaces. */
+  statusFilterMode?: 'select' | 'chips';
+}
+
+function statusChipClass(isActive: boolean): string {
+  return `rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+    isActive
+      ? 'bg-slate-900 text-white'
+      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+  }`;
 }
 
 export default function SearchAndFilterBar({
@@ -29,6 +42,7 @@ export default function SearchAndFilterBar({
   setSelectedStatus,
   brands,
   showStatusFilter,
+  statusFilterMode = 'select',
 }: SearchAndFilterBarProps) {
   return (
     <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
@@ -66,7 +80,7 @@ export default function SearchAndFilterBar({
           </select>
         </div>
 
-        {showStatusFilter && (
+        {showStatusFilter && statusFilterMode === 'select' && (
           <div>
             <label htmlFor="apparel-status" className="mb-1 block text-sm font-medium text-slate-700">
               Status
@@ -87,6 +101,22 @@ export default function SearchAndFilterBar({
           </div>
         )}
       </div>
+
+      {showStatusFilter && statusFilterMode === 'chips' && (
+        <div className="mt-4 flex flex-wrap gap-2" aria-label="Filter by status">
+          {LISTING_STATUS_FILTER_CHIPS.map((chip) => (
+            <button
+              key={chip.value}
+              type="button"
+              aria-pressed={selectedStatus === chip.value}
+              onClick={() => setSelectedStatus(chip.value)}
+              className={statusChipClass(selectedStatus === chip.value)}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

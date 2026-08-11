@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { db } from '../../lib/firebase-admin';
 import { VehicleResponseSchema } from '../../schemas';
 import { getOptionalSession } from '../../lib/auth';
-import { getSellerHideFab } from '../../lib/seller-settings';
+import { getSellerHideFab, getSellerHideListingsBackLink } from '../../lib/seller-settings';
 import { resolveVehicleDisplayMonroney } from '../../lib/resolve-display-monroney';
 import {
   buildVehicleSeoDescription,
@@ -14,6 +14,10 @@ import {
 import Layout from '../../layouts/Layout.astro';
 import VehicleListingContent from '../../components/VehicleListingContent.astro';
 import { generateVehicleSlug, resolveFirestoreIdCandidates } from '../../utils/url-helpers';
+import {
+  isBuyerCtaEnabledStatus,
+  isPubliclyViewableListingStatus,
+} from '../../lib/listing-lifecycle';
 
 const { id } = Astro.params;
 
@@ -46,6 +50,11 @@ if (!parsed.success) {
 }
 
 const vehicle = parsed.data;
+
+if (!isPubliclyViewableListingStatus(vehicle.status)) {
+  return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
+}
+
 const canonicalSlug = generateVehicleSlug(vehicle);
 
 if (slug !== canonicalSlug) {
@@ -81,7 +90,9 @@ const buyerContext = {
 };
 const isVehicleOwner = Boolean(session?.uid && session.uid === vehicle.sellerId);
 const hideFab = await getSellerHideFab(vehicle.sellerId);
-const showChatWidget = !hideFab && !isVehicleOwner;
+const hideListingsBackLink = await getSellerHideListingsBackLink(vehicle.sellerId);
+const buyerCtasEnabled = isBuyerCtaEnabledStatus(vehicle.status);
+const showChatWidget = !hideFab && !isVehicleOwner && buyerCtasEnabled;
 ---
 
 <Layout
@@ -97,5 +108,6 @@ const showChatWidget = !hideFab && !isVehicleOwner;
     initialSaved={initialSaved}
     isVehicleOwner={isVehicleOwner}
     showChatWidget={showChatWidget}
+    hideListingsBackLink={hideListingsBackLink}
   />
 </Layout>

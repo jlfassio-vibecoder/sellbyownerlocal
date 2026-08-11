@@ -25,3 +25,17 @@ export async function updateSellerHideItemDetails(
 ): Promise<void> {
   await db().collection('users').doc(sellerId).set({ hideItemDetails }, { merge: true });
 }
+
+/** Read hideListingsBackLink; missing defaults to false (back link visible). */
+export async function getSellerHideListingsBackLink(sellerId: string): Promise<boolean> {
+  const profile = await getUserProfile(sellerId);
+  return profile?.hideListingsBackLink === true;
+}
+
+/** Persist hideListingsBackLink on the seller's users/{uid} document. */
+export async function updateSellerHideListingsBackLink(
+  sellerId: string,
+  hideListingsBackLink: boolean
+): Promise<void> {
+  await db().collection('users').doc(sellerId).set({ hideListingsBackLink }, { merge: true });
+}

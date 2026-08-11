@@ -1,6 +1,7 @@
 import { db } from './firebase-admin';
 import { z } from 'zod';
 import { ClothingListingSchema, type ClothingListing } from '../schemas';
+import { isPubliclyViewableListingStatus } from './listing-lifecycle';
 
 function toCreatedAt(value: unknown): Date | undefined {
   if (value instanceof Date) return value;
@@ -57,8 +58,34 @@ export async function getClothingListingById(id: string): Promise<ClothingListin
   return parsed.data;
 }
 
+/** Public PDP loader: active, pending, or sold. Draft/archived return null. */
+export async function getPublicClothingListingById(
+  id: string
+): Promise<ClothingListing | null> {
+  const snapshot = await db().collection('clothing_listings').doc(id).get();
+
+  if (!snapshot.exists) {
+    return null;
+  }
+
+  const parsed = mapClothingDoc(snapshot.id, snapshot.data() as Record<string, unknown>);
+
+  if (!parsed.success) {
+    if (import.meta.env.DEV) {
+      console.error(`Clothing ${id} failed validation:`, z.flattenError(parsed.error));
+    }
+    return null;
+  }
+
+  if (!isPubliclyViewableListingStatus(parsed.data.status)) {
+    return null;
+  }
+
+  return parsed.data;
+}
+
 export async function getApparelCatalogForSeller(sellerId: string): Promise<ClothingListing[]> {
-  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? '(default)';
+  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? 'sellbyowner-prod';
   let snapshot;
 
   try {
@@ -105,7 +132,7 @@ export async function getApparelCatalogForSeller(sellerId: string): Promise<Clot
 }
 
 export async function getActiveApparelForSeller(sellerId: string): Promise<ClothingListing[]> {
-  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? '(default)';
+  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? 'sellbyowner-prod';
   let snapshot;
 
   try {
@@ -158,7 +185,7 @@ export async function getActiveApparelForSeller(sellerId: string): Promise<Cloth
 
 /** Active listing count only — avoids fetching/parsing full docs for status banners. */
 export async function getActiveApparelCountForSeller(sellerId: string): Promise<number> {
-  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? '(default)';
+  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? 'sellbyowner-prod';
   const query = db()
     .collection('clothing_listings')
     .where('sellerId', '==', sellerId)

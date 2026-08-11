@@ -16,7 +16,7 @@ const STORAGE_BUCKET =
   process.env.FIREBASE_STORAGE_BUCKET ?? 'ai-workout-generator-hub.firebasestorage.app';
 
 const FIRESTORE_DATABASE_ID =
-  process.env.FIRESTORE_DATABASE_ID ?? 'ai-studio-ram1500-a6aad1c3-783c-48e0-a179-f80c48018571';
+  process.env.FIRESTORE_DATABASE_ID ?? 'sellbyowner-prod';
 
 const GEMINI_SYSTEM_PROMPT =
   'You are an expert data extractor. Read this wholesale apparel catalog PDF. Extract every distinct style into a JSON array of objects. Each object must have these exact keys: title (string), brand (string, guess if not explicit), price (number), description (string), material (string), sizes (array of strings), colors (array of strings), prePackRatio (string). Do not include any other text.';

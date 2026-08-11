@@ -1,4 +1,6 @@
-export type ApparelFilterStatus = 'draft' | 'active' | 'archived';
+import type { ListingLifecycleStatus } from '../schemas';
+
+export type ApparelFilterStatus = ListingLifecycleStatus;
 
 export interface ApparelFilterItem {
   id: string;
@@ -69,18 +71,24 @@ export function splitCommaList(value: string): string[] {
 export const APPAREL_STATUS_LABELS: Record<ApparelFilterStatus, string> = {
   draft: 'Draft',
   active: 'Active',
+  pending: 'Pending',
+  sold: 'Sold',
   archived: 'Archived',
 };
 
 export const APPAREL_SELLER_STATUS_LABELS: Record<ApparelFilterStatus, string> = {
   draft: 'Draft',
   active: 'Published',
+  pending: 'Pending',
+  sold: 'Sold',
   archived: 'Archived',
 };
 
 export const APPAREL_STATUS_STYLES: Record<ApparelFilterStatus, string> = {
   draft: 'bg-amber-100 text-amber-800',
   active: 'bg-green-100 text-green-800',
+  pending: 'bg-amber-100 text-amber-800',
+  sold: 'bg-red-100 text-red-800',
   archived: 'bg-slate-100 text-slate-700',
 };
 

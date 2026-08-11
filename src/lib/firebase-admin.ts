@@ -20,7 +20,8 @@ function resolveStorageBucket(projectId?: string, serviceAccountBucket?: string)
   const storageBucket =
     readEnv('FIREBASE_STORAGE_BUCKET') ??
     serviceAccountBucket ??
-    (projectId ? `${projectId}.appspot.com` : undefined);
+    // Prefer the post-Oct-2024 default bucket name when env/service-account omit it.
+    (projectId ? `${projectId}.firebasestorage.app` : undefined);
 
   if (!storageBucket) {
     throw new Error(
@@ -60,11 +61,16 @@ function initAdmin(): App {
   });
 }
 
+/** Named DB used by this app (see firebase.json). Avoids the empty `(default)` DB. */
+export const DEFAULT_FIRESTORE_DATABASE_ID = 'sellbyowner-prod';
+
 export function getDb(): Firestore {
   if (!db) {
     const app = initAdmin();
-    const databaseId = readEnv('FIRESTORE_DATABASE_ID');
-    db = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+    // Prefer explicit env, then the production named database — never silently fall back to
+    // `(default)`, which diverges from migrated listing/media data and serves stale Storage URLs.
+    const databaseId = readEnv('FIRESTORE_DATABASE_ID') || DEFAULT_FIRESTORE_DATABASE_ID;
+    db = getFirestore(app, databaseId);
   }
   return db;
 }

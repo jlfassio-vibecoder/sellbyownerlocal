@@ -5,6 +5,7 @@ import {
   ForbiddenError,
   requireSellerOrRedirect,
 } from '../../../../lib/auth';
+import { getUserProfile } from '../../../../lib/buyer-profile';
 import { mapInquiryDoc } from '../../../../lib/inquiries';
 import { resolveVehicleDisplayMonroney } from '../../../../lib/resolve-display-monroney';
 import { VehicleResponseSchema } from '../../../../schemas';
@@ -20,6 +21,9 @@ if (!vehicleId) {
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
+
+const profile = await getUserProfile(seller.uid);
+const hideListingsBackLink = profile?.hideListingsBackLink === true;
 
 // Owner preview matches public owner view: chat widget is never shown to the listing owner.
 const showChatWidget = false;
@@ -87,6 +91,7 @@ const inquiryCount = inquirySnapshot.docs.reduce((count, inquiryDoc) => {
         analyticsEnabled={false}
         isVehicleOwner={true}
         showChatWidget={showChatWidget}
+        hideListingsBackLink={hideListingsBackLink}
       />
     </div>
   </body>

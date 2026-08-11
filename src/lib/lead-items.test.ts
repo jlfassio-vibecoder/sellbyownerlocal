@@ -13,6 +13,7 @@ describe('isActiveListingStatus', () => {
     assert.equal(isActiveListingStatus('draft'), false);
     assert.equal(isActiveListingStatus('archived'), false);
     assert.equal(isActiveListingStatus('sold'), false);
+    assert.equal(isActiveListingStatus('pending'), false);
   });
 });
 

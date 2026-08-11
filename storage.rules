@@ -38,6 +38,15 @@ service firebase.storage {
                    && request.resource.size < 10 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
+    // Public listing media (buyer PDPs use storage.googleapis.com; Firebase download URLs need this too).
+    match /vehicles/{vehicleId}/gallery/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /vehicles/{vehicleId}/comps/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
     match /{allPaths=**} {
       allow read, write: if false;
     }

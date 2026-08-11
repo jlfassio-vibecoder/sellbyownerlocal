@@ -1,4 +1,10 @@
-import type { Conversation, PopulateMonroneyFromStickerResponse, PopulateMonroneyFromVinResponse, VehicleFormState } from '../schemas';
+import type {
+  Conversation,
+  ListingLifecycleStatus,
+  PopulateMonroneyFromStickerResponse,
+  PopulateMonroneyFromVinResponse,
+  VehicleFormState,
+} from '../schemas';
 
 export class SellerApiError extends Error {
   readonly status: number;
@@ -25,6 +31,50 @@ export async function updateVehicle(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(formState),
   });
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
+}
+
+export async function updateVehicleStatus(
+  vehicleId: string,
+  status: ListingLifecycleStatus
+): Promise<void> {
+  const res = await fetch(
+    `/api/seller/vehicles/${encodeURIComponent(vehicleId)}/status`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
+}
+
+export async function updateApparelStatus(
+  listingId: string,
+  status: ListingLifecycleStatus
+): Promise<void> {
+  const res = await fetch(`/api/seller/apparel/${encodeURIComponent(listingId)}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!res.ok) {
+    throw new SellerApiError(await parseErrorResponse(res), res.status);
+  }
+}
+
+export async function hardDeleteVehicle(vehicleId: string): Promise<void> {
+  const res = await fetch(
+    `/api/seller/vehicles/${encodeURIComponent(vehicleId)}/hard-delete`,
+    { method: 'DELETE' }
+  );
 
   if (!res.ok) {
     throw new SellerApiError(await parseErrorResponse(res), res.status);

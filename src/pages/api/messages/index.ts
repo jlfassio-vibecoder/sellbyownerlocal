@@ -13,6 +13,7 @@ import { db } from '../../../lib/firebase-admin';
 import { mapMessageDoc } from '../../../lib/messages';
 import { checkRateLimit, getClientIp } from '../../../lib/rate-limit';
 import { MessageCreateSchema, VehicleResponseSchema } from '../../../schemas';
+import { isTransactionalListingStatus } from '../../../lib/listing-lifecycle';
 
 const MESSAGE_RATE_LIMIT = {
   windowMs: 15 * 60 * 1000,
@@ -111,6 +112,13 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
     if (vehicleParsed.data.inventorySource === 'dealer_comp') {
       return new Response(
         JSON.stringify({ error: 'Messaging is not available for dealer comparable listings' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!isTransactionalListingStatus(vehicleParsed.data.status)) {
+      return new Response(
+        JSON.stringify({ error: 'Messaging is only available for active listings' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }

@@ -64,6 +64,8 @@ export const UserSchema = z.object({
   hideFab: z.boolean().default(false),
   /** When true, buyers cannot open individual apparel item detail pages. */
   hideItemDetails: z.boolean().default(false),
+  /** When true, hide the All Listings / Back link on public vehicle listing pages. */
+  hideListingsBackLink: z.boolean().default(false),
 });
 
 export const PublicUserResponseSchema = z.object({
@@ -77,6 +79,7 @@ export const PublicUserResponseSchema = z.object({
   storefrontHeroUrl: httpHttpsUrl.optional(),
   hideFab: z.boolean().default(false),
   hideItemDetails: z.boolean().default(false),
+  hideListingsBackLink: z.boolean().default(false),
 });
 
 export const UserProfileUpdateSchema = z.object({
@@ -87,6 +90,7 @@ export const UserProfileUpdateSchema = z.object({
   storefrontHeroUrl: z.union([httpHttpsUrl, z.literal('')]).optional(),
   hideFab: z.boolean().optional(),
   hideItemDetails: z.boolean().optional(),
+  hideListingsBackLink: z.boolean().optional(),
 });
 
 export const PhoneVerifyRequestSchema = z.object({
@@ -98,7 +102,22 @@ export const VehicleLocationSchema = z.object({
   city: z.string().min(1),
 });
 
-export const VehicleStatusSchema = z.enum(['draft', 'active', 'pending', 'sold']);
+export const ListingLifecycleStatusSchema = z.enum([
+  'draft',
+  'active',
+  'pending',
+  'sold',
+  'archived',
+]);
+
+export const VehicleStatusSchema = ListingLifecycleStatusSchema;
+
+export const ListingStatusUpdateSchema = z.object({
+  status: ListingLifecycleStatusSchema,
+});
+
+export type ListingLifecycleStatus = z.infer<typeof ListingLifecycleStatusSchema>;
+export type ListingStatusUpdate = z.infer<typeof ListingStatusUpdateSchema>;
 
 export const VehicleSpecsSchema = z.object({
   exteriorColor: z.string().min(1),
@@ -743,6 +762,8 @@ export const SavedClothingStatusResponseSchema = z.object({
 
 export const FavoriteCategorySchema = z.enum(['vehicle', 'clothing']);
 
+export const FavoriteAvailabilitySchema = z.enum(['available', 'unavailable']);
+
 export const FavoriteItemSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
@@ -760,6 +781,8 @@ export const FavoriteItemSchema = z.object({
   engine: z.string().optional(),
   drivetrain: z.string().optional(),
   highlights: z.array(z.string()).optional(),
+  listingStatus: ListingLifecycleStatusSchema.optional(),
+  availability: FavoriteAvailabilitySchema.optional(),
 });
 
 export const FavoritesListResponseSchema = z.object({
@@ -1084,7 +1107,7 @@ export type BuyerConversationsResponse = z.infer<typeof BuyerConversationsRespon
 export type UserResponse = z.infer<typeof UserResponseSchema>;
 export type VehicleResponse = z.infer<typeof VehicleResponseSchema>;
 
-export const ClothingListingStatusSchema = z.enum(['draft', 'active', 'archived']);
+export const ClothingListingStatusSchema = ListingLifecycleStatusSchema;
 
 const lineSheetUrl = z.string().refine((value) => {
   if (value.startsWith('gs://')) return true;

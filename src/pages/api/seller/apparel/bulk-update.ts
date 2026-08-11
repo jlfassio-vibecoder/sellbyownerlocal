@@ -9,6 +9,11 @@ import {
   unauthorizedResponse,
 } from '../../../../lib/auth';
 import { db } from '../../../../lib/firebase-admin';
+import {
+  assertListingStatusTransition,
+  InvalidListingStatusTransitionError,
+  parseListingLifecycleStatus,
+} from '../../../../lib/listing-lifecycle';
 import { ClothingListingStatusSchema } from '../../../../schemas';
 
 const BulkUpdateUpdatesSchema = z
@@ -57,11 +62,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const docs = await Promise.all(refs.map((ref) => ref.get()));
     const batch = db().batch();
     let updatedCount = 0;
-
-    const firestoreUpdates: Record<string, unknown> = { ...parsed.data.updates };
-    if (parsed.data.updates.isSale === false) {
-      firestoreUpdates.salePrice = FieldValue.delete();
-    }
+    const toStatus = parsed.data.updates.status;
+    const statusChangedAt = new Date().toISOString();
 
     for (let i = 0; i < uniqueIds.length; i++) {
       const doc = docs[i];
@@ -74,9 +76,28 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         });
       }
 
-      const existingSellerId = doc.data()?.sellerId;
+      const existing = doc.data() ?? {};
+      const existingSellerId = existing.sellerId;
       if (existingSellerId !== session.uid) {
         return forbiddenResponse();
+      }
+
+      const firestoreUpdates: Record<string, unknown> = { ...parsed.data.updates };
+      if (parsed.data.updates.isSale === false) {
+        firestoreUpdates.salePrice = FieldValue.delete();
+      }
+
+      if (toStatus !== undefined) {
+        const fromStatus = parseListingLifecycleStatus(existing.status);
+        if (!fromStatus) {
+          return new Response(JSON.stringify({ error: 'Listing has invalid status' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        assertListingStatusTransition(fromStatus, toStatus);
+        firestoreUpdates.previousStatus = fromStatus;
+        firestoreUpdates.statusChangedAt = statusChangedAt;
       }
 
       batch.update(ref, firestoreUpdates);
@@ -90,6 +111,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    if (error instanceof InvalidListingStatusTransitionError) {
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid status transition',
+          from: error.from,
+          to: error.to,
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
     if (error instanceof AuthError) {
       return unauthorizedResponse(error.message);
     }

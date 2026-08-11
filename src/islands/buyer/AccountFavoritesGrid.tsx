@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FavoriteItem, VerificationTier } from '../../schemas';
 import VehicleCard from '../../components/buyer/VehicleCard';
-import { FavoritesProvider } from '../../context/FavoritesContext';
+import { FavoritesProvider, useFavorites } from '../../context/FavoritesContext';
 import { fetchFavoritesFromServer } from '../../lib/favorites-client';
 import type { InventoryVehicle } from '../../types/inventory-vehicle';
 
@@ -27,16 +27,40 @@ function favoriteToInventoryVehicle(item: FavoriteItem): InventoryVehicle {
   };
 }
 
+function favoriteStatusBadge(item: FavoriteItem): { label: string; className: string } | null {
+  if (item.availability === 'unavailable') {
+    return {
+      label: 'Unavailable',
+      className: 'bg-amber-100 text-amber-900',
+    };
+  }
+  if (item.listingStatus === 'pending') {
+    return {
+      label: 'Pending',
+      className: 'bg-amber-100 text-amber-800',
+    };
+  }
+  if (item.listingStatus === 'sold') {
+    return {
+      label: 'Sold',
+      className: 'bg-slate-800 text-white',
+    };
+  }
+  return null;
+}
+
 function AccountFavoritesGridInner({
   isLoggedIn,
   verificationTier,
   initialItems = [],
 }: AccountFavoritesGridProps) {
+  const { toggle, isFavorite } = useFavorites();
   const [items, setItems] = useState<FavoriteItem[]>(
     () => initialItems.filter((item) => item.category === 'vehicle')
   );
   const [loading, setLoading] = useState(initialItems.length === 0);
   const [error, setError] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,7 +88,20 @@ function AccountFavoritesGridInner({
     };
   }, []);
 
-  const vehicles = items.map(favoriteToInventoryVehicle);
+  const handleRemove = async (item: FavoriteItem) => {
+    setRemovingId(item.id);
+    try {
+      if (isFavorite(item.id)) {
+        await toggle(item);
+      }
+      setItems((prev) => prev.filter((entry) => entry.id !== item.id));
+    } catch {
+      setError('Unable to remove saved vehicle');
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
   const showAnonymousBanner = verificationTier === 'anonymous';
 
   return (
@@ -82,7 +119,7 @@ function AccountFavoritesGridInner({
 
       {loading ? (
         <p className="text-sm text-slate-500">Loading saved vehicles…</p>
-      ) : vehicles.length === 0 ? (
+      ) : items.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
           <p className="text-sm font-medium text-slate-700">No saved vehicles yet</p>
           <p className="mt-1 text-sm text-slate-500">
@@ -97,14 +134,38 @@ function AccountFavoritesGridInner({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          {vehicles.map((vehicle, index) => (
-            <VehicleCard
-              key={vehicle.id}
-              vehicle={vehicle}
-              position={index + 1}
-              buyerContext={{ isLoggedIn, verificationTier }}
-            />
-          ))}
+          {items.map((item, index) => {
+            const badge = favoriteStatusBadge(item);
+            const vehicle = favoriteToInventoryVehicle(item);
+            return (
+              <div key={item.id} className="relative">
+                {badge && (
+                  <span
+                    className={`absolute left-3 top-3 z-10 rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-sm ${badge.className}`}
+                  >
+                    {badge.label}
+                  </span>
+                )}
+                <VehicleCard
+                  vehicle={vehicle}
+                  position={index + 1}
+                  buyerContext={{ isLoggedIn, verificationTier }}
+                />
+                {item.availability === 'unavailable' && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleRemove(item)}
+                      disabled={removingId === item.id}
+                      className="text-sm font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
+                    >
+                      {removingId === item.id ? 'Removing…' : 'Remove from Saved'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

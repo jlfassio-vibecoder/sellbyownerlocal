@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 export interface SellerSettingToggleProps {
   userId: string;
-  field: 'hideFab' | 'hideItemDetails';
+  field: 'hideFab' | 'hideItemDetails' | 'hideListingsBackLink';
   initialValue?: boolean;
   title: string;
   description: string;
