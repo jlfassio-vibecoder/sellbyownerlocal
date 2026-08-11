@@ -85,7 +85,7 @@ export async function getPublicClothingListingById(
 }
 
 export async function getApparelCatalogForSeller(sellerId: string): Promise<ClothingListing[]> {
-  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? '(default)';
+  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? 'sellbyowner-prod';
   let snapshot;
 
   try {
@@ -132,7 +132,7 @@ export async function getApparelCatalogForSeller(sellerId: string): Promise<Clot
 }
 
 export async function getActiveApparelForSeller(sellerId: string): Promise<ClothingListing[]> {
-  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? '(default)';
+  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? 'sellbyowner-prod';
   let snapshot;
 
   try {
@@ -185,7 +185,7 @@ export async function getActiveApparelForSeller(sellerId: string): Promise<Cloth
 
 /** Active listing count only — avoids fetching/parsing full docs for status banners. */
 export async function getActiveApparelCountForSeller(sellerId: string): Promise<number> {
-  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? '(default)';
+  const databaseId = process.env.FIRESTORE_DATABASE_ID ?? 'sellbyowner-prod';
   const query = db()
     .collection('clothing_listings')
     .where('sellerId', '==', sellerId)
