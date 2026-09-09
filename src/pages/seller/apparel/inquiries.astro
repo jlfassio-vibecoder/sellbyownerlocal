@@ -6,6 +6,7 @@ import ApparelSellerLayout from '../../../islands/seller/ApparelSellerLayout';
 import LeadsPanel from '../../../islands/seller/LeadsPanel';
 import { getStorefrontPath, resolveStorefrontSegment } from '../../../utils/url-helpers';
 import '../../../styles/global.css';
+import FirebaseConfigScript from '../../../components/FirebaseConfigScript.astro';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
@@ -29,6 +30,7 @@ const leads = await getSellerLeads(seller.uid);
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>Quote Requests · Apparel Dashboard · Sell By Owner Local</title>
+    <FirebaseConfigScript />
   </head>
   <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
     <ApparelSellerLayout

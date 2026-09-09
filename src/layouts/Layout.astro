@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { DEFAULT_OG_IMAGE, resolveAbsoluteUrl } from '../lib/seo';
+import FirebaseConfigScript from '../components/FirebaseConfigScript.astro';
 
 interface Props {
   title?: string;
@@ -54,6 +55,7 @@ const resolvedOgUrl = resolveAbsoluteUrl(ogUrl, origin);
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={resolvedOgImage} />
+    <FirebaseConfigScript />
   </head>
   <body class={bodyClass}>
     <slot />

@@ -1,0 +1,17 @@
+---
+/**
+ * Injects Firebase web config for the browser when PUBLIC_* vars are Vercel Sensitive
+ * (runtime-only) and therefore missing from the Vite-inlined import.meta.env bundle.
+ */
+import { getFirebaseWebConfigForSsr } from '../lib/firebase-web-config';
+
+const config = getFirebaseWebConfigForSsr();
+---
+
+{
+  config && (
+    <script is:inline define:vars={{ config }}>
+      window.__SBOL_FIREBASE_CONFIG__ = config;
+    </script>
+  )
+}
