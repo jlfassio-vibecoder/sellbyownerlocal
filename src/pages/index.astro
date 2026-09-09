@@ -1,15 +1,28 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getOptionalSellerSession } from '../lib/auth';
+import { getOptionalSellerSession, type UserSession } from '../lib/auth';
 import { getPublishedInventory } from '../lib/inventory-api';
 import BuyerMarketplaceNav from '../islands/buyer/BuyerMarketplaceNav';
 import InventoryGrid from '../islands/buyer/InventoryGrid';
 import VehicleMarketplaceHeader from '../components/vehicles/VehicleMarketplaceHeader.astro';
 import VehicleMarketplaceHero from '../components/vehicles/VehicleMarketplaceHero.astro';
 
-const session = await getOptionalSellerSession(Astro.request, Astro.cookies);
+let session: UserSession | null = null;
+try {
+  session = await getOptionalSellerSession(Astro.request, Astro.cookies);
+} catch (error) {
+  console.error('Homepage session lookup failed', error);
+}
+
 const displayName = session?.email?.split('@')[0] ?? 'there';
-const vehicles = await getPublishedInventory();
+
+let vehicles: Awaited<ReturnType<typeof getPublishedInventory>> = [];
+try {
+  vehicles = await getPublishedInventory();
+} catch (error) {
+  console.error('Homepage inventory lookup failed', error);
+}
+
 const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
