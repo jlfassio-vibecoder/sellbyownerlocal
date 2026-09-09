@@ -1,5 +1,5 @@
 import './load-env';
-import { initializeApp, cert, getApps, type App } from 'firebase-admin/app';
+import { initializeApp, cert, getApps, type App, type ServiceAccount } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
@@ -32,30 +32,57 @@ function resolveStorageBucket(projectId?: string, serviceAccountBucket?: string)
   return storageBucket;
 }
 
-function initAdmin(): App {
-  if (getApps().length > 0) return getApps()[0]!;
-
+function resolveServiceAccount(): {
+  credential: ServiceAccount;
+  projectId?: string;
+  storageBucket?: string;
+} {
   const serviceAccountString =
     import.meta.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-  if (!serviceAccountString) {
-    throw new Error('CRITICAL: Missing FIREBASE_SERVICE_ACCOUNT_JSON environment variable.');
+  if (serviceAccountString) {
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(serviceAccountString);
+    } catch {
+      throw new Error(
+        'CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON. Ensure it is a valid JSON string.'
+      );
+    }
+
+    return {
+      credential: parsed as ServiceAccount,
+      projectId: typeof parsed.project_id === 'string' ? parsed.project_id : undefined,
+      storageBucket: typeof parsed.storage_bucket === 'string' ? parsed.storage_bucket : undefined,
+    };
   }
 
-  let serviceAccount;
-  try {
-    serviceAccount = JSON.parse(serviceAccountString);
-  } catch {
-    throw new Error(
-      'CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON. Ensure it is a valid JSON string.'
-    );
+  const projectId = readEnv('FIREBASE_PROJECT_ID');
+  const clientEmail = readEnv('FIREBASE_CLIENT_EMAIL');
+  const privateKey = readEnv('FIREBASE_PRIVATE_KEY')?.replace(/\\n/g, '\n');
+
+  if (projectId && clientEmail && privateKey) {
+    return {
+      credential: { projectId, clientEmail, privateKey },
+      projectId,
+    };
   }
 
-  const projectId = readEnv('FIREBASE_PROJECT_ID') ?? serviceAccount.project_id;
-  const storageBucket = resolveStorageBucket(projectId, serviceAccount.storage_bucket);
+  throw new Error(
+    'CRITICAL: Missing Firebase Admin credentials. Set FIREBASE_SERVICE_ACCOUNT_JSON, or FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY.'
+  );
+}
+
+function initAdmin(): App {
+  if (getApps().length > 0) return getApps()[0]!;
+
+  const { credential, projectId: accountProjectId, storageBucket: accountBucket } =
+    resolveServiceAccount();
+  const projectId = readEnv('FIREBASE_PROJECT_ID') ?? accountProjectId;
+  const storageBucket = resolveStorageBucket(projectId, accountBucket);
 
   return initializeApp({
-    credential: cert(serviceAccount),
+    credential: cert(credential),
     projectId,
     storageBucket,
   });
