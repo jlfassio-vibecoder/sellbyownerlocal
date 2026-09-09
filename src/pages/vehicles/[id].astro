@@ -1,8 +1,8 @@
 ---
 import { z } from 'zod';
 import { db } from '../../lib/firebase-admin';
-import { VehicleResponseSchema } from '../../schemas';
-import { getOptionalSession } from '../../lib/auth';
+import { VehicleResponseSchema, type VehicleResponse } from '../../schemas';
+import { getOptionalSession, type UserSession } from '../../lib/auth';
 import { getSellerHideFab, getSellerHideListingsBackLink } from '../../lib/seller-settings';
 import { resolveVehicleDisplayMonroney } from '../../lib/resolve-display-monroney';
 import {
@@ -13,6 +13,7 @@ import {
 } from '../../lib/seo';
 import Layout from '../../layouts/Layout.astro';
 import VehicleListingContent from '../../components/VehicleListingContent.astro';
+import ServiceUnavailable from '../../components/ServiceUnavailable.astro';
 import { generateVehicleSlug, resolveFirestoreIdCandidates } from '../../utils/url-helpers';
 import {
   isBuyerCtaEnabledStatus,
@@ -26,88 +27,124 @@ if (!id) {
 }
 
 const slug = id;
-let doc = null;
-
-for (const candidate of resolveFirestoreIdCandidates(slug)) {
-  const snapshot = await db().collection('vehicles').doc(candidate).get();
-  if (snapshot.exists) {
-    doc = snapshot;
-    break;
-  }
-}
-
-if (!doc) {
-  return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
-}
-
-const parsed = VehicleResponseSchema.safeParse({ id: doc.id, ...doc.data() });
-
-if (!parsed.success) {
-  if (import.meta.env.DEV) {
-    console.error(`Vehicle ${slug} failed validation:`, z.flattenError(parsed.error));
-  }
-  return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
-}
-
-const vehicle = parsed.data;
-
-if (!isPubliclyViewableListingStatus(vehicle.status)) {
-  return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
-}
-
-const canonicalSlug = generateVehicleSlug(vehicle);
-
-if (slug !== canonicalSlug) {
-  return Astro.redirect(`/vehicles/${canonicalSlug}`, 301);
-}
-
-const displayMonroney = await resolveVehicleDisplayMonroney(vehicle);
-const listingVehicle = displayMonroney ? { ...vehicle, monroney: displayMonroney } : vehicle;
-
-const seoTitle = buildVehicleSeoTitle(listingVehicle);
-const seoDescription = buildVehicleSeoDescription(listingVehicle);
-const seoImage = resolveVehicleOgImage(listingVehicle) ?? DEFAULT_OG_IMAGE;
-const canonicalUrl = `/vehicles/${canonicalSlug}`;
-
-const session = await getOptionalSession(Astro.request, Astro.cookies);
-
+let serviceUnavailable = false;
+let listingVehicle: VehicleResponse | null = null;
+let session: UserSession | null = null;
 let initialSaved = false;
-if (session) {
-  const saveDoc = await db()
-    .collection('saved_vehicles')
-    .doc(`${session.uid}_${vehicle.id}`)
-    .get();
-  initialSaved = saveDoc.exists;
-}
-
-const buyerContext = {
-  isLoggedIn: !!session,
-  verificationTier: session?.verificationTier ?? 'anonymous',
-  loginHref: `/login?next=${encodeURIComponent(
-    vehicle.inventorySource === 'dealer_comp' ? canonicalUrl : `${canonicalUrl}#contact`
-  )}`,
-  saveLoginHref: `/login?next=${encodeURIComponent(canonicalUrl)}`,
+let seoTitle = 'Vehicle listing';
+let seoDescription = 'Browse owner-listed vehicles.';
+let seoImage = DEFAULT_OG_IMAGE;
+let canonicalUrl = `/vehicles/${slug}`;
+let isVehicleOwner = false;
+let showChatWidget = false;
+let hideListingsBackLink = false;
+let buyerContext: {
+  isLoggedIn: boolean;
+  verificationTier: UserSession['verificationTier'];
+  loginHref: string;
+  saveLoginHref: string;
+} = {
+  isLoggedIn: false,
+  verificationTier: 'anonymous',
+  loginHref: '/login',
+  saveLoginHref: '/login',
 };
-const isVehicleOwner = Boolean(session?.uid && session.uid === vehicle.sellerId);
-const hideFab = await getSellerHideFab(vehicle.sellerId);
-const hideListingsBackLink = await getSellerHideListingsBackLink(vehicle.sellerId);
-const buyerCtasEnabled = isBuyerCtaEnabledStatus(vehicle.status);
-const showChatWidget = !hideFab && !isVehicleOwner && buyerCtasEnabled;
+
+try {
+  let doc = null;
+
+  for (const candidate of resolveFirestoreIdCandidates(slug)) {
+    const snapshot = await db().collection('vehicles').doc(candidate).get();
+    if (snapshot.exists) {
+      doc = snapshot;
+      break;
+    }
+  }
+
+  if (!doc) {
+    return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
+  }
+
+  const parsed = VehicleResponseSchema.safeParse({ id: doc.id, ...doc.data() });
+
+  if (!parsed.success) {
+    if (import.meta.env.DEV) {
+      console.error(`Vehicle ${slug} failed validation:`, z.flattenError(parsed.error));
+    }
+    return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
+  }
+
+  const vehicle = parsed.data;
+
+  if (!isPubliclyViewableListingStatus(vehicle.status)) {
+    return new Response('Vehicle not found', { status: 404, statusText: 'Not Found' });
+  }
+
+  const canonicalSlug = generateVehicleSlug(vehicle);
+
+  if (slug !== canonicalSlug) {
+    return Astro.redirect(`/vehicles/${canonicalSlug}`, 301);
+  }
+
+  const displayMonroney = await resolveVehicleDisplayMonroney(vehicle);
+  listingVehicle = displayMonroney ? { ...vehicle, monroney: displayMonroney } : vehicle;
+
+  seoTitle = buildVehicleSeoTitle(listingVehicle);
+  seoDescription = buildVehicleSeoDescription(listingVehicle);
+  seoImage = resolveVehicleOgImage(listingVehicle) ?? DEFAULT_OG_IMAGE;
+  canonicalUrl = `/vehicles/${canonicalSlug}`;
+
+  session = await getOptionalSession(Astro.request, Astro.cookies);
+
+  if (session) {
+    const saveDoc = await db()
+      .collection('saved_vehicles')
+      .doc(`${session.uid}_${vehicle.id}`)
+      .get();
+    initialSaved = saveDoc.exists;
+  }
+
+  buyerContext = {
+    isLoggedIn: !!session,
+    verificationTier: session?.verificationTier ?? 'anonymous',
+    loginHref: `/login?next=${encodeURIComponent(
+      vehicle.inventorySource === 'dealer_comp' ? canonicalUrl : `${canonicalUrl}#contact`
+    )}`,
+    saveLoginHref: `/login?next=${encodeURIComponent(canonicalUrl)}`,
+  };
+  isVehicleOwner = Boolean(session?.uid && session.uid === vehicle.sellerId);
+  const hideFab = await getSellerHideFab(vehicle.sellerId);
+  hideListingsBackLink = await getSellerHideListingsBackLink(vehicle.sellerId);
+  const buyerCtasEnabled = isBuyerCtaEnabledStatus(vehicle.status);
+  showChatWidget = !hideFab && !isVehicleOwner && buyerCtasEnabled;
+} catch (error) {
+  console.error('Vehicle listing lookup failed', error);
+  serviceUnavailable = true;
+  Astro.response.status = 503;
+}
 ---
 
-<Layout
-  title={`${seoTitle} · Sell By Owner Local`}
-  description={seoDescription}
-  ogImage={seoImage}
-  ogUrl={canonicalUrl}
-  bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
->
-  <VehicleListingContent
-    vehicle={listingVehicle}
-    buyerContext={buyerContext}
-    initialSaved={initialSaved}
-    isVehicleOwner={isVehicleOwner}
-    showChatWidget={showChatWidget}
-    hideListingsBackLink={hideListingsBackLink}
-  />
-</Layout>
+{
+  serviceUnavailable || !listingVehicle ? (
+    <Layout title="Temporarily unavailable · Sell By Owner Local">
+      <ServiceUnavailable backHref="/vehicles" backLabel="Back to vehicles marketplace" />
+    </Layout>
+  ) : (
+    <Layout
+      title={`${seoTitle} · Sell By Owner Local`}
+      description={seoDescription}
+      ogImage={seoImage}
+      ogUrl={canonicalUrl}
+      bodyClass="min-h-screen bg-[#f8f9fa] font-sans text-slate-900"
+    >
+      <VehicleListingContent
+        vehicle={listingVehicle}
+        buyerContext={buyerContext}
+        initialSaved={initialSaved}
+        isVehicleOwner={isVehicleOwner}
+        showChatWidget={showChatWidget}
+        hideListingsBackLink={hideListingsBackLink}
+      />
+    </Layout>
+  )
+}

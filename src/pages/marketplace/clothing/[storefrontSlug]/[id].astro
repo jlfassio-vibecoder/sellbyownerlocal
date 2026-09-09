@@ -1,6 +1,6 @@
 ---
 import Layout from '../../../../layouts/Layout.astro';
-import { getOptionalSession } from '../../../../lib/auth';
+import { getOptionalSession, type UserSession } from '../../../../lib/auth';
 import {
   getUserProfile,
   resolveSellerByStorefrontParam,
@@ -27,7 +27,9 @@ import DocumentViewer from '../../../../islands/DocumentViewer';
 import FavoriteButton from '../../../../islands/buyer/FavoriteButton';
 import ContactSellerFab from '../../../../islands/buyer/ContactSellerFab';
 import ApparelAnalytics from '../../../../islands/ApparelAnalytics';
+import ServiceUnavailable from '../../../../components/ServiceUnavailable.astro';
 import { db } from '../../../../lib/firebase-admin';
+import type { ClothingListing, User } from '../../../../schemas';
 
 const { storefrontSlug: param, id } = Astro.params;
 
@@ -35,86 +37,135 @@ if (!param || !id) {
   return Astro.rewrite('/404');
 }
 
-const resolvedSeller = await resolveSellerByStorefrontParam(param);
-if (!resolvedSeller) {
-  return Astro.rewrite('/404');
-}
+type SellerProfile = User & { id: string };
 
-const listing = await getPublicClothingListingById(id);
-if (!listing) {
-  return Astro.rewrite('/404');
-}
-
-// Strict ownership: do not serve a listing under another seller's storefront.
-if (listing.sellerId !== resolvedSeller.id) {
-  return Astro.rewrite('/404');
-}
-
-const canonicalSegment = resolveStorefrontSegment(resolvedSeller);
-const canonicalPath = getClothingListingPath(listing.id, canonicalSegment);
-const storefrontPath = getStorefrontPath(canonicalSegment);
-
-// Previous slug / UID fallback → 301 to current canonical nested URL.
-if (param !== canonicalSegment) {
-  return Astro.redirect(canonicalPath, 301);
-}
-
-const session = await getOptionalSession(Astro.request, Astro.cookies);
-const isStorefrontOwner = Boolean(session?.uid && session.uid === resolvedSeller.id);
-
-// Seller disabled item click-through: send buyers back to the storefront.
-if (resolvedSeller.hideItemDetails === true && !isStorefrontOwner) {
-  return Astro.redirect(storefrontPath, 302);
-}
-
-const wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
+let serviceUnavailable = false;
+let resolvedSeller: SellerProfile | null = null;
+let listing: ClothingListing | null = null;
+let session: UserSession | null = null;
+let isStorefrontOwner = false;
+let wholesalePriceFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
   minimumFractionDigits: 2,
 });
-
-const hasSalePricing =
-  Boolean(listing.isSale) &&
-  typeof listing.salePrice === 'number' &&
-  listing.salePrice < listing.price;
-
-const origin = Astro.site?.href ?? Astro.url.origin;
-const seoTitle = buildClothingSeoTitle(listing);
-const seoDescription = buildClothingSeoDescription(listing);
-const seoImage = resolveClothingOgImage(listing);
-const canonicalUrl = resolveAbsoluteUrl(canonicalPath, origin);
-const galleryImages = listing.galleryPhotos?.length ? listing.galleryPhotos : [];
-const heroImage = listing.galleryPhotos?.[0];
-const hasGalleryImages = galleryImages.length > 0;
-const buyerProfile = session ? await getUserProfile(session.uid) : null;
-const hideRequestQuoteFab = resolvedSeller.hideFab === true;
-const buyerCtasEnabled = isBuyerCtaEnabledStatus(listing.status);
-const showRequestQuoteFab = !isStorefrontOwner && !hideRequestQuoteFab && buyerCtasEnabled;
-const isPending = listing.status === 'pending';
-const isSold = listing.status === 'sold';
-
+let hasSalePricing = false;
+let seoTitle = 'Apparel listing';
+let seoDescription = 'Browse local apparel from independent sellers.';
+let seoImage: string | undefined;
+let canonicalUrl = '';
+let canonicalPath = '';
+let storefrontPath = '';
+let galleryImages: string[] = [];
+let heroImage: string | undefined;
+let hasGalleryImages = false;
+let showRequestQuoteFab = false;
+let buyerCtasEnabled = false;
+let isPending = false;
+let isSold = false;
 let initialSaved = false;
-if (session) {
-  const saveDoc = await db()
-    .collection('saved_clothing')
-    .doc(`${session.uid}_${listing.id}`)
-    .get();
-  initialSaved = saveDoc.exists;
-}
-
-const buyerContext = {
-  isLoggedIn: !!session,
-  verificationTier: session?.verificationTier ?? 'anonymous',
-  loginHref: `/login?next=${encodeURIComponent(`${canonicalPath}#contact`)}`,
-  buyerName: buyerProfile?.displayName,
-  buyerEmail: session?.email,
-  buyerPhone: buyerProfile?.phone,
+let storefrontTitle = 'Apparel storefront';
+let buyerContext: {
+  isLoggedIn: boolean;
+  verificationTier: UserSession['verificationTier'] | 'anonymous';
+  loginHref: string;
+  buyerName?: string;
+  buyerEmail?: string;
+  buyerPhone?: string;
+} = {
+  isLoggedIn: false,
+  verificationTier: 'anonymous',
+  loginHref: '/login',
 };
 
-const storefrontTitle =
-  resolvedSeller.storefrontName?.trim() || resolvedSeller.displayName;
+try {
+  resolvedSeller = await resolveSellerByStorefrontParam(param);
+  if (!resolvedSeller) {
+    return Astro.rewrite('/404');
+  }
+
+  listing = await getPublicClothingListingById(id);
+  if (!listing) {
+    return Astro.rewrite('/404');
+  }
+
+  // Strict ownership: do not serve a listing under another seller's storefront.
+  if (listing.sellerId !== resolvedSeller.id) {
+    return Astro.rewrite('/404');
+  }
+
+  const canonicalSegment = resolveStorefrontSegment(resolvedSeller);
+  canonicalPath = getClothingListingPath(listing.id, canonicalSegment);
+  storefrontPath = getStorefrontPath(canonicalSegment);
+
+  // Previous slug / UID fallback → 301 to current canonical nested URL.
+  if (param !== canonicalSegment) {
+    return Astro.redirect(canonicalPath, 301);
+  }
+
+  session = await getOptionalSession(Astro.request, Astro.cookies);
+  isStorefrontOwner = Boolean(session?.uid && session.uid === resolvedSeller.id);
+
+  // Seller disabled item click-through: send buyers back to the storefront.
+  if (resolvedSeller.hideItemDetails === true && !isStorefrontOwner) {
+    return Astro.redirect(storefrontPath, 302);
+  }
+
+  hasSalePricing =
+    Boolean(listing.isSale) &&
+    typeof listing.salePrice === 'number' &&
+    listing.salePrice < listing.price;
+
+  const origin = Astro.site?.href ?? Astro.url.origin;
+  seoTitle = buildClothingSeoTitle(listing);
+  seoDescription = buildClothingSeoDescription(listing);
+  seoImage = resolveClothingOgImage(listing);
+  canonicalUrl = resolveAbsoluteUrl(canonicalPath, origin);
+  galleryImages = listing.galleryPhotos?.length ? listing.galleryPhotos : [];
+  heroImage = listing.galleryPhotos?.[0];
+  hasGalleryImages = galleryImages.length > 0;
+  const buyerProfile = session ? await getUserProfile(session.uid) : null;
+  const hideRequestQuoteFab = resolvedSeller.hideFab === true;
+  buyerCtasEnabled = isBuyerCtaEnabledStatus(listing.status);
+  showRequestQuoteFab = !isStorefrontOwner && !hideRequestQuoteFab && buyerCtasEnabled;
+  isPending = listing.status === 'pending';
+  isSold = listing.status === 'sold';
+
+  if (session) {
+    const saveDoc = await db()
+      .collection('saved_clothing')
+      .doc(`${session.uid}_${listing.id}`)
+      .get();
+    initialSaved = saveDoc.exists;
+  }
+
+  buyerContext = {
+    isLoggedIn: !!session,
+    verificationTier: session?.verificationTier ?? 'anonymous',
+    loginHref: `/login?next=${encodeURIComponent(`${canonicalPath}#contact`)}`,
+    buyerName: buyerProfile?.displayName,
+    buyerEmail: session?.email,
+    buyerPhone: buyerProfile?.phone,
+  };
+
+  storefrontTitle =
+    resolvedSeller.storefrontName?.trim() || resolvedSeller.displayName;
+} catch (error) {
+  console.error('Apparel listing lookup failed', error);
+  serviceUnavailable = true;
+  Astro.response.status = 503;
+}
 ---
 
+{
+  serviceUnavailable || !listing || !resolvedSeller ? (
+    <Layout title="Temporarily unavailable · Sell By Owner Local">
+      <ServiceUnavailable
+        backHref="/marketplace/clothing"
+        backLabel="Back to clothing marketplace"
+      />
+    </Layout>
+  ) : (
 <Layout
   title={`${seoTitle} · Sell By Owner Local`}
   description={seoDescription}
@@ -377,3 +428,5 @@ const storefrontTitle =
     )
   }
 </Layout>
+  )
+}
