@@ -2,6 +2,7 @@
 import NewListingForm from '../../islands/NewListingForm';
 import { requireSellerOrRedirect } from '../../lib/auth';
 import '../../styles/global.css';
+import FirebaseConfigScript from '../../components/FirebaseConfigScript.astro';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
@@ -16,6 +17,7 @@ if (seller instanceof Response) return seller;
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>New Listing · Sell By Owner Local</title>
+    <FirebaseConfigScript />
   </head>
   <body class="min-h-screen bg-slate-50 py-12 px-4">
     <NewListingForm client:load mode="seller" />

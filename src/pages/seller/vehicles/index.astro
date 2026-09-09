@@ -7,6 +7,7 @@ import AccountUidBanner from '../../../components/AccountUidBanner.astro';
 import SellerFabSettingsPanel from '../../../islands/seller/SellerFabSettingsPanel';
 import SellerVehicleInventoryGrid from '../../../islands/seller/SellerVehicleInventoryGrid';
 import '../../../styles/global.css';
+import FirebaseConfigScript from '../../../components/FirebaseConfigScript.astro';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
@@ -48,6 +49,7 @@ const inventoryItems = vehicles.map((vehicle) => ({
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>Your Vehicle Listings · Sell By Owner Local</title>
+    <FirebaseConfigScript />
   </head>
   <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
     <header class="border-b border-slate-200 bg-white">

@@ -4,6 +4,7 @@ import { requireSellerOrRedirect } from '../../lib/auth';
 import { getApparelCatalogForSeller } from '../../lib/clothing-api';
 import AccountUidBanner from '../../components/AccountUidBanner.astro';
 import '../../styles/global.css';
+import FirebaseConfigScript from '../../components/FirebaseConfigScript.astro';
 
 const seller = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (seller instanceof Response) return seller;
@@ -28,6 +29,7 @@ const displayEmail = seller.email ?? 'Seller';
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>Seller Dashboards · Sell By Owner Local</title>
+    <FirebaseConfigScript />
   </head>
   <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
     <header class="bg-slate-900 text-white">

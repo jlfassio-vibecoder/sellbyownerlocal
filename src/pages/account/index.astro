@@ -15,6 +15,7 @@ import HistoryBackLink from '../../islands/HistoryBackLink';
 import SignOutButton from '../../islands/SignOutButton';
 import { getStorefrontPath, resolveStorefrontSegment } from '../../utils/url-helpers';
 import '../../styles/global.css';
+import FirebaseConfigScript from '../../components/FirebaseConfigScript.astro';
 
 const session = await requireSellerOrRedirect(Astro.request, Astro.cookies);
 if (session instanceof Response) return session;
@@ -47,6 +48,7 @@ const showFullyVerified = verificationTier === 'identity_verified';
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>Your Account · Sell By Owner Local</title>
+    <FirebaseConfigScript />
   </head>
   <body class="min-h-screen bg-[#f8f9fa] font-sans text-slate-900">
     <header class="bg-slate-900 text-white">

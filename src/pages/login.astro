@@ -1,6 +1,7 @@
 ---
 import AuthForm from '../islands/AuthForm';
 import '../styles/global.css';
+import FirebaseConfigScript from '../components/FirebaseConfigScript.astro';
 ---
 
 <html lang="en">
@@ -12,6 +13,7 @@ import '../styles/global.css';
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>Sign In · Sell By Owner Local</title>
+    <FirebaseConfigScript />
   </head>
   <body>
     <AuthForm client:load />

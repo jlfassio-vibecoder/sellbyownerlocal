@@ -11,9 +11,12 @@ let adminAuth: Auth | undefined;
 let bucket: AdminBucket | undefined;
 
 function readEnv(name: string): string | undefined {
-  const fromMeta = (import.meta.env as Record<string, string | undefined>)[name];
+  // Prefer process.env first so Vercel Sensitive (runtime-only) secrets win over
+  // build-time-empty import.meta.env placeholders.
   const fromProcess = process.env[name];
-  return fromMeta || fromProcess;
+  if (fromProcess) return fromProcess;
+  const fromMeta = (import.meta.env as Record<string, string | undefined>)[name];
+  return fromMeta || undefined;
 }
 
 function resolveStorageBucket(projectId?: string, serviceAccountBucket?: string): string {
@@ -38,7 +41,7 @@ function resolveServiceAccount(): {
   storageBucket?: string;
 } {
   const serviceAccountString =
-    import.meta.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON || import.meta.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
   if (serviceAccountString) {
     let parsed: Record<string, unknown>;

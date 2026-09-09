@@ -12,6 +12,7 @@ import { VehicleResponseSchema } from '../../../../schemas';
 import SellerPreviewFrame from '../../../../islands/seller/SellerPreviewFrame';
 import VehicleListingContent from '../../../../components/VehicleListingContent.astro';
 import '../../../../styles/global.css';
+import FirebaseConfigScript from '../../../../components/FirebaseConfigScript.astro';
 
 const { vehicleId } = Astro.params;
 
@@ -77,6 +78,7 @@ const inquiryCount = inquirySnapshot.docs.reduce((count, inquiryDoc) => {
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>{vehicleTitle} · Preview · Seller Dashboard</title>
+    <FirebaseConfigScript />
   </head>
   <body class="flex min-h-screen flex-col bg-[#f8f9fa] font-sans text-slate-900">
     <SellerPreviewFrame
