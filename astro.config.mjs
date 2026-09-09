@@ -37,8 +37,15 @@ export default defineConfig({
 
   env: {
     schema: {
-      FIREBASE_SERVICE_ACCOUNT_JSON: envField.string({ context: 'server', access: 'secret' }),
+      // Either JSON, or discrete PROJECT_ID + CLIENT_EMAIL + PRIVATE_KEY (see firebase-admin.ts).
+      FIREBASE_SERVICE_ACCOUNT_JSON: envField.string({
+        context: 'server',
+        access: 'secret',
+        optional: true,
+      }),
       FIREBASE_PROJECT_ID: envField.string({ context: 'server', access: 'secret', optional: true }),
+      FIREBASE_CLIENT_EMAIL: envField.string({ context: 'server', access: 'secret', optional: true }),
+      FIREBASE_PRIVATE_KEY: envField.string({ context: 'server', access: 'secret', optional: true }),
       FIRESTORE_DATABASE_ID: envField.string({ context: 'server', access: 'secret', optional: true }),
       FIREBASE_STORAGE_BUCKET: envField.string({ context: 'server', access: 'secret', optional: true }),
     },
