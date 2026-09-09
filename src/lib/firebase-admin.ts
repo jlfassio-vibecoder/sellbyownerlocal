@@ -47,17 +47,14 @@ function resolveServiceAccount(): {
     let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(serviceAccountString);
+      return {
+        credential: parsed as ServiceAccount,
+        projectId: typeof parsed.project_id === 'string' ? parsed.project_id : undefined,
+        storageBucket: typeof parsed.storage_bucket === 'string' ? parsed.storage_bucket : undefined,
+      };
     } catch {
-      throw new Error(
-        'CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON. Ensure it is a valid JSON string.'
-      );
+      // Fall through to discrete credentials when the JSON env value is malformed.
     }
-
-    return {
-      credential: parsed as ServiceAccount,
-      projectId: typeof parsed.project_id === 'string' ? parsed.project_id : undefined,
-      storageBucket: typeof parsed.storage_bucket === 'string' ? parsed.storage_bucket : undefined,
-    };
   }
 
   const projectId = readEnv('FIREBASE_PROJECT_ID');
