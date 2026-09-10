@@ -1,6 +1,6 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
-import { getOptionalSellerSession } from '../../../lib/auth';
+import { getOptionalSellerSession, type UserSession } from '../../../lib/auth';
 import {
   getUserProfile,
   resolveStorefrontSegmentsForSellerIds,
@@ -8,13 +8,24 @@ import {
 import { getClothingInventory } from '../../../lib/clothing-api';
 import ClothingInventoryGrid from '../../../islands/buyer/ClothingInventoryGrid';
 import ContactSellerFab from '../../../islands/buyer/ContactSellerFab';
+import type { ClothingListing, User } from '../../../schemas';
 
-const session = await getOptionalSellerSession(Astro.request, Astro.cookies);
-const profile = session ? await getUserProfile(session.uid) : null;
-const listings = await getClothingInventory();
-const storefrontSegmentsBySellerId = await resolveStorefrontSegmentsForSellerIds(
-  listings.map((listing) => listing.sellerId)
-);
+let session: UserSession | null = null;
+let profile: (User & { id: string }) | null = null;
+let listings: ClothingListing[] = [];
+let storefrontSegmentsBySellerId: Record<string, string> = {};
+
+try {
+  session = await getOptionalSellerSession(Astro.request, Astro.cookies);
+  profile = session ? await getUserProfile(session.uid) : null;
+  listings = await getClothingInventory();
+  storefrontSegmentsBySellerId = await resolveStorefrontSegmentsForSellerIds(
+    listings.map((listing) => listing.sellerId)
+  );
+} catch (error) {
+  console.error('Clothing marketplace lookup failed', error);
+}
+
 const buyerContext = {
   isLoggedIn: !!session,
   verificationTier: session?.verificationTier ?? 'anonymous',
